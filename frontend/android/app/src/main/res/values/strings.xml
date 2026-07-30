@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Smart Farming</string>
+    <string name="title_activity_main">Smart Farming</string>
+    <string name="package_name">com.smartfarming.app</string>
+    <string name="custom_url_scheme">com.smartfarming.app</string>
+</resources>

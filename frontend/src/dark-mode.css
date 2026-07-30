@@ -1,0 +1,180 @@
+/* --- DARK MODE OVERRIDES --- */
+body.dark {
+  background-color: #111827;
+}
+body.dark .app-layout {
+  background: #111827;
+}
+body.dark .sidebar,
+body.dark .admin-sidebar {
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
+}
+body.dark .app-header {
+  background: rgba(31, 41, 55, 0.8);
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+body.dark .header-title div,
+body.dark h2,
+body.dark h3,
+body.dark h4,
+body.dark .brand-name {
+  color: #f9fafb !important;
+}
+body.dark .card,
+body.dark .settings-card,
+body.dark .stat-chip,
+body.dark .sector-card-mini {
+  background: rgba(31, 41, 55, 0.85);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f9fafb;
+}
+body.dark .settings-label,
+body.dark .settings-value,
+body.dark .section-header div {
+  color: #d1d5db !important;
+}
+body.dark .settings-card-title {
+  color: #f9fafb;
+}
+body.dark .settings-row {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+body.dark .btn-secondary,
+body.dark .btn-ghost {
+  background: #374151;
+  color: #f9fafb;
+  border-color: #4b5563;
+}
+body.dark .btn-secondary:hover:not(:disabled),
+body.dark .btn-ghost:hover:not(:disabled) {
+  background: #4b5563;
+}
+body.dark .modal-sheet {
+  background: #1f2937;
+  color: #f9fafb;
+}
+body.dark .sidebar-status {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+body.dark .metric-box {
+  background: rgba(0, 0, 0, 0.2);
+}
+body.dark .card-footer {
+  border-top-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Admin Page Fixes */
+body.dark .admin-layout main {
+  background: #111827 !important;
+}
+body.dark .admin-layout main h2,
+body.dark .admin-layout main h3,
+body.dark .admin-layout main h4,
+body.dark .admin-layout main p,
+body.dark .admin-layout main th,
+body.dark .admin-layout main td,
+body.dark .admin-layout main span,
+body.dark .admin-layout main label {
+  color: #f9fafb !important;
+}
+body.dark .admin-stat-card,
+body.dark .sector-card-mini {
+  background: #1f2937 !important;
+  border-color: #374151 !important;
+}
+body.dark .admin-stat-card h3,
+body.dark .sector-card-mini h4 {
+  color: #f9fafb !important;
+}
+body.dark .admin-stat-card p {
+  color: #ffffff !important;
+}
+body.dark .admin-layout main th {
+  background: rgba(0, 0, 0, 0.2) !important;
+  color: #d1d5db !important;
+}
+body.dark .admin-layout main tr {
+  border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+body.dark .admin-layout main input,
+body.dark .admin-layout main select {
+  background: #374151 !important;
+  color: #f9fafb !important;
+  border-color: #4b5563 !important;
+}
+body.dark .admin-layout main .modal-sheet {
+  background: #1f2937 !important;
+}
+body.dark .admin-layout main .btn-ghost {
+  color: #d1d5db !important;
+}
+body.dark .admin-layout main a {
+  color: #d1d5db !important;
+}
+body.dark .admin-layout main a[style*="color: rgb(16, 185, 129)"],
+body.dark .admin-layout main a[style*="color: #10b981"] {
+  color: #10b981 !important;
+}
+
+/* Landing Page Dark Mode Fixes */
+body.dark .landing-page {
+  background: #111827 !important;
+}
+body.dark .landing-page h1, 
+body.dark .landing-page h2, 
+body.dark .landing-page h3, 
+body.dark .landing-page span.stat-value,
+body.dark .landing-page .landing-nav span {
+  color: #f9fafb !important;
+}
+body.dark .landing-page p,
+body.dark .landing-page span.stat-label {
+  color: #d1d5db !important;
+}
+body.dark .landing-page .hero-card,
+body.dark .landing-page .feature-item {
+  background: #1f2937 !important;
+  border-color: #374151 !important;
+}
+body.dark .landing-page .hero-card h3,
+body.dark .landing-page .feature-item h3 {
+  color: #f9fafb !important;
+}
+body.dark .landing-page .hero-card.accent {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+body.dark .landing-page .hero-card.accent h3 {
+  color: #34d399 !important;
+}
+body.dark .landing-page .hero-card.accent p {
+  color: #a7f3d0 !important;
+}
+
+/* Login Page Dark Mode Fixes */
+body.dark .login-page {
+  background: #111827 !important;
+}
+body.dark .login-page .login-card {
+  background: #1f2937 !important;
+  border-color: #374151 !important;
+}
+body.dark .login-page .login-card h2 {
+  color: #f9fafb !important;
+}
+body.dark .login-page .login-card p,
+body.dark .login-page .login-card label {
+  color: #d1d5db !important;
+}
+body.dark .login-page .login-card input {
+  background: #374151 !important;
+  border-color: #4b5563 !important;
+  color: #f9fafb !important;
+}
+body.dark .login-page .login-card button[type="submit"] {
+  box-shadow: 0 4px 14px rgba(5,150,105,0.1) !important;
+}
+body.dark .login-page .login-card button {
+  color: #9ca3af !important;
+}
