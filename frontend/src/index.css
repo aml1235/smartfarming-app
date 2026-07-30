@@ -1179,7 +1179,7 @@ body.dark .sidebar-status {
 }
 .notif-message {
   font-size: 14px;
-  color: #1e293b;
+  color: var(--text-primary);
   flex: 1;
 }
 .notif-time {
