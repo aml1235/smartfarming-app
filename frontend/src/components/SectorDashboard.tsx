@@ -1,4 +1,4 @@
-﻿import { API_URL } from './constants'
+﻿import { API_URL } from '../constants'
 import { useState } from 'react'
 import { Sector, SectorId } from '../types'
 import { generateTempData } from '../constants'
@@ -282,4 +282,5 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
     </div>
   )
 }
+
 

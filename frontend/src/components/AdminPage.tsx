@@ -1,4 +1,4 @@
-﻿import { API_URL } from './constants'
+﻿import { API_URL } from '../constants'
 import React, { useState, useCallback, useEffect } from 'react';
 import { Sector, SectorId, User, AdminTab, ActivityLog } from '../types';
 import { SECTORS, STATUS_MAP } from '../constants';
@@ -599,4 +599,5 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
     </div>
   );
 }
+
 

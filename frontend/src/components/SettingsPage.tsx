@@ -1,4 +1,4 @@
-﻿import { API_URL } from './constants'
+﻿import { API_URL } from '../constants'
 import React, { useState, useEffect } from 'react'
 import { IcChevronRight, IcEye, IcEyeOff } from './Icons'
 
@@ -233,4 +233,5 @@ export function SettingsPage({ darkMode, setDarkMode, user, onUpdateUser }: Sett
     </div>
   )
 }
+
 
