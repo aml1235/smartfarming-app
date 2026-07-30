@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { Sector, SectorId } from '../types'
 import { STATUS_MAP } from '../constants'
 import { ProgressBar } from './UIComponents'
@@ -11,24 +11,24 @@ export function OverviewMetrics({ id }: { id: SectorId }) {
         <div style={{ display: 'flex', gap: 8 }}>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Suhu</div>
-            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>28.4°C</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>0°C</div>
           </div>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Kelembapan</div>
-            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>65%</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>0%</div>
           </div>
         </div>
         <div>
           <div className="metric-row-label" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
-            <span>🌾 Pakan</span><span style={{ fontWeight: 600, color: '#795548' }}>58%</span>
+            <span>🌾 Pakan</span><span style={{ fontWeight: 600, color: '#795548' }}>0%</span>
           </div>
-          <ProgressBar value={58} color="#795548" />
+          <ProgressBar value={0} color="#795548" />
         </div>
         <div>
           <div className="metric-row-label" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
-            <span>💧 Air Minum</span><span style={{ fontWeight: 600, color: '#1565C0' }}>72%</span>
+            <span>💧 Air Minum</span><span style={{ fontWeight: 600, color: '#1565C0' }}>0%</span>
           </div>
-          <ProgressBar value={72} color="#1565C0" />
+          <ProgressBar value={0} color="#1565C0" />
         </div>
       </div>
     ),
@@ -42,18 +42,18 @@ export function OverviewMetrics({ id }: { id: SectorId }) {
         <div style={{ display: 'flex', gap: 8 }}>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Level Air</div>
-            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>85%</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>0%</div>
           </div>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Suhu Air</div>
-            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>27°C</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>0°C</div>
           </div>
         </div>
         <div>
           <div className="metric-row-label" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
-            <span>🌊 Kapasitas Tangki</span><span style={{ fontWeight: 600, color: '#1565C0' }}>85%</span>
+            <span>🌊 Kapasitas Tangki</span><span style={{ fontWeight: 600, color: '#1565C0' }}>0%</span>
           </div>
-          <ProgressBar value={85} color="#1565C0" />
+          <ProgressBar value={0} color="#1565C0" />
         </div>
       </div>
     ),

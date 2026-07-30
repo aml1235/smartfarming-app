@@ -59,9 +59,9 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
   const [feedAuto, setFeedAuto] = useState(true)
   const [drinkAuto, setDrinkAuto] = useState(true)
   const [fanOn, setFanOn] = useState(false)
-  const [temp] = useState(28.4)
-  const [waterLevel] = useState(72)
-  const [feedLevel] = useState(58)
+  const [temp] = useState(0)
+  const [waterLevel] = useState(0)
+  const [feedLevel] = useState(0)
   const [tempData] = useState(generateTempData)
   const [lastRefresh, setLastRefresh] = useState(new Date())
 

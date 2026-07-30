@@ -1,5 +1,5 @@
 import { API_URL } from '../constants'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sector, SectorId } from '../types'
 import { generateTempData } from '../constants'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -17,11 +17,11 @@ const SECTOR_DATA: Record<SectorId, {
 }> = {
   kandang: {
     metrics: [
-      { label: 'Suhu', value: '28.4°C', color: '#E65100', icon: '🌡️' },
-      { label: 'Kelembapan', value: '65%', color: '#1565C0', icon: '💧' },
-      { label: 'Populasi Aktif', value: '1.240', color: '#E65100', icon: '🐓' },
-      { label: 'Level Pakan', value: '58%', color: '#795548', icon: '🌾' },
-      { label: 'Air Minum', value: '72%', color: '#1565C0', icon: '💧' },
+      { label: 'Suhu', value: '0°C', color: '#E65100', icon: '🌡️' },
+      { label: 'Kelembapan', value: '0%', color: '#1565C0', icon: '💧' },
+      { label: 'Populasi Aktif', value: '0', color: '#E65100', icon: '🐓' },
+      { label: 'Level Pakan', value: '0%', color: '#795548', icon: '🌾' },
+      { label: 'Air Minum', value: '0%', color: '#1565C0', icon: '💧' },
     ],
     controls: [
       { label: 'Pemberian Pakan Otomatis', desc: 'Jadwal waktu pakan', icon: '🌾', hasTimeSetting: true },
@@ -31,12 +31,12 @@ const SECTOR_DATA: Record<SectorId, {
   },
   kolam: {
     metrics: [
-      { label: 'pH Air', value: '7.2', color: '#1565C0', icon: '🧪' },
-      { label: 'Suhu Air', value: '26°C', color: '#E65100', icon: '🌡️' },
-      { label: 'Kekeruhan', value: 'Normal', color: '#059669', icon: '💧' },
-      { label: 'Oksigen Terlarut', value: '7.8 mg/L', color: '#059669', icon: '🫧' },
-      { label: 'Populasi Ikan', value: '850', color: '#1565C0', icon: '🐟' },
-      { label: 'Volume Air', value: '92%', color: '#1565C0', icon: '🌊' },
+      { label: 'pH Air', value: '0', color: '#1565C0', icon: '🧪' },
+      { label: 'Suhu Air', value: '0°C', color: '#E65100', icon: '🌡️' },
+      { label: 'Kekeruhan', value: '-', color: '#059669', icon: '💧' },
+      { label: 'Oksigen Terlarut', value: '0 mg/L', color: '#059669', icon: '🫧' },
+      { label: 'Populasi Ikan', value: '0', color: '#1565C0', icon: '🐟' },
+      { label: 'Volume Air', value: '0%', color: '#1565C0', icon: '🌊' },
     ],
     controls: [
       { label: 'Aerator Kolam', desc: 'Sirkulasi oksigen', icon: '🫧' },
@@ -46,8 +46,8 @@ const SECTOR_DATA: Record<SectorId, {
   },
   hidroponik: {
     metrics: [
-      { label: 'Level Air', value: '85%', color: '#1565C0', icon: '🌊' },
-      { label: 'Suhu Lingkungan', value: '27°C', color: '#E65100', icon: '🌡️' },
+      { label: 'Level Air', value: '0%', color: '#1565C0', icon: '🌊' },
+      { label: 'Suhu Lingkungan', value: '0°C', color: '#E65100', icon: '🌡️' },
     ],
     controls: [
       { label: 'Pompa Air', desc: 'Aliran sirkulasi', icon: '🔄', hasTimeSetting: false },
@@ -55,12 +55,12 @@ const SECTOR_DATA: Record<SectorId, {
   },
   irigasi: {
     metrics: [
-      { label: 'Kelembapan Tanah', value: '45%', color: '#E65100', icon: '🌱' },
-      { label: 'Status', value: 'Kering', color: '#C62828', icon: '⚠️' },
-      { label: 'Lahan Total', value: '2.5 Ha', color: 'var(--text-primary)', icon: '🗺️' },
-      { label: 'Terakhir Irigasi', value: '8 jam lalu', color: '#6B7280', icon: '🕒' },
-      { label: 'Volume Air', value: '68%', color: '#1565C0', icon: '💧' },
-      { label: 'Suhu Tanah', value: '29°C', color: '#795548', icon: '🌡️' },
+      { label: 'Kelembapan Tanah', value: '0%', color: '#E65100', icon: '🌱' },
+      { label: 'Status', value: '-', color: '#C62828', icon: '⚠️' },
+      { label: 'Lahan Total', value: '0 Ha', color: 'var(--text-primary)', icon: '🗺️' },
+      { label: 'Terakhir Irigasi', value: '-', color: '#6B7280', icon: '🕒' },
+      { label: 'Volume Air', value: '0%', color: '#1565C0', icon: '💧' },
+      { label: 'Suhu Tanah', value: '0°C', color: '#795548', icon: '🌡️' },
     ],
     controls: [
       { label: 'Sprinkler Otomatis', desc: 'Irigasi area utama', icon: '🌧️' },
@@ -74,13 +74,49 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
   const sectorKey = (sector.id.split('_')[0] as SectorId) || sector.id
   const isDevelopment = sectorKey === 'kolam' || sectorKey === 'irigasi'
   const data = SECTOR_DATA[sectorKey] || SECTOR_DATA.kandang
+  
   const [controls, setControls] = useState(data.controls.map((_, i) => i < 2))
+  const [metricsData, setMetricsData] = useState(data.metrics)
   const [tempData] = useState(generateTempData)
   const [lastRefresh, setLastRefresh] = useState(new Date())
 
   const [showAiModal, setShowAiModal] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState<any>(null)
+
+  useEffect(() => {
+    // Reset state jika sektor berubah
+    setControls(data.controls.map((_, i) => i < 2))
+    setMetricsData(data.metrics)
+
+    if (sectorKey === 'hidroponik') {
+      const fetchData = async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/sensors/supabase/SEC-010`)
+          if (res.ok) {
+            const supabaseData = await res.json()
+            setMetricsData([
+              { label: 'Level Air', value: `${supabaseData.waterLevel || 0}%`, color: '#1565C0', icon: '🌊' },
+              { label: 'Suhu Lingkungan', value: `${supabaseData.temperature || 0}°C`, color: '#E65100', icon: '🌡️' },
+              { label: 'Kelembapan', value: `${supabaseData.humidity || 0}%`, color: '#059669', icon: '💧' },
+            ])
+            
+            if (supabaseData.pumpStatus) {
+               const isPumpOn = supabaseData.pumpStatus.toUpperCase() === 'ON';
+               setControls([isPumpOn])
+            }
+          }
+        } catch (e) {
+          console.error('Failed to fetch from supabase proxy', e)
+        }
+      }
+      
+      fetchData()
+      
+      const interval = setInterval(fetchData, 10000)
+      return () => clearInterval(interval)
+    }
+  }, [sectorKey, lastRefresh])
 
   const handleAiEvaluate = async () => {
     setShowAiModal(true)
@@ -152,7 +188,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
 
       {/* Metrics Grid */}
       <div className="sector-dash-grid">
-        {data.metrics.map(m => (
+        {metricsData.map(m => (
           <div key={m.label} className="sector-dash-metric">
             <div className="metric-label">{m.icon} {m.label}</div>
             <div className="metric-value" style={{ color: m.color }}>{m.value}</div>
@@ -222,7 +258,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
       <div className="card" style={{ padding: 20 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>Level Sumber Daya</div>
         <div className="sector-dash-progress-grid">
-          {data.metrics.filter(m => m.value.includes('%')).slice(0, 3).map(m => (
+          {metricsData.filter(m => m.value.includes('%')).slice(0, 3).map(m => (
             <div key={m.label}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{m.icon} {m.label}</span>

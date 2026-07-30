@@ -47,6 +47,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Endpoint untuk menerima data dari perangkat IoT (ESP32 / NodeMCU)
 Route::post('/sensors', [\App\Http\Controllers\SensorController::class, 'store']);
+Route::get('/sensors/supabase/{sectorId}', [\App\Http\Controllers\SensorController::class, 'getSupabaseData']);
 
 // Notification routes
 Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
