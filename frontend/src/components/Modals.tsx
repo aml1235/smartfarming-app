@@ -98,10 +98,10 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <StatCard label="Kelembapan" value="65%" sub="Kondisi baik" icon={<IcDroplets size={16} />} color="#1565C0" bg="#e3f0ff" />
-                <StatCard label="Populasi Aktif" value="1.240" sub="Ekor hidup" icon={<span style={{ fontSize: 14 }}>🐓</span>} color="#E65100" bg="#fff3e0" />
-                <StatCard label="Level Pakan" value={`${feedLevel}%`} sub="Perlu isi ulang" icon={<span style={{ fontSize: 14 }}>🌾</span>} color="#795548" bg="#f9f5f3" />
-                <StatCard label="Suhu Luar" value="31°C" sub="Cuaca panas" icon={<IcThermometer size={16} />} color="#C62828" bg="#ffebee" />
+                <StatCard label="Kelembapan" value="0%" sub="-" icon={<IcDroplets size={16} />} color="#1565C0" bg="#e3f0ff" />
+                <StatCard label="Populasi Aktif" value="0" sub="-" icon={<span style={{ fontSize: 14 }}>🐓</span>} color="#E65100" bg="#fff3e0" />
+                <StatCard label="Level Pakan" value={`${feedLevel}%`} sub="-" icon={<span style={{ fontSize: 14 }}>🌾</span>} color="#795548" bg="#f9f5f3" />
+                <StatCard label="Suhu Luar" value="0°C" sub="-" icon={<IcThermometer size={16} />} color="#C62828" bg="#ffebee" />
               </div>
 
               <div className="card" style={{ padding: 14 }}>
@@ -167,12 +167,12 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
               <div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, marginBottom: 4 }}>Kualitas Air</div>
                 <div className="badge badge-green" style={{ marginBottom: 4 }}><IcCheck /> Layak Minum</div>
-                <div style={{ fontSize: 11, color: '#6B7280' }}>TDS: 240 ppm • pH: 7.1</div>
+                <div style={{ fontSize: 11, color: '#6B7280' }}>TDS: 0 ppm • pH: 0</div>
               </div>
               <div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, marginBottom: 4 }}>Konsumsi Hari Ini</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>148 L</div>
-                <div style={{ fontSize: 11, color: '#6B7280' }}>Rata-rata: ~0.12L/ekor</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>0 L</div>
+                <div style={{ fontSize: 11, color: '#6B7280' }}>Rata-rata: 0L/ekor</div>
               </div>
             </div>
           </div>
@@ -190,28 +190,28 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
     kandang: { metrics: [], ctrl1: '', ctrl2: '' },
     kolam: {
       metrics: [
-        { label: 'pH Air', value: '7.2', color: '#1565C0' },
-        { label: 'Suhu Air', value: '26°C', color: '#E65100' },
-        { label: 'Kekeruhan', value: 'Normal', color: '#2E7D32' },
-        { label: 'Oksigen Terlarut', value: '7.8 mg/L', color: '#2E7D32' },
+        { label: 'pH Air', value: '0', color: '#1565C0' },
+        { label: 'Suhu Air', value: '0°C', color: '#E65100' },
+        { label: 'Kekeruhan', value: '-', color: '#2E7D32' },
+        { label: 'Oksigen Terlarut', value: '0 mg/L', color: '#2E7D32' },
       ],
       ctrl1: 'Aerator Kolam', ctrl2: 'Pompa Sirkulasi',
     },
     hidroponik: {
       metrics: [
-        { label: 'Level Nutrisi', value: '80%', color: '#2E7D32' },
-        { label: 'Aliran Air', value: 'Lancar', color: '#2E7D32' },
-        { label: 'EC Larutan', value: '2.4 mS/cm', color: 'var(--text-secondary)' },
-        { label: 'Level Tangki', value: '85%', color: '#1565C0' },
+        { label: 'Level Nutrisi', value: '0%', color: '#2E7D32' },
+        { label: 'Aliran Air', value: '-', color: '#2E7D32' },
+        { label: 'EC Larutan', value: '0 mS/cm', color: 'var(--text-secondary)' },
+        { label: 'Level Tangki', value: '0%', color: '#1565C0' },
       ],
       ctrl1: 'Pompa Sirkulasi', ctrl2: 'Pengatur Nutrisi',
     },
     irigasi: {
       metrics: [
-        { label: 'Kelembapan Tanah', value: '45%', color: '#E65100' },
-        { label: 'Status', value: 'Kering', color: '#C62828' },
-        { label: 'Lahan Total', value: '2.5 Ha', color: 'var(--text-secondary)' },
-        { label: 'Terakhir Irigasi', value: '8 jam lalu', color: '#6B7280' },
+        { label: 'Kelembapan Tanah', value: '0%', color: '#E65100' },
+        { label: 'Status', value: '-', color: '#C62828' },
+        { label: 'Lahan Total', value: '0 Ha', color: 'var(--text-secondary)' },
+        { label: 'Terakhir Irigasi', value: '-', color: '#6B7280' },
       ],
       ctrl1: 'Sprinkler Otomatis', ctrl2: 'Irigasi Tetes',
     },
