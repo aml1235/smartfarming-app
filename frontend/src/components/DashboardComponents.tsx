@@ -4,7 +4,30 @@ import { STATUS_MAP } from '../constants'
 import { ProgressBar } from './UIComponents'
 import { IcCheck, IcChevronRight } from './Icons'
 
+import { API_URL } from '../constants'
+
 export function OverviewMetrics({ id }: { id: SectorId }) {
+  const [hydroData, setHydroData] = React.useState({ waterLevel: 0, temp: 0 })
+
+  React.useEffect(() => {
+    if (id === 'hidroponik') {
+      const fetchData = async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/sensors/supabase/SEC-010`)
+          if (res.ok) {
+            const data = await res.json()
+            setHydroData({ waterLevel: data.waterLevel || 0, temp: data.temperature || 0 })
+          }
+        } catch (e) {
+          console.error(e)
+        }
+      }
+      fetchData()
+      const interval = setInterval(fetchData, 10000)
+      return () => clearInterval(interval)
+    }
+  }, [id])
+
   const metrics: Record<SectorId, React.ReactNode> = {
     kandang: (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -42,18 +65,18 @@ export function OverviewMetrics({ id }: { id: SectorId }) {
         <div style={{ display: 'flex', gap: 8 }}>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Level Air</div>
-            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>0%</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>{hydroData.waterLevel}%</div>
           </div>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Suhu Air</div>
-            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>0°C</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>{hydroData.temp}°C</div>
           </div>
         </div>
         <div>
           <div className="metric-row-label" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
-            <span>🌊 Kapasitas Tangki</span><span style={{ fontWeight: 600, color: '#1565C0' }}>0%</span>
+            <span>🌊 Kapasitas Tangki</span><span style={{ fontWeight: 600, color: '#1565C0' }}>{hydroData.waterLevel}%</span>
           </div>
-          <ProgressBar value={0} color="#1565C0" />
+          <ProgressBar value={hydroData.waterLevel} color="#1565C0" />
         </div>
       </div>
     ),

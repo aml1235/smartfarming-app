@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { API_URL } from '../constants'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Sector, SectorId } from '../types'
 import { generateTempData } from '../constants'
@@ -185,6 +186,31 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
 export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () => void }) {
   const [pump, setPump] = useState(true)
   const [auto, setAuto] = useState(true)
+  
+  const [hydroData, setHydroData] = useState({ waterLevel: 0, ec: 0, flow: '-' })
+
+  useEffect(() => {
+    if (sector.id === 'hidroponik' || sector.id === 'hidroponik_1') {
+      const fetchData = async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/sensors/supabase/SEC-010`)
+          if (res.ok) {
+            const data = await res.json()
+            setHydroData({
+              waterLevel: data.waterLevel || 0,
+              ec: data.humidity || 0, // dummy mapping for EC
+              flow: data.pumpStatus === 'ON' ? 'Lancar' : 'Berhenti',
+            })
+          }
+        } catch (e) {
+          console.error(e)
+        }
+      }
+      fetchData()
+      const interval = setInterval(fetchData, 10000)
+      return () => clearInterval(interval)
+    }
+  }, [sector.id])
 
   const configs: Record<SectorId, { metrics: { label: string; value: string; color: string }[]; ctrl1: string; ctrl2: string }> = {
     kandang: { metrics: [], ctrl1: '', ctrl2: '' },
@@ -199,10 +225,10 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
     },
     hidroponik: {
       metrics: [
-        { label: 'Level Nutrisi', value: '0%', color: '#2E7D32' },
-        { label: 'Aliran Air', value: '-', color: '#2E7D32' },
-        { label: 'EC Larutan', value: '0 mS/cm', color: 'var(--text-secondary)' },
-        { label: 'Level Tangki', value: '0%', color: '#1565C0' },
+        { label: 'Level Nutrisi', value: `${hydroData.waterLevel}%`, color: '#2E7D32' },
+        { label: 'Aliran Air', value: hydroData.flow, color: '#2E7D32' },
+        { label: 'EC Larutan', value: `${hydroData.ec} mS/cm`, color: 'var(--text-secondary)' },
+        { label: 'Level Tangki', value: `${hydroData.waterLevel}%`, color: '#1565C0' },
       ],
       ctrl1: 'Pompa Sirkulasi', ctrl2: 'Pengatur Nutrisi',
     },
