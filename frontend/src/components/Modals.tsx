@@ -190,7 +190,7 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
   const [hydroData, setHydroData] = useState({ waterLevel: 0, temp: 0, light: 0, pumpStatus: 'OFF' })
 
   useEffect(() => {
-    if (sector.id === 'hidroponik' || sector.id === 'hidroponik_1') {
+    if (sector.id === 'hidroponik') {
       const fetchData = async () => {
         try {
           const res = await fetch(`${API_URL}/api/sensors/supabase/SEC-010`)
