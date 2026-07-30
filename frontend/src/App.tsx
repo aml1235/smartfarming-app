@@ -391,7 +391,7 @@ export default function App() {
                   { label: 'Uptime Sistem', value: '99.4%', sub: 'Stabil', color: '#059669', bg: '#dcfce7' },
                 ].map(s => (
                   <div key={s.label} className="card" style={{ padding: '18px 20px', display: 'flex', gap: 14, alignItems: 'center' }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ minWidth: 44, padding: '0 10px', height: 44, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       <span style={{ fontWeight: 800, fontSize: 16, color: s.color }}>{s.value}</span>
                     </div>
                     <div>
