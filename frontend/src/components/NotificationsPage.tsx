@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { AppNotification } from '../types'
 import { IcCheck, IcBell } from './Icons'
 
@@ -12,10 +12,10 @@ type FilterType = 'all' | 'alert' | 'warning' | 'success' | 'info'
 
 const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
   { value: 'all', label: 'Semua' },
-  { value: 'alert', label: '🔴 Alert' },
-  { value: 'warning', label: '🟡 Peringatan' },
-  { value: 'success', label: '🟢 Sukses' },
-  { value: 'info', label: '🔵 Info' },
+  { value: 'alert', label: 'ðŸ”´ Alert' },
+  { value: 'warning', label: 'ðŸŸ¡ Peringatan' },
+  { value: 'success', label: 'ðŸŸ¢ Sukses' },
+  { value: 'info', label: 'ðŸ”µ Info' },
 ]
 
 export function NotificationsPage({ notifications, onMarkRead, onMarkAllRead }: NotificationsPageProps) {
@@ -87,3 +87,4 @@ export function NotificationsPage({ notifications, onMarkRead, onMarkAllRead }: 
     </div>
   )
 }
+

@@ -1,3 +1,4 @@
+﻿import { API_URL } from './constants'
 import { useState } from 'react'
 import { Sector, SectorId } from '../types'
 import { generateTempData } from '../constants'
@@ -16,55 +17,55 @@ const SECTOR_DATA: Record<SectorId, {
 }> = {
   kandang: {
     metrics: [
-      { label: 'Suhu', value: '28.4°C', color: '#E65100', icon: '🌡️' },
-      { label: 'Kelembapan', value: '65%', color: '#1565C0', icon: '💧' },
-      { label: 'Populasi Aktif', value: '1.240', color: '#E65100', icon: '🐓' },
-      { label: 'Level Pakan', value: '58%', color: '#795548', icon: '🌾' },
-      { label: 'Air Minum', value: '72%', color: '#1565C0', icon: '💧' },
+      { label: 'Suhu', value: '28.4Â°C', color: '#E65100', icon: 'ðŸŒ¡ï¸' },
+      { label: 'Kelembapan', value: '65%', color: '#1565C0', icon: 'ðŸ’§' },
+      { label: 'Populasi Aktif', value: '1.240', color: '#E65100', icon: 'ðŸ“' },
+      { label: 'Level Pakan', value: '58%', color: '#795548', icon: 'ðŸŒ¾' },
+      { label: 'Air Minum', value: '72%', color: '#1565C0', icon: 'ðŸ’§' },
     ],
     controls: [
-      { label: 'Pemberian Pakan Otomatis', desc: 'Jadwal waktu pakan', icon: '🌾', hasTimeSetting: true },
-      { label: 'Pompa Air Minum', desc: 'Pengisian otomatis', icon: '💧', hasTimeSetting: false },
-      { label: 'Lampu Kandang', desc: 'Pencahayaan kandang', icon: '💡', hasTimeSetting: false },
+      { label: 'Pemberian Pakan Otomatis', desc: 'Jadwal waktu pakan', icon: 'ðŸŒ¾', hasTimeSetting: true },
+      { label: 'Pompa Air Minum', desc: 'Pengisian otomatis', icon: 'ðŸ’§', hasTimeSetting: false },
+      { label: 'Lampu Kandang', desc: 'Pencahayaan kandang', icon: 'ðŸ’¡', hasTimeSetting: false },
     ],
   },
   kolam: {
     metrics: [
-      { label: 'pH Air', value: '7.2', color: '#1565C0', icon: '🧪' },
-      { label: 'Suhu Air', value: '26°C', color: '#E65100', icon: '🌡️' },
-      { label: 'Kekeruhan', value: 'Normal', color: '#059669', icon: '💧' },
-      { label: 'Oksigen Terlarut', value: '7.8 mg/L', color: '#059669', icon: '🫧' },
-      { label: 'Populasi Ikan', value: '850', color: '#1565C0', icon: '🐟' },
-      { label: 'Volume Air', value: '92%', color: '#1565C0', icon: '🌊' },
+      { label: 'pH Air', value: '7.2', color: '#1565C0', icon: 'ðŸ§ª' },
+      { label: 'Suhu Air', value: '26Â°C', color: '#E65100', icon: 'ðŸŒ¡ï¸' },
+      { label: 'Kekeruhan', value: 'Normal', color: '#059669', icon: 'ðŸ’§' },
+      { label: 'Oksigen Terlarut', value: '7.8 mg/L', color: '#059669', icon: 'ðŸ«§' },
+      { label: 'Populasi Ikan', value: '850', color: '#1565C0', icon: 'ðŸŸ' },
+      { label: 'Volume Air', value: '92%', color: '#1565C0', icon: 'ðŸŒŠ' },
     ],
     controls: [
-      { label: 'Aerator Kolam', desc: 'Sirkulasi oksigen', icon: '🫧' },
-      { label: 'Pompa Sirkulasi', desc: 'Filter air otomatis', icon: '🔄' },
-      { label: 'Pemberian Pakan', desc: 'Jadwal 07:00 & 16:00', icon: '🐟' },
+      { label: 'Aerator Kolam', desc: 'Sirkulasi oksigen', icon: 'ðŸ«§' },
+      { label: 'Pompa Sirkulasi', desc: 'Filter air otomatis', icon: 'ðŸ”„' },
+      { label: 'Pemberian Pakan', desc: 'Jadwal 07:00 & 16:00', icon: 'ðŸŸ' },
     ],
   },
   hidroponik: {
     metrics: [
-      { label: 'Level Air', value: '85%', color: '#1565C0', icon: '🌊' },
-      { label: 'Suhu Lingkungan', value: '27°C', color: '#E65100', icon: '🌡️' },
+      { label: 'Level Air', value: '85%', color: '#1565C0', icon: 'ðŸŒŠ' },
+      { label: 'Suhu Lingkungan', value: '27Â°C', color: '#E65100', icon: 'ðŸŒ¡ï¸' },
     ],
     controls: [
-      { label: 'Pompa Air', desc: 'Aliran sirkulasi', icon: '🔄', hasTimeSetting: false },
+      { label: 'Pompa Air', desc: 'Aliran sirkulasi', icon: 'ðŸ”„', hasTimeSetting: false },
     ],
   },
   irigasi: {
     metrics: [
-      { label: 'Kelembapan Tanah', value: '45%', color: '#E65100', icon: '🌱' },
-      { label: 'Status', value: 'Kering', color: '#C62828', icon: '⚠️' },
-      { label: 'Lahan Total', value: '2.5 Ha', color: 'var(--text-primary)', icon: '🏞️' },
-      { label: 'Terakhir Irigasi', value: '8 jam lalu', color: '#6B7280', icon: '🕐' },
-      { label: 'Volume Air', value: '68%', color: '#1565C0', icon: '💧' },
-      { label: 'Suhu Tanah', value: '29°C', color: '#795548', icon: '🌡️' },
+      { label: 'Kelembapan Tanah', value: '45%', color: '#E65100', icon: 'ðŸŒ±' },
+      { label: 'Status', value: 'Kering', color: '#C62828', icon: 'âš ï¸' },
+      { label: 'Lahan Total', value: '2.5 Ha', color: 'var(--text-primary)', icon: 'ðŸžï¸' },
+      { label: 'Terakhir Irigasi', value: '8 jam lalu', color: '#6B7280', icon: 'ðŸ•' },
+      { label: 'Volume Air', value: '68%', color: '#1565C0', icon: 'ðŸ’§' },
+      { label: 'Suhu Tanah', value: '29Â°C', color: '#795548', icon: 'ðŸŒ¡ï¸' },
     ],
     controls: [
-      { label: 'Sprinkler Otomatis', desc: 'Irigasi area utama', icon: '🌧️' },
-      { label: 'Irigasi Tetes', desc: 'Area tanaman sensitif', icon: '💧' },
-      { label: 'Sensor Kelembapan', desc: 'Monitoring tanah', icon: '📡' },
+      { label: 'Sprinkler Otomatis', desc: 'Irigasi area utama', icon: 'ðŸŒ§ï¸' },
+      { label: 'Irigasi Tetes', desc: 'Area tanaman sensitif', icon: 'ðŸ’§' },
+      { label: 'Sensor Kelembapan', desc: 'Monitoring tanah', icon: 'ðŸ“¡' },
     ],
   },
 }
@@ -85,7 +86,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
     setShowAiModal(true)
     setAiLoading(true)
     try {
-      const res = await fetch(`http://127.0.0.1:8000/api/sectors/${sector.id}/evaluate`)
+      const res = await fetch(`/api/sectors/${sector.id}/evaluate`)
       const evalData = await res.json()
       setAiResult(evalData)
     } catch (e) {
@@ -104,7 +105,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
     if (loggedInUser) {
       const actionStr = newState ? 'mengaktifkan' : 'mematikan';
       const targetStr = `${data.controls[idx].label} (${sector.name})`;
-      fetch('http://127.0.0.1:8000/api/activities', {
+      fetch(`${API_URL}/api/activities`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -119,7 +120,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
   if (isDevelopment) {
     return (
       <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', textAlign: 'center' }}>
-        <div style={{ fontSize: 64, marginBottom: 16 }}>🚧</div>
+        <div style={{ fontSize: 64, marginBottom: 16 }}>ðŸš§</div>
         <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>Dalam Pengembangan Saja Dulu</h2>
         <p style={{ color: 'var(--text-secondary)', maxWidth: 400 }}>Saat ini kami terfokus ke sistem Hidroponik dan Kandang Ayam. Fitur untuk {sector.name} akan hadir di pembaruan selanjutnya.</p>
       </div>
@@ -134,11 +135,11 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
         </div>
         <div>
           <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{sector.name}</h2>
-          <p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{sector.unit} — Monitoring Real-time</p>
+          <p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{sector.unit} â€” Monitoring Real-time</p>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
           <button className="btn" onClick={handleAiEvaluate} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)' }}>
-            ✨ Analisis AI
+            âœ¨ Analisis AI
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setLastRefresh(new Date())}>
             <IcRefresh size={13} /> Perbarui
@@ -166,9 +167,9 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Grafik Suhu Harian</div>
-              <div style={{ fontSize: 13, color: 'var(--text-primary)', marginTop: 2 }}>Data hari ini — diperbarui setiap menit</div>
+              <div style={{ fontSize: 13, color: 'var(--text-primary)', marginTop: 2 }}>Data hari ini â€” diperbarui setiap menit</div>
             </div>
-            <div className="badge badge-amber"><IcActivity size={11} /> Batas: 35°C</div>
+            <div className="badge badge-amber"><IcActivity size={11} /> Batas: 35Â°C</div>
           </div>
           <ResponsiveContainer width="100%" height={180}>
             <AreaChart data={tempData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
@@ -198,7 +199,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{ctrl.label}</div>
                     <div style={{ fontSize: 12, color: controls[idx] ? '#10b981' : 'var(--text-secondary)', marginTop: 1 }}>
-                      {controls[idx] ? `Aktif — ${ctrl.desc}` : 'Nonaktif'}
+                      {controls[idx] ? `Aktif â€” ${ctrl.desc}` : 'Nonaktif'}
                     </div>
                     {ctrl.hasTimeSetting && controls[idx] && (
                       <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -241,7 +242,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
               <IcX size={20} />
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20 }}>✨</div>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20 }}>âœ¨</div>
               <div>
                 <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>Agen Analisis Pintar</h3>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Mengevaluasi {sector.name}</div>
@@ -281,3 +282,4 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
     </div>
   )
 }
+

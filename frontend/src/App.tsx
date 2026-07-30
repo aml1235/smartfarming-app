@@ -1,3 +1,4 @@
+﻿import { API_URL } from './constants'
 import { useState, useEffect, useCallback } from 'react'
 import { Sector, SectorId, PageId, AppView, User, AppNotification } from './types'
 import { SECTORS } from './constants'
@@ -25,7 +26,7 @@ export default function App() {
   const [notifications, setNotifications] = useState<AppNotification[]>([])
   
   const fetchNotifications = () => {
-    fetch('http://127.0.0.1:8000/api/notifications')
+    fetch(`${API_URL}/api/notifications`)
       .then(res => res.json())
       .then(data => {
         // Map backend model to AppNotification interface
@@ -47,7 +48,7 @@ export default function App() {
     
     // Check auth first
     if (token) {
-      fetch('http://127.0.0.1:8000/api/user', {
+      fetch(`${API_URL}/api/user`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       .then(res => {
@@ -73,7 +74,7 @@ export default function App() {
     }
 
     const fetchSectors = () => {
-      fetch('http://127.0.0.1:8000/api/sectors')
+      fetch(`${API_URL}/api/sectors`)
         .then(res => res.json())
         .then(data => {
           if (data && Array.isArray(data)) {
@@ -94,7 +95,7 @@ export default function App() {
     const fetchUserData = () => {
       const t = localStorage.getItem('token');
       if (!t) return;
-      fetch('http://127.0.0.1:8000/api/user', {
+      fetch(`${API_URL}/api/user`, {
         headers: { 'Authorization': `Bearer ${t}` }
       })
       .then(res => res.json())
@@ -121,7 +122,7 @@ export default function App() {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    fetch('http://127.0.0.1:8000/api/users', { headers })
+    fetch(`${API_URL}/api/users`, { headers })
       .then(res => res.json())
       .then(data => {
         if (data && data.length > 0) setUsers(data);
@@ -190,13 +191,13 @@ export default function App() {
   }
 
   const handleMarkRead = (id: string) => {
-    fetch(`http://127.0.0.1:8000/api/notifications/${id}/read`, { method: 'PUT' })
+    fetch(`/api/notifications/${id}/read`, { method: 'PUT' })
       .then(() => fetchNotifications())
       .catch(err => console.error(err));
   }
 
   const handleMarkAllRead = () => {
-    fetch('http://127.0.0.1:8000/api/notifications/read-all', { method: 'PUT' })
+    fetch(`${API_URL}/api/notifications/read-all`, { method: 'PUT' })
       .then(() => fetchNotifications())
       .catch(err => console.error(err));
   }
@@ -364,7 +365,7 @@ export default function App() {
             />
           ) : ['kolam', 'irigasi'].includes(page) ? (
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🚧</div>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>ðŸš§</div>
               <h2 style={{ color: 'var(--text-primary)', marginBottom: 8 }}>Dalam Pengembangan</h2>
               <p>Fitur {page === 'kolam' ? 'Kolam Ikan' : 'Irigasi Tanah'} sedang dalam tahap pengembangan.</p>
             </div>
@@ -374,7 +375,7 @@ export default function App() {
               <SectorDashboard sector={sectors.find(s => s.id === page)!} loggedInUser={loggedInUser} />
             ) : (
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>🌱</div>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>ðŸŒ±</div>
                 <h2 style={{ color: 'var(--text-primary)', marginBottom: 8 }}>Belum Dikonfigurasi</h2>
                 <p>Data untuk sektor ini belum ditambahkan ke database.</p>
               </div>

@@ -1,3 +1,4 @@
+﻿import { API_URL } from './constants'
 import React, { useState, useEffect } from 'react';
 import { IcLeaf, IcArrowLeft, IcEye, IcEyeOff } from './Icons';
 
@@ -46,7 +47,7 @@ export function LoginPage({ onLogin, onBack, darkMode, setDarkMode }: LoginPageP
     setIsLoading(true);
     setMessage('');
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/login', {
+      const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +79,7 @@ export function LoginPage({ onLogin, onBack, darkMode, setDarkMode }: LoginPageP
     setIsLoading(true);
     setMessage('');
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/forgot-password', {
+      const response = await fetch(`${API_URL}/api/forgot-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -114,7 +115,7 @@ export function LoginPage({ onLogin, onBack, darkMode, setDarkMode }: LoginPageP
     setMessage('');
     try {
       const params = new URLSearchParams(window.location.search);
-      const response = await fetch('http://127.0.0.1:8000/api/reset-password', {
+      const response = await fetch(`${API_URL}/api/reset-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -186,7 +187,7 @@ export function LoginPage({ onLogin, onBack, darkMode, setDarkMode }: LoginPageP
               <div style={{ position: 'relative' }}>
                 <input 
                   type={showPassword ? 'text' : 'password'} 
-                  placeholder="••••••••"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -270,3 +271,4 @@ export function LoginPage({ onLogin, onBack, darkMode, setDarkMode }: LoginPageP
     </div>
   );
 }
+

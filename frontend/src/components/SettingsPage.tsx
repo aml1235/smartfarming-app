@@ -1,3 +1,4 @@
+﻿import { API_URL } from './constants'
 import React, { useState, useEffect } from 'react'
 import { IcChevronRight, IcEye, IcEyeOff } from './Icons'
 
@@ -65,7 +66,7 @@ export function SettingsPage({ darkMode, setDarkMode, user, onUpdateUser }: Sett
   }
 
   const logActivity = (action: string) => {
-    fetch('http://127.0.0.1:8000/api/activities', {
+    fetch(`${API_URL}/api/activities`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -82,7 +83,7 @@ export function SettingsPage({ darkMode, setDarkMode, user, onUpdateUser }: Sett
     setProfileMsg('');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://127.0.0.1:8000/api/user/profile', {
+      const res = await fetch(`${API_URL}/api/user/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -120,7 +121,7 @@ export function SettingsPage({ darkMode, setDarkMode, user, onUpdateUser }: Sett
     setPasswordMsg('');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch('http://127.0.0.1:8000/api/user/password', {
+      const res = await fetch(`${API_URL}/api/user/password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -232,3 +233,4 @@ export function SettingsPage({ darkMode, setDarkMode, user, onUpdateUser }: Sett
     </div>
   )
 }
+

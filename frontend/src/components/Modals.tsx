@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Sector, SectorId } from '../types'
 import { generateTempData } from '../constants'
@@ -10,10 +10,10 @@ export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd:
   const [type, setType] = useState('kandang')
 
   const types = [
-    { value: 'kandang', label: 'Kandang Ayam', icon: '🐓' },
-    { value: 'kolam', label: 'Kolam Ikan', icon: '🐟' },
-    { value: 'hidroponik', label: 'Hidroponik', icon: '🌿' },
-    { value: 'irigasi', label: 'Irigasi Tanah', icon: '🌱' },
+    { value: 'kandang', label: 'Kandang Ayam', icon: 'ðŸ“' },
+    { value: 'kolam', label: 'Kolam Ikan', icon: 'ðŸŸ' },
+    { value: 'hidroponik', label: 'Hidroponik', icon: 'ðŸŒ¿' },
+    { value: 'irigasi', label: 'Irigasi Tanah', icon: 'ðŸŒ±' },
   ]
 
   return (
@@ -77,7 +77,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
             <div style={{ width: 36, height: 36, borderRadius: 10, background: sector.colorLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{sector.icon}</div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>{sector.name}</div>
-              <div style={{ fontSize: 12, color: '#6B7280' }}>Detail Monitoring — Sektor A</div>
+              <div style={{ fontSize: 12, color: '#6B7280' }}>Detail Monitoring â€” Sektor A</div>
             </div>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -99,18 +99,18 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <StatCard label="Kelembapan" value="65%" sub="Kondisi baik" icon={<IcDroplets size={16} />} color="#1565C0" bg="#e3f0ff" />
-                <StatCard label="Populasi Aktif" value="1.240" sub="Ekor hidup" icon={<span style={{ fontSize: 14 }}>🐓</span>} color="#E65100" bg="#fff3e0" />
-                <StatCard label="Level Pakan" value={`${feedLevel}%`} sub="Perlu isi ulang" icon={<span style={{ fontSize: 14 }}>🌾</span>} color="#795548" bg="#f9f5f3" />
-                <StatCard label="Suhu Luar" value="31°C" sub="Cuaca panas" icon={<IcThermometer size={16} />} color="#C62828" bg="#ffebee" />
+                <StatCard label="Populasi Aktif" value="1.240" sub="Ekor hidup" icon={<span style={{ fontSize: 14 }}>ðŸ“</span>} color="#E65100" bg="#fff3e0" />
+                <StatCard label="Level Pakan" value={`${feedLevel}%`} sub="Perlu isi ulang" icon={<span style={{ fontSize: 14 }}>ðŸŒ¾</span>} color="#795548" bg="#f9f5f3" />
+                <StatCard label="Suhu Luar" value="31Â°C" sub="Cuaca panas" icon={<IcThermometer size={16} />} color="#C62828" bg="#ffebee" />
               </div>
 
               <div className="card" style={{ padding: 14 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>Panel Kontrol</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {[
-                    { label: 'Kontrol Pemberian Pakan Otomatis', desc: feedAuto ? 'Aktif — jadwal 06:00 & 17:00' : 'Nonaktif — mode manual', val: feedAuto, set: setFeedAuto, icon: '🌾' },
-                    { label: 'Monitor Air Minum Otomatis', desc: drinkAuto ? 'Aktif — pengisian otomatis' : 'Nonaktif — mode manual', val: drinkAuto, set: setDrinkAuto, icon: '💧' },
-                    { label: 'Kipas Exhaust', desc: fanOn ? 'Menyala — ventilasi aktif' : 'Mati', val: fanOn, set: setFanOn, icon: '🌬️' },
+                    { label: 'Kontrol Pemberian Pakan Otomatis', desc: feedAuto ? 'Aktif â€” jadwal 06:00 & 17:00' : 'Nonaktif â€” mode manual', val: feedAuto, set: setFeedAuto, icon: 'ðŸŒ¾' },
+                    { label: 'Monitor Air Minum Otomatis', desc: drinkAuto ? 'Aktif â€” pengisian otomatis' : 'Nonaktif â€” mode manual', val: drinkAuto, set: setDrinkAuto, icon: 'ðŸ’§' },
+                    { label: 'Kipas Exhaust', desc: fanOn ? 'Menyala â€” ventilasi aktif' : 'Mati', val: fanOn, set: setFanOn, icon: 'ðŸŒ¬ï¸' },
                   ].map(ctrl => (
                     <div key={ctrl.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -132,9 +132,9 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Grafik Suhu Harian</div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>Data hari ini — diperbarui setiap menit</div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>Data hari ini â€” diperbarui setiap menit</div>
               </div>
-              <div className="badge badge-amber"><IcActivity size={11} /> Batas atas: 35°C</div>
+              <div className="badge badge-amber"><IcActivity size={11} /> Batas atas: 35Â°C</div>
             </div>
             <ResponsiveContainer width="100%" height={160}>
               <AreaChart data={tempData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
@@ -167,7 +167,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
               <div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, marginBottom: 4 }}>Kualitas Air</div>
                 <div className="badge badge-green" style={{ marginBottom: 4 }}><IcCheck /> Layak Minum</div>
-                <div style={{ fontSize: 11, color: '#6B7280' }}>TDS: 240 ppm • pH: 7.1</div>
+                <div style={{ fontSize: 11, color: '#6B7280' }}>TDS: 240 ppm â€¢ pH: 7.1</div>
               </div>
               <div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, marginBottom: 4 }}>Konsumsi Hari Ini</div>
@@ -191,7 +191,7 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
     kolam: {
       metrics: [
         { label: 'pH Air', value: '7.2', color: '#1565C0' },
-        { label: 'Suhu Air', value: '26°C', color: '#E65100' },
+        { label: 'Suhu Air', value: '26Â°C', color: '#E65100' },
         { label: 'Kekeruhan', value: 'Normal', color: '#2E7D32' },
         { label: 'Oksigen Terlarut', value: '7.8 mg/L', color: '#2E7D32' },
       ],
@@ -237,7 +237,7 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
         <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16, maxHeight: 'calc(85vh - 70px)', overflowY: 'auto' }}>
           {(sector.id === 'kolam' || sector.id === 'irigasi') ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', textAlign: 'center', background: 'var(--bg-base)', borderRadius: 12, border: '1px dashed var(--border-color)' }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🚧</div>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>ðŸš§</div>
               <h3 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 8px 0' }}>Dalam Pengembangan</h3>
               <p style={{ color: 'var(--text-secondary)', fontSize: 14, margin: 0, maxWidth: 300 }}>Sistem monitoring untuk {sector.name} sedang dikembangkan dan akan segera hadir.</p>
             </div>

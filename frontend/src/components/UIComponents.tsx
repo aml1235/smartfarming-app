@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 
 export function Toggle({ isOn, onChange, label }: { isOn: boolean; onChange: (v: boolean) => void; label?: string }) {
   return (
@@ -40,10 +40,10 @@ export function TempGauge({ value, min = 0, max = 50 }: { value: number; min?: n
         <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke={color} strokeWidth="10" strokeLinecap="round" strokeDasharray={arcLen} strokeDashoffset={dashOffset} className="gauge-arc" />
         <line x1={cx} y1={cy} x2={needleX} y2={needleY} stroke={color} strokeWidth="2.5" strokeLinecap="round" />
         <circle cx={cx} cy={cy} r="4" fill={color} />
-        <text x={cx - r - 4} y={cy + 16} textAnchor="middle" fontSize="10" fill="#9CA3AF">{min}°</text>
-        <text x={cx + r + 4} y={cy + 16} textAnchor="middle" fontSize="10" fill="#9CA3AF">{max}°</text>
+        <text x={cx - r - 4} y={cy + 16} textAnchor="middle" fontSize="10" fill="#9CA3AF">{min}Â°</text>
+        <text x={cx + r + 4} y={cy + 16} textAnchor="middle" fontSize="10" fill="#9CA3AF">{max}Â°</text>
       </svg>
-      <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 28, fontWeight: 700, color, lineHeight: 1 }}>{value}°C</div>
+      <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 28, fontWeight: 700, color, lineHeight: 1 }}>{value}Â°C</div>
       <div style={{ fontSize: 12, color: '#6B7280' }}>Suhu Kandang</div>
     </div>
   )
@@ -69,7 +69,7 @@ export function ChartTooltip({ active, payload, label }: { active?: boolean; pay
   return (
     <div style={{ background: 'var(--bg-surface)', border: '1px solid #e4e7ec', borderRadius: 8, padding: '8px 12px', fontSize: 13, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
       <div style={{ fontWeight: 600, marginBottom: 2, color: 'var(--text-secondary)' }}>{label}</div>
-      <div style={{ color: '#E65100' }}>Suhu: <strong>{payload[0]?.value.toFixed(1)}°C</strong></div>
+      <div style={{ color: '#E65100' }}>Suhu: <strong>{payload[0]?.value.toFixed(1)}Â°C</strong></div>
     </div>
   )
 }

@@ -1,3 +1,4 @@
+﻿import { API_URL } from './constants'
 import React, { useState, useCallback, useEffect } from 'react';
 import { Sector, SectorId, User, AdminTab, ActivityLog } from '../types';
 import { SECTORS, STATUS_MAP } from '../constants';
@@ -26,7 +27,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
   const [activities, setActivities] = useState<any[]>([]);
 
   const fetchActivities = useCallback(() => {
-    fetch('http://127.0.0.1:8000/api/activities')
+    fetch(`${API_URL}/api/activities`)
       .then(res => res.json())
       .then(data => setActivities(data))
       .catch(err => console.error('Gagal memuat aktivitas', err));
@@ -54,7 +55,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        const res = await fetch('http://127.0.0.1:8000/api/users', {
+        const res = await fetch(`${API_URL}/api/users`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -69,7 +70,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
   }, [onUpdateUsers]);
 
   const addActivity = useCallback((action: string, target: string) => {
-    fetch('http://127.0.0.1:8000/api/activities', {
+    fetch(`${API_URL}/api/activities`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -110,7 +111,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
       : [...user.assignedSectors, sectorId];
     
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/users/${userId}`, {
+      const response = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -137,7 +138,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
     if (editUserId) {
       try {
         const token = localStorage.getItem('token') || '';
-        const response = await fetch(`http://127.0.0.1:8000/api/users/${editUserId}`, {
+        const response = await fetch(`/api/users/${editUserId}`, {
           method: 'PUT',
           headers: { 
             'Content-Type': 'application/json',
@@ -157,7 +158,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
     } else {
       try {
         const token = localStorage.getItem('token') || '';
-        const response = await fetch('http://127.0.0.1:8000/api/users', {
+        const response = await fetch(`${API_URL}/api/users`, {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -186,7 +187,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
     if (userToDelete) {
       try {
         const token = localStorage.getItem('token') || '';
-        const response = await fetch(`http://127.0.0.1:8000/api/users/${userToDelete}`, {
+        const response = await fetch(`/api/users/${userToDelete}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -398,7 +399,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
                 <div>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Password {editUserId && '(Kosongkan jika tidak diubah)'}</label>
                   <div style={{ position: 'relative' }}>
-                    <input type={showNewUserPassword ? "text" : "password"} value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} style={{ width: '100%', padding: '10px 12px', paddingRight: '40px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} placeholder="••••••••" required={!editUserId} minLength={6} />
+                    <input type={showNewUserPassword ? "text" : "password"} value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} style={{ width: '100%', padding: '10px 12px', paddingRight: '40px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" required={!editUserId} minLength={6} />
                     <button type="button" onClick={() => setShowNewUserPassword(!showNewUserPassword)} style={{ position: 'absolute', right: 12, top: 12, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                       {showNewUserPassword ? <IcEyeOff size={18} /> : <IcEye size={18} />}
                     </button>
@@ -598,3 +599,4 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
     </div>
   );
 }
+
