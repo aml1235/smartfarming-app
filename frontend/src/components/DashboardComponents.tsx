@@ -11,11 +11,11 @@ export function OverviewMetrics({ id }: { id: SectorId }) {
         <div style={{ display: 'flex', gap: 8 }}>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Suhu</div>
-            <div className="metric-box-val" style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>28.4°C</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>28.4°C</div>
           </div>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Kelembapan</div>
-            <div className="metric-box-val" style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>65%</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>65%</div>
           </div>
         </div>
         <div>
@@ -42,11 +42,11 @@ export function OverviewMetrics({ id }: { id: SectorId }) {
         <div style={{ display: 'flex', gap: 8 }}>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Level Air</div>
-            <div className="metric-box-val" style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>85%</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>85%</div>
           </div>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Suhu Air</div>
-            <div className="metric-box-val" style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>27°C</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>27°C</div>
           </div>
         </div>
         <div>

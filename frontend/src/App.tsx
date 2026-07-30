@@ -313,7 +313,7 @@ export default function App() {
           </div>
 
           <div className="header-actions">
-            <div className="date-time-wrapper" style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: 'var(--text-secondary)', display: 'flex', gap: 4, alignItems: 'center' }}>
+            <div className="date-time-wrapper" style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'flex', gap: 4, alignItems: 'center' }}>
               <span>{clock.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</span>
               <span style={{ color: 'var(--border-color)' }}>|</span>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{clock.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -392,7 +392,7 @@ export default function App() {
                 ].map(s => (
                   <div key={s.label} className="card" style={{ padding: '18px 20px', display: 'flex', gap: 14, alignItems: 'center' }}>
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <span style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, fontSize: 16, color: s.color }}>{s.value}</span>
+                      <span style={{ fontWeight: 800, fontSize: 16, color: s.color }}>{s.value}</span>
                     </div>
                     <div>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{s.label}</div>

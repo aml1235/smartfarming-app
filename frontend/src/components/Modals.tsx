@@ -159,7 +159,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>Level Tangki</span>
-                  <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, fontWeight: 700, color: '#1565C0' }}>{waterLevel}%</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#1565C0' }}>{waterLevel}%</span>
                 </div>
                 <ProgressBar value={waterLevel} color="#1565C0" />
                 <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>Kapasitas: 500L</div>
@@ -171,7 +171,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
               </div>
               <div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, marginBottom: 4 }}>Konsumsi Hari Ini</div>
-                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>148 L</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>148 L</div>
                 <div style={{ fontSize: 11, color: '#6B7280' }}>Rata-rata: ~0.12L/ekor</div>
               </div>
             </div>
@@ -247,7 +247,7 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
             {cfg.metrics.map(m => (
               <div key={m.label} className="card" style={{ padding: '16px 20px' }}>
                 <div style={{ fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600, marginBottom: 4 }}>{m.label}</div>
-                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: 24, color: m.color }}>{m.value}</div>
+                <div style={{ fontWeight: 700, fontSize: 24, color: m.color }}>{m.value}</div>
               </div>
             ))}
           </div>

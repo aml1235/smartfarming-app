@@ -43,7 +43,7 @@ export function TempGauge({ value, min = 0, max = 50 }: { value: number; min?: n
         <text x={cx - r - 4} y={cy + 16} textAnchor="middle" fontSize="10" fill="#9CA3AF">{min}°</text>
         <text x={cx + r + 4} y={cy + 16} textAnchor="middle" fontSize="10" fill="#9CA3AF">{max}°</text>
       </svg>
-      <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 28, fontWeight: 700, color, lineHeight: 1 }}>{value}°C</div>
+      <div style={{ fontSize: 28, fontWeight: 700, color, lineHeight: 1 }}>{value}°C</div>
       <div style={{ fontSize: 12, color: '#6B7280' }}>Suhu Kandang</div>
     </div>
   )
@@ -57,7 +57,7 @@ export function StatCard({ label, value, sub, icon, color = '#2E7D32', bg = '#dc
       </div>
       <div>
         <div style={{ fontSize: 11, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>{label}</div>
-        <div style={{ fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, fontSize: 16, color: 'var(--text-primary)', marginTop: 1 }}>{value}</div>
+        <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)', marginTop: 1 }}>{value}</div>
         {sub && <div style={{ fontSize: 11, color: '#6B7280', marginTop: 1 }}>{sub}</div>}
       </div>
     </div>

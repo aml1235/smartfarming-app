@@ -564,7 +564,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
           </div>
 
           <div className="header-actions">
-            <div className="date-time-wrapper" style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 13, color: 'var(--text-secondary)', display: 'flex', gap: 4, alignItems: 'center' }}>
+            <div className="date-time-wrapper" style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'flex', gap: 4, alignItems: 'center' }}>
               <span>{new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</span>
               <span style={{ color: 'var(--border-color)' }}>|</span>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>

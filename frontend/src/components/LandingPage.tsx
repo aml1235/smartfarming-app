@@ -382,7 +382,7 @@ export function LandingPage({ onLogin, darkMode, setDarkMode }: LandingPageProps
         </div>
 
         <div style={{ width: '100%', maxWidth: '1000px', margin: '40px auto 0', paddingTop: '20px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', fontSize: '0.8rem', flexDirection: isMobile ? 'column' : 'row' }}>
-          <div>Â© 2026 Hak cipta dilindungi.</div>
+          <div>© 2026 Hak cipta dilindungi.</div>
           <div style={{ opacity: 0.5, fontStyle: 'italic' }}>Dikembangkan oleh Kadet Informatika Universitas Pertahanan RI</div>
         </div>
       </footer>

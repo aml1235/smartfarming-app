@@ -549,7 +549,7 @@ body {
   font-size: 32px;
   font-weight: 800;
   color: var(--text-primary);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
 }
 .hero-insights span {
   font-size: 13px;
@@ -780,7 +780,7 @@ body {
   padding: 4px 0;
 }
 .login-demo-item span:last-child {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
   font-size: 12px;
 }
@@ -939,7 +939,7 @@ body.dark .sidebar-status {
   box-shadow: 0 4px 20px rgba(0,0,0,0.06);
 }
 .admin-stat-value {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
   font-size: 28px;
   font-weight: 700;
   color: #0f172a;
@@ -1229,7 +1229,7 @@ body.dark .sidebar-status {
 .settings-value {
   font-size: 14px;
   color: var(--text-secondary);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: inherit; font-variant-numeric: tabular-nums;
 }
 
 /* --- SECTOR DASHBOARD --- */
