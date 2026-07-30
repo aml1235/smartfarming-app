@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Sector, SectorId } from '../types'
 import { generateTempData } from '../constants'
@@ -10,8 +10,8 @@ export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd:
   const [type, setType] = useState('kandang')
 
   const types = [
-    { value: 'kandang', label: 'Kandang Ayam', icon: 'ðŸ“' },
-    { value: 'kolam', label: 'Kolam Ikan', icon: 'ðŸŸ' },
+    { value: 'kandang', label: 'Kandang Ayam', icon: '🐓' },
+    { value: 'kolam', label: 'Kolam Ikan', icon: '🐟' },
     { value: 'hidroponik', label: 'Hidroponik', icon: '🌿' },
     { value: 'irigasi', label: 'Irigasi Tanah', icon: '🌱' },
   ]
@@ -99,7 +99,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <StatCard label="Kelembapan" value="65%" sub="Kondisi baik" icon={<IcDroplets size={16} />} color="#1565C0" bg="#e3f0ff" />
-                <StatCard label="Populasi Aktif" value="1.240" sub="Ekor hidup" icon={<span style={{ fontSize: 14 }}>ðŸ“</span>} color="#E65100" bg="#fff3e0" />
+                <StatCard label="Populasi Aktif" value="1.240" sub="Ekor hidup" icon={<span style={{ fontSize: 14 }}>🐓</span>} color="#E65100" bg="#fff3e0" />
                 <StatCard label="Level Pakan" value={`${feedLevel}%`} sub="Perlu isi ulang" icon={<span style={{ fontSize: 14 }}>🌾</span>} color="#795548" bg="#f9f5f3" />
                 <StatCard label="Suhu Luar" value="31°C" sub="Cuaca panas" icon={<IcThermometer size={16} />} color="#C62828" bg="#ffebee" />
               </div>
@@ -110,7 +110,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
                   {[
                     { label: 'Kontrol Pemberian Pakan Otomatis', desc: feedAuto ? 'Aktif — jadwal 06:00 & 17:00' : 'Nonaktif — mode manual', val: feedAuto, set: setFeedAuto, icon: '🌾' },
                     { label: 'Monitor Air Minum Otomatis', desc: drinkAuto ? 'Aktif — pengisian otomatis' : 'Nonaktif — mode manual', val: drinkAuto, set: setDrinkAuto, icon: '💧' },
-                    { label: 'Kipas Exhaust', desc: fanOn ? 'Menyala — ventilasi aktif' : 'Mati', val: fanOn, set: setFanOn, icon: 'ðŸŒ¬ï¸' },
+                    { label: 'Kipas Exhaust', desc: fanOn ? 'Menyala — ventilasi aktif' : 'Mati', val: fanOn, set: setFanOn, icon: '🌬️' },
                   ].map(ctrl => (
                     <div key={ctrl.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

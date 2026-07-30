@@ -1,4 +1,4 @@
-﻿import { API_URL } from './constants'
+import { API_URL } from './constants'
 import { useState, useEffect, useCallback } from 'react'
 import { Sector, SectorId, PageId, AppView, User, AppNotification } from './types'
 import { SECTORS } from './constants'
@@ -191,7 +191,7 @@ export default function App() {
   }
 
   const handleMarkRead = (id: string) => {
-    fetch(`/api/notifications/${id}/read`, { method: 'PUT' })
+    fetch(`${API_URL}/api/notifications/${id}/read`, { method: 'PUT' })
       .then(() => fetchNotifications())
       .catch(err => console.error(err));
   }

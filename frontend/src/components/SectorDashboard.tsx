@@ -1,4 +1,4 @@
-﻿import { API_URL } from '../constants'
+import { API_URL } from '../constants'
 import { useState } from 'react'
 import { Sector, SectorId } from '../types'
 import { generateTempData } from '../constants'
@@ -17,9 +17,9 @@ const SECTOR_DATA: Record<SectorId, {
 }> = {
   kandang: {
     metrics: [
-      { label: 'Suhu', value: '28.4°C', color: '#E65100', icon: 'ðŸŒ¡ï¸' },
+      { label: 'Suhu', value: '28.4°C', color: '#E65100', icon: '🌡️' },
       { label: 'Kelembapan', value: '65%', color: '#1565C0', icon: '💧' },
-      { label: 'Populasi Aktif', value: '1.240', color: '#E65100', icon: 'ðŸ“' },
+      { label: 'Populasi Aktif', value: '1.240', color: '#E65100', icon: '🐓' },
       { label: 'Level Pakan', value: '58%', color: '#795548', icon: '🌾' },
       { label: 'Air Minum', value: '72%', color: '#1565C0', icon: '💧' },
     ],
@@ -32,22 +32,22 @@ const SECTOR_DATA: Record<SectorId, {
   kolam: {
     metrics: [
       { label: 'pH Air', value: '7.2', color: '#1565C0', icon: '🧪' },
-      { label: 'Suhu Air', value: '26°C', color: '#E65100', icon: 'ðŸŒ¡ï¸' },
+      { label: 'Suhu Air', value: '26°C', color: '#E65100', icon: '🌡️' },
       { label: 'Kekeruhan', value: 'Normal', color: '#059669', icon: '💧' },
       { label: 'Oksigen Terlarut', value: '7.8 mg/L', color: '#059669', icon: '🫧' },
-      { label: 'Populasi Ikan', value: '850', color: '#1565C0', icon: 'ðŸŸ' },
+      { label: 'Populasi Ikan', value: '850', color: '#1565C0', icon: '🐟' },
       { label: 'Volume Air', value: '92%', color: '#1565C0', icon: '🌊' },
     ],
     controls: [
       { label: 'Aerator Kolam', desc: 'Sirkulasi oksigen', icon: '🫧' },
       { label: 'Pompa Sirkulasi', desc: 'Filter air otomatis', icon: '🔄' },
-      { label: 'Pemberian Pakan', desc: 'Jadwal 07:00 & 16:00', icon: 'ðŸŸ' },
+      { label: 'Pemberian Pakan', desc: 'Jadwal 07:00 & 16:00', icon: '🐟' },
     ],
   },
   hidroponik: {
     metrics: [
       { label: 'Level Air', value: '85%', color: '#1565C0', icon: '🌊' },
-      { label: 'Suhu Lingkungan', value: '27°C', color: '#E65100', icon: 'ðŸŒ¡ï¸' },
+      { label: 'Suhu Lingkungan', value: '27°C', color: '#E65100', icon: '🌡️' },
     ],
     controls: [
       { label: 'Pompa Air', desc: 'Aliran sirkulasi', icon: '🔄', hasTimeSetting: false },
@@ -56,14 +56,14 @@ const SECTOR_DATA: Record<SectorId, {
   irigasi: {
     metrics: [
       { label: 'Kelembapan Tanah', value: '45%', color: '#E65100', icon: '🌱' },
-      { label: 'Status', value: 'Kering', color: '#C62828', icon: 'âš ï¸' },
-      { label: 'Lahan Total', value: '2.5 Ha', color: 'var(--text-primary)', icon: 'ðŸžï¸' },
-      { label: 'Terakhir Irigasi', value: '8 jam lalu', color: '#6B7280', icon: 'ðŸ•' },
+      { label: 'Status', value: 'Kering', color: '#C62828', icon: '⚠️' },
+      { label: 'Lahan Total', value: '2.5 Ha', color: 'var(--text-primary)', icon: '🗺️' },
+      { label: 'Terakhir Irigasi', value: '8 jam lalu', color: '#6B7280', icon: '🕒' },
       { label: 'Volume Air', value: '68%', color: '#1565C0', icon: '💧' },
-      { label: 'Suhu Tanah', value: '29°C', color: '#795548', icon: 'ðŸŒ¡ï¸' },
+      { label: 'Suhu Tanah', value: '29°C', color: '#795548', icon: '🌡️' },
     ],
     controls: [
-      { label: 'Sprinkler Otomatis', desc: 'Irigasi area utama', icon: 'ðŸŒ§ï¸' },
+      { label: 'Sprinkler Otomatis', desc: 'Irigasi area utama', icon: '🌧️' },
       { label: 'Irigasi Tetes', desc: 'Area tanaman sensitif', icon: '💧' },
       { label: 'Sensor Kelembapan', desc: 'Monitoring tanah', icon: '📡' },
     ],
@@ -86,7 +86,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
     setShowAiModal(true)
     setAiLoading(true)
     try {
-      const res = await fetch(`/api/sectors/${sector.id}/evaluate`)
+      const res = await fetch(`${API_URL}/api/sectors/${sector.id}/evaluate`)
       const evalData = await res.json()
       setAiResult(evalData)
     } catch (e) {
