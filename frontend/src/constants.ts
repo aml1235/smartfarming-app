@@ -24,5 +24,5 @@ export function generateTempData() {
   }))
 }
 
-// Deteksi otomatis URL API berdasarkan lingkungan (lokal atau Vercel)
-export const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://smartfarming-app-production.up.railway.app');
+// Gunakan URL Railway langsung untuk mempermudah Vercel
+export const API_URL = 'https://smartfarming-app-production.up.railway.app';
