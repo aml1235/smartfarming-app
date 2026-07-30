@@ -187,7 +187,7 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
   const [pump, setPump] = useState(true)
   const [auto, setAuto] = useState(true)
   
-  const [hydroData, setHydroData] = useState({ waterLevel: 0, ec: 0, flow: '-' })
+  const [hydroData, setHydroData] = useState({ waterLevel: 0, temp: 0, light: 0, pumpStatus: 'OFF' })
 
   useEffect(() => {
     if (sector.id === 'hidroponik' || sector.id === 'hidroponik_1') {
@@ -198,9 +198,11 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
             const data = await res.json()
             setHydroData({
               waterLevel: data.waterLevel || 0,
-              ec: data.humidity || 0, // dummy mapping for EC
-              flow: data.pumpStatus === 'ON' ? 'Lancar' : 'Berhenti',
+              temp: data.temperature || 0,
+              light: data.lightLevel || 0,
+              pumpStatus: data.pumpStatus || 'OFF',
             })
+            setPump(data.pumpStatus?.toUpperCase() === 'ON' || data.pumpStatus === '1')
           }
         } catch (e) {
           console.error(e)
@@ -225,12 +227,11 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
     },
     hidroponik: {
       metrics: [
-        { label: 'Level Nutrisi', value: `${hydroData.waterLevel}%`, color: '#2E7D32' },
-        { label: 'Aliran Air', value: hydroData.flow, color: '#2E7D32' },
-        { label: 'EC Larutan', value: `${hydroData.ec} mS/cm`, color: 'var(--text-secondary)' },
-        { label: 'Level Tangki', value: `${hydroData.waterLevel}%`, color: '#1565C0' },
+        { label: 'Level Air', value: `${hydroData.waterLevel}%`, color: '#1565C0' },
+        { label: 'Suhu', value: `${hydroData.temp}°C`, color: '#E65100' },
+        { label: 'Intensitas Cahaya', value: `${hydroData.light} lux`, color: '#F59E0B' },
       ],
-      ctrl1: 'Pompa Sirkulasi', ctrl2: 'Pengatur Nutrisi',
+      ctrl1: 'Pompa Sirkulasi', ctrl2: '',
     },
     irigasi: {
       metrics: [
@@ -281,18 +282,28 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
           <div className="card" style={{ padding: 20 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 14 }}>Panel Kontrol</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {[
-                { label: cfg.ctrl1, val: pump, set: setPump },
-                { label: cfg.ctrl2, val: auto, set: setAuto },
-              ].map(ctrl => (
-                <div key={ctrl.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--bg-base)', borderRadius: 8 }}>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{ctrl.label}</div>
-                    <div style={{ fontSize: 12, color: ctrl.val ? '#2E7D32' : '#9CA3AF', marginTop: 1 }}>{ctrl.val ? 'Aktif' : 'Nonaktif'}</div>
-                  </div>
-                  <Toggle isOn={ctrl.val} onChange={ctrl.set} />
-                </div>
-              ))}
+              {(cfg.ctrl1 || cfg.ctrl2) ? (
+                <>
+                  {cfg.ctrl1 && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--bg-base)', borderRadius: 8 }}>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{cfg.ctrl1}</div>
+                        <div style={{ fontSize: 12, color: pump ? '#2E7D32' : '#9CA3AF', marginTop: 1 }}>{pump ? 'Aktif' : 'Nonaktif'}</div>
+                      </div>
+                      <Toggle isOn={pump} onChange={setPump} />
+                    </div>
+                  )}
+                  {cfg.ctrl2 && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--bg-base)', borderRadius: 8 }}>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{cfg.ctrl2}</div>
+                        <div style={{ fontSize: 12, color: auto ? '#2E7D32' : '#9CA3AF', marginTop: 1 }}>{auto ? 'Aktif' : 'Nonaktif'}</div>
+                      </div>
+                      <Toggle isOn={auto} onChange={setAuto} />
+                    </div>
+                  )}
+                </>
+              ) : null}
             </div>
           </div>
           </>

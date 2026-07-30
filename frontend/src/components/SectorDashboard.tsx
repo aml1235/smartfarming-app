@@ -97,8 +97,8 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
             const supabaseData = await res.json()
             setMetricsData([
               { label: 'Level Air', value: `${supabaseData.waterLevel || 0}%`, color: '#1565C0', icon: '🌊' },
-              { label: 'Suhu Lingkungan', value: `${supabaseData.temperature || 0}°C`, color: '#E65100', icon: '🌡️' },
-              { label: 'Kelembapan', value: `${supabaseData.humidity || 0}%`, color: '#059669', icon: '💧' },
+              { label: 'Suhu', value: `${supabaseData.temperature || 0}°C`, color: '#E65100', icon: '🌡️' },
+              { label: 'Intensitas Cahaya', value: `${supabaseData.lightLevel || 0} lux`, color: '#F59E0B', icon: '☀️' },
             ])
             
             if (supabaseData.pumpStatus) {
