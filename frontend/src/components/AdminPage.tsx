@@ -399,7 +399,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
                 <div>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Password {editUserId && '(Kosongkan jika tidak diubah)'}</label>
                   <div style={{ position: 'relative' }}>
-                    <input type={showNewUserPassword ? "text" : "password"} value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} style={{ width: '100%', padding: '10px 12px', paddingRight: '40px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} placeholder="••••••••" required={!editUserId} minLength={6} />
+                    <input type={showNewUserPassword ? "text" : "password"} value={newUserPassword} onChange={e => setNewUserPassword(e.target.value)} style={{ width: '100%', padding: '10px 12px', paddingRight: '40px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} placeholder="********" required={!editUserId} minLength={6} />
                     <button type="button" onClick={() => setShowNewUserPassword(!showNewUserPassword)} style={{ position: 'absolute', right: 12, top: 12, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                       {showNewUserPassword ? <IcEyeOff size={18} /> : <IcEye size={18} />}
                     </button>
@@ -599,5 +599,6 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
     </div>
   );
 }
+
 
 
