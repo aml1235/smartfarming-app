@@ -365,7 +365,7 @@ export default function App() {
             />
           ) : ['kolam', 'irigasi'].includes(page) ? (
             <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>ðŸš§</div>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>🚧</div>
               <h2 style={{ color: 'var(--text-primary)', marginBottom: 8 }}>Dalam Pengembangan</h2>
               <p>Fitur {page === 'kolam' ? 'Kolam Ikan' : 'Irigasi Tanah'} sedang dalam tahap pengembangan.</p>
             </div>
@@ -375,7 +375,7 @@ export default function App() {
               <SectorDashboard sector={sectors.find(s => s.id === page)!} loggedInUser={loggedInUser} />
             ) : (
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>ðŸŒ±</div>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>🌱</div>
                 <h2 style={{ color: 'var(--text-primary)', marginBottom: 8 }}>Belum Dikonfigurasi</h2>
                 <p>Data untuk sektor ini belum ditambahkan ke database.</p>
               </div>

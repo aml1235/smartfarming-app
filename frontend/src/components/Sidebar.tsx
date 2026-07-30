@@ -13,11 +13,11 @@ interface SidebarProps {
 
 export function Sidebar({ activeId, onSelect, alertCount, unitAktif, onLogout, isAdmin, assignedSectors }: SidebarProps) {
   const userNav: { id: PageId; label: string; icon: string }[] = [
-    { id: 'overview', label: 'Dashboard', icon: 'ðŸ“Š' },
+    { id: 'overview', label: 'Dashboard', icon: '📊' },
     { id: 'kandang', label: 'Kandang Ayam', icon: 'ðŸ“' },
     { id: 'kolam', label: 'Kolam Ikan', icon: 'ðŸŸ' },
-    { id: 'hidroponik', label: 'Hidroponik', icon: 'ðŸŒ¿' },
-    { id: 'irigasi', label: 'Irigasi Tanah', icon: 'ðŸŒ±' },
+    { id: 'hidroponik', label: 'Hidroponik', icon: '🌿' },
+    { id: 'irigasi', label: 'Irigasi Tanah', icon: '🌱' },
   ]
   
   const filteredUserNav = userNav.filter(item => 
