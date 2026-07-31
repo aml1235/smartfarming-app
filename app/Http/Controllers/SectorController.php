@@ -61,70 +61,96 @@ class SectorController extends Controller
         $analisa = [];
         $rekomendasiUtama = "Lanjutkan pemantauan rutin.";
 
-        // --- Aturan Suhu ---
-        if ($hasTemp) {
-            if ($avgTemp <= 0 || $avgTemp > 50) {
-                $analisa[] = "Suhu ({$avgTemp}°C) tidak masuk akal. Kemungkinan sensor rusak/terputus atau terkena panas langsung.";
-                $status = "Perhatian";
-                $rekomendasiUtama = "Periksa kabel atau posisi sensor suhu DHT22.";
-            } elseif ($avgTemp > 38) {
-                $analisa[] = "Suhu sangat panas ({$avgTemp}°C).";
-                $status = "Peringatan";
-                $rekomendasiUtama = "Nyalakan pompa untuk mendinginkan akar, atau nyalakan kipas/buka ventilasi greenhouse.";
-            } elseif ($avgTemp >= 30 && $avgTemp <= 38) {
-                $analisa[] = "Suhu normal siang hari tropis ({$avgTemp}°C).";
-            } else {
-                $analisa[] = "Suhu sejuk/dingin ({$avgTemp}°C).";
+        // --- SEKTOR HIDROPONIK ---
+        if (strtolower($id) === 'hidroponik' || strtolower($id) === 'sec-010') {
+            // --- Aturan Suhu ---
+            if ($hasTemp) {
+                if ($avgTemp <= 0 || $avgTemp > 50) {
+                    $analisa[] = "Suhu ({$avgTemp}°C) tidak masuk akal. Kemungkinan sensor rusak/terputus atau terkena panas langsung.";
+                    $status = "Perhatian";
+                    $rekomendasiUtama = "Periksa kabel atau posisi sensor suhu DHT22.";
+                } elseif ($avgTemp > 38) {
+                    $analisa[] = "Suhu sangat panas ({$avgTemp}°C).";
+                    $status = "Peringatan";
+                    $rekomendasiUtama = "Nyalakan pompa untuk mendinginkan akar, atau nyalakan kipas/buka ventilasi greenhouse.";
+                } elseif ($avgTemp >= 30 && $avgTemp <= 38) {
+                    $analisa[] = "Suhu normal siang hari tropis ({$avgTemp}°C).";
+                } else {
+                    $analisa[] = "Suhu sejuk/dingin ({$avgTemp}°C).";
+                }
             }
-        }
 
-        // --- Aturan Kelembapan ---
-        if ($hasHum) {
-            if ($avgHum <= 0 || $avgHum > 100) {
-                $analisa[] = "Data kelembapan ({$avgHum}%) tidak valid, cek sensor.";
-                if ($status == "Normal") $status = "Perhatian";
-            } elseif ($avgHum > 80) {
-                $analisa[] = "Kelembapan tinggi ({$avgHum}%), sirkulasi buruk dan rawan jamur.";
-                if ($status != "Peringatan") $status = "Perhatian";
-                if ($rekomendasiUtama == "Lanjutkan pemantauan rutin.") $rekomendasiUtama = "Tingkatkan sirkulasi udara (nyalakan kipas/buka ventilasi) untuk mencegah jamur.";
-            } elseif ($avgHum < 50) {
-                $analisa[] = "Kelembapan rendah ({$avgHum}%), tanaman cepat dehidrasi.";
-                if ($status != "Peringatan") $status = "Perhatian";
-                if ($rekomendasiUtama == "Lanjutkan pemantauan rutin.") $rekomendasiUtama = "Pastikan pasokan nutrisi/air mencukupi agar tanaman tidak layu.";
-            } else {
-                $analisa[] = "Kelembapan ideal ({$avgHum}%).";
+            // --- Aturan Kelembapan ---
+            if ($hasHum) {
+                if ($avgHum <= 0 || $avgHum > 100) {
+                    $analisa[] = "Data kelembapan ({$avgHum}%) tidak valid, cek sensor.";
+                    if ($status == "Normal") $status = "Perhatian";
+                } elseif ($avgHum > 80) {
+                    $analisa[] = "Kelembapan tinggi ({$avgHum}%), sirkulasi buruk dan rawan jamur.";
+                    if ($status != "Peringatan") $status = "Perhatian";
+                    if ($rekomendasiUtama == "Lanjutkan pemantauan rutin.") $rekomendasiUtama = "Tingkatkan sirkulasi udara (nyalakan kipas/buka ventilasi) untuk mencegah jamur.";
+                } elseif ($avgHum < 50) {
+                    $analisa[] = "Kelembapan rendah ({$avgHum}%), tanaman cepat dehidrasi.";
+                    if ($status != "Peringatan") $status = "Perhatian";
+                    if ($rekomendasiUtama == "Lanjutkan pemantauan rutin.") $rekomendasiUtama = "Pastikan pasokan nutrisi/air mencukupi agar tanaman tidak layu.";
+                } else {
+                    $analisa[] = "Kelembapan ideal ({$avgHum}%).";
+                }
             }
-        }
 
-        // --- Aturan Cahaya ---
-        if ($hasLight) {
-            if ($avgLight <= 0) {
-                $analisa[] = "Cahaya 0%, kemungkinan sensor LDR tertutup atau malam hari.";
-            } elseif ($avgLight < 30) {
-                $analisa[] = "Terlalu gelap ({$avgLight}%), butuh grow light atau buka naungan.";
-                if ($status == "Normal") $status = "Perhatian";
-                if ($rekomendasiUtama == "Lanjutkan pemantauan rutin.") $rekomendasiUtama = "Berikan tambahan pencahayaan buatan (grow light) atau singkirkan peneduh.";
-            } elseif ($avgLight > 80) {
-                $analisa[] = "Sangat terik ({$avgLight}%), cek suhu.";
-            } else {
-                $analisa[] = "Cahaya ideal ({$avgLight}%).";
+            // --- Aturan Cahaya ---
+            if ($hasLight) {
+                if ($avgLight <= 0) {
+                    $analisa[] = "Cahaya 0%, kemungkinan sensor LDR tertutup atau malam hari.";
+                } elseif ($avgLight < 30) {
+                    $analisa[] = "Terlalu gelap ({$avgLight}%), butuh grow light atau buka naungan.";
+                    if ($status == "Normal") $status = "Perhatian";
+                    if ($rekomendasiUtama == "Lanjutkan pemantauan rutin.") $rekomendasiUtama = "Berikan tambahan pencahayaan buatan (grow light) atau singkirkan peneduh.";
+                } elseif ($avgLight > 80) {
+                    $analisa[] = "Sangat terik ({$avgLight}%), cek suhu.";
+                } else {
+                    $analisa[] = "Cahaya ideal ({$avgLight}%).";
+                }
             }
-        }
 
-        // --- Aturan Level Air (Jarak Sensor ke Air dalam cm) ---
-        if ($hasWater) {
-            if ($avgWater <= 0 || $avgWater > 400) {
-                $analisa[] = "Pembacaan ultrasonik tidak valid ({$avgWater} cm), cek sensor.";
-                if ($status == "Normal") $status = "Perhatian";
-            } elseif ($avgWater > 20) {
-                $analisa[] = "Tandon air hampir kosong (jarak {$avgWater} cm).";
-                $status = "Peringatan";
-                $rekomendasiUtama = "Segera isi ulang air tandon dan tambahkan nutrisi AB Mix.";
-            } elseif ($avgWater < 5) {
-                $analisa[] = "Tandon penuh (jarak {$avgWater} cm).";
-            } else {
-                $analisa[] = "Volume air tandon cukup (jarak {$avgWater} cm).";
+            // --- Aturan Level Air (Jarak Sensor ke Air dalam cm) ---
+            if ($hasWater) {
+                if ($avgWater <= 0 || $avgWater > 400) {
+                    $analisa[] = "Pembacaan ultrasonik tidak valid ({$avgWater} cm), cek sensor.";
+                    if ($status == "Normal") $status = "Perhatian";
+                } elseif ($avgWater > 20) {
+                    $analisa[] = "Tandon air hampir kosong (jarak {$avgWater} cm).";
+                    $status = "Peringatan";
+                    $rekomendasiUtama = "Segera isi ulang air tandon dan tambahkan nutrisi AB Mix.";
+                } elseif ($avgWater < 5) {
+                    $analisa[] = "Tandon penuh (jarak {$avgWater} cm).";
+                } else {
+                    $analisa[] = "Volume air tandon cukup (jarak {$avgWater} cm).";
+                }
             }
+        } else {
+            // --- SEKTOR UMUM / DEFAULT ---
+            if ($hasTemp) {
+                if ($avgTemp > 35) {
+                    $analisa[] = "Suhu relatif tinggi ({$avgTemp}°C).";
+                    $status = "Perhatian";
+                } else {
+                    $analisa[] = "Suhu normal ({$avgTemp}°C).";
+                }
+            }
+
+            if ($hasHum) {
+                if ($avgHum > 85) {
+                    $analisa[] = "Kelembapan tinggi ({$avgHum}%).";
+                    if ($status == "Normal") $status = "Perhatian";
+                } else {
+                    $analisa[] = "Kelembapan terpantau aman.";
+                }
+            }
+            
+            $rekomendasiUtama = ($status == "Perhatian" || $status == "Peringatan") 
+                                ? "Lakukan pengecekan sistem sirkulasi udara dan air." 
+                                : "Lanjutkan pemantauan harian rutin.";
         }
 
         $kesimpulan = count($analisa) > 0 ? implode(' ', $analisa) : "Data sensor tidak lengkap untuk dianalisis.";
