@@ -15,19 +15,20 @@ export function OverviewMetrics({ id }: { id: string | number }) {
 
   React.useEffect(() => {
     if (effectiveId === 'hidroponik') {
-      const fetchData = async () => {
+      const fetchLatest = async () => {
         try {
-          const res = await fetch(`${API_URL}/api/sensors/supabase/SEC-010`)
-          if (res.ok) {
-            const data = await res.json()
-            setHydroData({ waterLevel: data.waterLevel || 0, temp: data.temperature || 0 })
+          const res = await fetch(`${API_URL}/api/sectors/${effectiveId}/logs`)
+          const data = await res.json()
+          if (data && data.length > 0) {
+            const latest = data[0]
+            setHydroData({ waterLevel: latest.value, temp: latest.value })
           }
-        } catch (e) {
-          console.error(e)
+        } catch (err) {
+          console.error(err)
         }
       }
-      fetchData()
-      const interval = setInterval(fetchData, 10000)
+      fetchLatest()
+      const interval = setInterval(fetchLatest, 10000)
       return () => clearInterval(interval)
     }
   }, [id])

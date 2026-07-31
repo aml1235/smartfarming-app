@@ -81,23 +81,6 @@ class SectorController extends Controller
 
         $command = $validated['command'];
         
-        // Arduino mengambil perintah dari Edge Function Supabase:
-        // /functions/v1/make-server-5aa965b0/pump-command/{sector_id}
-        // Kita berasumsi bahwa untuk mengeset perintah, kita bisa melakukan POST
-        // ke endpoint yang sama (atau kita bisa langsung update metrics sebagai fallback lokal)
-        
-        $supabaseUrl = config('services.supabase.url');
-        $supabaseKey = config('services.supabase.key');
-        
-        $url = $supabaseUrl . '/functions/v1/make-server-5aa965b0/pump-command/' . $sector_id;
-
-        $response = \Illuminate\Support\Facades\Http::withHeaders([
-            'Authorization' => 'Bearer ' . $supabaseKey,
-            'Content-Type' => 'application/json'
-        ])->post($url, [
-            'status' => $command
-        ]);
-
         // Catat aktivitas (Opsional, agar muncul di activity log)
         \App\Models\Activity::create([
             'user_name' => auth()->check() ? auth()->user()->name : 'System/Admin',
@@ -105,16 +88,8 @@ class SectorController extends Controller
             'target' => "Sektor $sector_id"
         ]);
 
-        if ($response->successful()) {
-            return response()->json([
-                'message' => "Perintah $command berhasil dikirim ke pompa sektor $sector_id",
-                'supabase_response' => $response->json()
-            ]);
-        }
-
         return response()->json([
-            'error' => "Gagal mengirim perintah ke Supabase Edge Function",
-            'details' => $response->body()
-        ], 500);
+            'message' => "Perintah $command berhasil dikirim ke pompa sektor $sector_id"
+        ]);
     }
 }

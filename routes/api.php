@@ -51,8 +51,6 @@ Route::post('/sensor-update', [\App\Http\Controllers\SensorController::class, 's
 Route::get('/debug-logs', function() {
     return \App\Models\SensorLog::orderBy('created_at', 'desc')->take(5)->get();
 });
-Route::get('/sensors/supabase/{sectorId}', [\App\Http\Controllers\SensorController::class, 'getSupabaseData']);
-
 // Notification routes
 Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
 Route::put('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead']);

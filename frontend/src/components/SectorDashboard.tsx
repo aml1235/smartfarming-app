@@ -31,56 +31,10 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
   const [showAiModal, setShowAiModal] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState<any>(null)
-
-  // 1. Ambil data metrics real-time dari Supabase
+  // Real-time data from local API fallback
   useEffect(() => {
-    const fetchRealtime = async () => {
-      try {
-        const sectorId = sector.sector_id || sector.id
-        const res = await fetch(`${API_URL}/api/sensors/supabase/${sectorId}`)
-        if (res.ok) {
-          const supabaseData = await res.json()
-          const apiData = supabaseData.data || supabaseData;
-          
-          const newMetrics = []
-          const newControls = []
-
-          // Parsing DB keys
-          for (const key in apiData) {
-            if (key === 'id' || key === 'created_at' || key === 'sector_id') continue;
-            
-            if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {
-               newControls.push({
-                  key: key,
-                  label: key.includes('pump') ? 'Pompa Air' : 'Relay Control',
-                  isOn: String(apiData[key]).toUpperCase() === 'ON'
-               })
-            } else {
-               const ui = getMetricUI(key)
-               newMetrics.push({
-                 key,
-                 label: ui.label,
-                 value: apiData[key],
-                 color: ui.color,
-                 icon: ui.icon,
-                 isProgress: ui.isProgress
-               })
-            }
-          }
-          
-          setMetricsData(newMetrics)
-          setControls(newControls)
-        }
-      } catch (e) {
-        console.error('Failed to fetch realtime data', e)
-      }
-    }
-    
-    fetchRealtime()
-    const interval = setInterval(fetchRealtime, 10000)
-    return () => clearInterval(interval)
+    // Supabase has been removed based on request.
   }, [sector, lastRefresh])
-
   // 2. Ambil data chart (logs) dari DB lokal
   useEffect(() => {
     const fetchLogs = async () => {
