@@ -44,12 +44,42 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
           if (res.ok) {
              const data = await res.json()
              setTempData(data)
+             
+             if (data && data.length > 0) {
+               const latest = data[data.length - 1]
+               const newMetrics = []
+               const newControls = []
+               for (const key in latest) {
+                 if (key === 'time') continue;
+                 if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {
+                   newControls.push({
+                      key: key,
+                      label: key.includes('pump') ? 'Pompa Air' : 'Relay Control',
+                      isOn: String(latest[key]).toUpperCase() === 'ON'
+                   })
+                 } else {
+                   const ui = getMetricUI(key)
+                   newMetrics.push({
+                     key,
+                     label: ui.label,
+                     value: latest[key],
+                     color: ui.color,
+                     icon: ui.icon,
+                     isProgress: ui.isProgress
+                   })
+                 }
+               }
+               setMetricsData(newMetrics)
+               setControls(newControls)
+             }
           }
        } catch (e) {
           console.error('Failed to fetch chart data', e)
        }
     }
     fetchLogs()
+    const interval = setInterval(fetchLogs, 10000)
+    return () => clearInterval(interval)
   }, [sector, lastRefresh])
 
   const handleAiEvaluate = async () => {

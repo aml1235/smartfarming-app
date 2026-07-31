@@ -196,11 +196,12 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
           const res = await fetch(`${API_URL}/api/sectors/${sector.id}/logs`)
           const data = await res.json()
           if (data && data.length > 0) {
+             const latest = data[data.length - 1]
              setHydroData({
-               waterLevel: data.find((d: any) => d.type === 'water_level')?.value || 0,
-               temp: data.find((d: any) => d.type === 'temperature')?.value || 0,
-               light: data.find((d: any) => d.type === 'light_level')?.value || 0,
-               pumpStatus: 'OFF'
+               waterLevel: latest.water_level || 0,
+               temp: latest.temperature || 0,
+               light: latest.light_level || 0,
+               pumpStatus: latest.pump_status || 'OFF'
              })
           }
         } catch (e) {
