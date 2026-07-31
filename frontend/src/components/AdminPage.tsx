@@ -349,7 +349,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
                 </td>
                 <td style={{ padding: '16px', display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center', minHeight: '72px' }}>
                   {user.assignedSectors.map(sid => {
-                    const sec = SECTORS.find(s => s.id === sid);
+                    const sec = sectors.find(s => s.id === sid);
                     if (!sec) return null;
                     return (
                       <span key={sid} className="sector-tag" style={{ background: sec.colorLight, color: sec.color, padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 500, whiteSpace: 'nowrap' }}>
@@ -444,7 +444,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
           <thead style={{ background: 'var(--bg-base)', borderBottom: '1px solid var(--border-color)' }}>
             <tr>
               <th style={{ padding: '16px', textAlign: 'left', minWidth: '240px', fontWeight: 600, color: 'var(--text-primary)' }}>Pengguna</th>
-              {SECTORS.map(sec => (
+              {sectors.map(sec => (
                 <th key={sec.id} style={{ padding: '16px', minWidth: '140px', fontWeight: 500 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                     <div style={{ color: sec.color, padding: '8px', background: sec.colorLight, borderRadius: '50%', fontSize: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '36px', height: '36px' }}>{sec.icon}</div>
@@ -468,7 +468,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
                     </div>
                   </div>
                 </td>
-                {SECTORS.map(sec => {
+                {sectors.map(sec => {
                   const isAssigned = user.assignedSectors.includes(sec.id as any);
                   return (
                     <td key={sec.id} style={{ padding: '16px' }}>
