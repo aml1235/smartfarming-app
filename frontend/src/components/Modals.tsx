@@ -187,6 +187,32 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
   const [pump, setPump] = useState(true)
   const [auto, setAuto] = useState(true)
   
+  const [hydroData, setHydroData] = useState({ waterLevel: 0, temp: 0, light: 0, pumpStatus: 'OFF' })
+
+  useEffect(() => {
+    if (sector.id === 'hidroponik') {
+      const fetchData = async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/sectors/${sector.id}/logs`)
+          const data = await res.json()
+          if (data && data.length > 0) {
+             setHydroData({
+               waterLevel: data.find((d: any) => d.type === 'water_level')?.value || 0,
+               temp: data.find((d: any) => d.type === 'temperature')?.value || 0,
+               light: data.find((d: any) => d.type === 'light_level')?.value || 0,
+               pumpStatus: 'OFF'
+             })
+          }
+        } catch (e) {
+          console.error(e)
+        }
+      }
+      fetchData()
+      const interval = setInterval(fetchData, 10000)
+      return () => clearInterval(interval)
+    }
+  }, [sector.id])
+
   const configs: Record<SectorId, { metrics: { label: string; value: string; color: string }[]; ctrl1: string; ctrl2: string }> = {
     kandang: { metrics: [], ctrl1: '', ctrl2: '' },
     kolam: {
