@@ -13,6 +13,26 @@ class SectorController extends Controller
         return response()->json(Sector::all());
     }
 
+    public function logs($id)
+    {
+        $logs = SensorLog::where('sector_id', $id)
+            ->where('created_at', '>=', now()->subHours(24))
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        // Group by time
+        $formattedLogs = [];
+        foreach ($logs as $log) {
+            $time = $log->created_at->format('H:i');
+            if (!isset($formattedLogs[$time])) {
+                $formattedLogs[$time] = ['time' => $time];
+            }
+            $formattedLogs[$time][$log->type] = $log->value;
+        }
+
+        return response()->json(array_values($formattedLogs));
+    }
+
     public function evaluate($id)
     {
         $logs = SensorLog::where('sector_id', $id)

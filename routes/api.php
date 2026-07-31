@@ -55,3 +55,4 @@ Route::put('/notifications/read-all', [\App\Http\Controllers\NotificationControl
 Route::put('/notifications/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);
 
 Route::get('/sectors/{id}/evaluate', [\App\Http\Controllers\SectorController::class, 'evaluate']);
+Route::get('/sectors/{id}/logs', [\App\Http\Controllers\SectorController::class, 'logs']);

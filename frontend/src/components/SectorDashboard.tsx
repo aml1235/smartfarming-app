@@ -1,10 +1,9 @@
 import { API_URL } from '../constants'
 import { useState, useEffect } from 'react'
-import { Sector, SectorId } from '../types'
-import { generateTempData } from '../constants'
+import { Sector } from '../types'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Toggle, ProgressBar, TempGauge, ChartTooltip } from './UIComponents'
-import { IcCheck, IcActivity, IcRefresh, IcX } from './Icons'
+import { Toggle, ProgressBar, ChartTooltip } from './UIComponents'
+import { IcActivity, IcRefresh, IcX } from './Icons'
 
 interface SectorDashboardProps {
   sector: Sector
