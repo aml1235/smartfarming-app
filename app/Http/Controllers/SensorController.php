@@ -41,15 +41,46 @@ class SensorController extends Controller
             'apikey' => $key,
             'Authorization' => 'Bearer ' . $key
         ])->get($url, [
-            'sectorId' => 'eq.' . $sectorId,
-            'order' => 'created_at.desc', // Asumsi ada kolom created_at
+            'sector_id' => 'eq.' . $sectorId, // Sesuai dengan kolom di Supabase
+            'order' => 'created_at.desc',
             'limit' => 1
         ]);
 
         if ($response->successful()) {
             $data = $response->json();
             if (is_array($data) && count($data) > 0) {
-                return response()->json($data[0]);
+                $latestData = $data[0];
+
+                // 1. Simpan ke sensor_logs
+                $sensorTypes = ['temperature', 'humidity', 'water_level', 'light_level'];
+                foreach ($sensorTypes as $type) {
+                    if (isset($latestData[$type]) && is_numeric($latestData[$type])) {
+                        SensorLog::create([
+                            'sector_id' => $sectorId,
+                            'type' => $type,
+                            'value' => (float) $latestData[$type]
+                        ]);
+                    }
+                }
+
+                // 2. Update metrics di tabel sectors
+                $sector = Sector::where('id', $sectorId)->first();
+                if ($sector) {
+                    $metrics = $sector->metrics ?? [];
+                    // Simpan seluruh data ke metrics termasuk pump_status
+                    foreach (['temperature', 'humidity', 'water_level', 'light_level', 'pump_status'] as $keyName) {
+                        if (isset($latestData[$keyName])) {
+                            $metrics[$keyName] = $latestData[$keyName];
+                        }
+                    }
+                    $sector->metrics = $metrics;
+                    $sector->save();
+                }
+
+                return response()->json([
+                    'message' => 'Data berhasil ditarik dan disimpan', 
+                    'data' => $latestData
+                ]);
             }
             return response()->json(['message' => 'No data found'], 404);
         }
