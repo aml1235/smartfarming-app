@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 
 export function Toggle({ isOn, onChange, label }: { isOn: boolean; onChange: (v: boolean) => void; label?: string }) {
   return (
@@ -69,7 +69,7 @@ export function ChartTooltip({ active, payload, label }: { active?: boolean; pay
   return (
     <div style={{ background: 'var(--bg-surface)', border: '1px solid #e4e7ec', borderRadius: 8, padding: '8px 12px', fontSize: 13, boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
       <div style={{ fontWeight: 600, marginBottom: 2, color: 'var(--text-secondary)' }}>{label}</div>
-      <div style={{ color: '#E65100' }}>Suhu: <strong>{payload[0]?.value.toFixed(1)}°C</strong></div>
+      <div style={{ color: '#E65100' }}>Suhu: <strong>{Number(payload[0]?.value).toFixed(1)}°C</strong></div>
     </div>
   )
 }
