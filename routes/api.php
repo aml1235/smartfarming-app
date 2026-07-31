@@ -58,3 +58,6 @@ Route::put('/notifications/{id}/read', [\App\Http\Controllers\NotificationContro
 
 Route::get('/sectors/{id}/evaluate', [\App\Http\Controllers\SectorController::class, 'evaluate']);
 Route::get('/sectors/{id}/logs', [\App\Http\Controllers\SectorController::class, 'logs']);
+
+Route::get('/pump-command/{id}', [\App\Http\Controllers\SectorController::class, 'getPumpCommand']);
+Route::post('/pump-acknowledge/{id}', [\App\Http\Controllers\SectorController::class, 'acknowledgePumpCommand']);

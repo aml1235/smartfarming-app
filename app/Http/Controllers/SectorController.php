@@ -88,8 +88,34 @@ class SectorController extends Controller
             'target' => "Sektor $sector_id"
         ]);
 
+        // Simpan command di cache (berlaku selama 5 menit)
+        \Illuminate\Support\Facades\Cache::put("pump_command_{$sector_id}", $command, now()->addMinutes(5));
+
         return response()->json([
             'message' => "Perintah $command berhasil dikirim ke pompa sektor $sector_id"
         ]);
+    }
+
+    public function getPumpCommand($id)
+    {
+        $command = \Illuminate\Support\Facades\Cache::get("pump_command_{$id}");
+        
+        if ($command) {
+            return response()->json([
+                'status' => $command,
+                'executed' => false
+            ]);
+        }
+
+        return response()->json([
+            'status' => 'OFF', // default if no pending command
+            'executed' => true
+        ]);
+    }
+
+    public function acknowledgePumpCommand($id)
+    {
+        \Illuminate\Support\Facades\Cache::forget("pump_command_{$id}");
+        return response()->json(['message' => 'Command acknowledged']);
     }
 }
