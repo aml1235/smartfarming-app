@@ -13,7 +13,7 @@ class SensorController extends Controller
     {
         $payload = $request->all();
         $sectorId = $payload['sector_id'] ?? 'SEC-010'; // Default jika tidak dikirim
-        $sector = Sector::where('id', $sectorId)->first();
+        $sector = Sector::where('sector_id', $sectorId)->first();
         
         $metrics = $sector ? ($sector->metrics ?? []) : [];
         $savedLogs = [];
