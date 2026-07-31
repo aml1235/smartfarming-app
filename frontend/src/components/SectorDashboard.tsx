@@ -85,38 +85,72 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
   const [aiResult, setAiResult] = useState<any>(null)
 
   useEffect(() => {
-    // Reset state jika sektor berubah
-    setControls(data.controls.map((_, i) => i < 2))
-    setMetricsData(data.metrics)
-
-    if (sectorKey === 'hidroponik') {
-      const fetchData = async () => {
-        try {
-          const res = await fetch(`${API_URL}/api/sensors/supabase/SEC-010`)
-          if (res.ok) {
-            const supabaseData = await res.json()
-            setMetricsData([
-              { label: 'Level Air', value: `${supabaseData.waterLevel || 0}%`, color: '#1565C0', icon: '🌊' },
-              { label: 'Suhu', value: `${supabaseData.temperature || 0}°C`, color: '#E65100', icon: '🌡️' },
-              { label: 'Intensitas Cahaya', value: `${supabaseData.lightLevel || 0} lux`, color: '#F59E0B', icon: '☀️' },
-            ])
-            
-            if (supabaseData.pumpStatus) {
-               const isPumpOn = supabaseData.pumpStatus.toUpperCase() === 'ON';
-               setControls([isPumpOn])
-            }
+    // Inisialisasi awal dari SECTOR_DATA
+    let currentMetrics = [...data.metrics]
+    
+    // Timpa dengan data dari database (sector.metrics) jika ada
+    if (sector.metrics && typeof sector.metrics === 'object') {
+       currentMetrics = currentMetrics.map(m => {
+          // Cari apakah ada key di metrics yang cocok (misal Suhu -> temperature)
+          let dbVal = undefined;
+          if (m.label.toLowerCase().includes('suhu') || m.label.toLowerCase().includes('temp')) dbVal = sector.metrics?.temperature;
+          if (m.label.toLowerCase().includes('kelembapan') || m.label.toLowerCase().includes('humid')) dbVal = sector.metrics?.humidity;
+          if (m.label.toLowerCase().includes('level air') || m.label.toLowerCase().includes('water')) dbVal = sector.metrics?.water_level;
+          if (m.label.toLowerCase().includes('cahaya') || m.label.toLowerCase().includes('light')) dbVal = sector.metrics?.light_level;
+          
+          if (dbVal !== undefined) {
+             const unit = m.value.replace(/[0-9.-]/g, ''); // Ambil unit aslinya (misal °C, %)
+             return { ...m, value: `${dbVal}${unit}` }
           }
-        } catch (e) {
-          console.error('Failed to fetch from supabase proxy', e)
-        }
-      }
-      
-      fetchData()
-      
-      const interval = setInterval(fetchData, 10000)
-      return () => clearInterval(interval)
+          return m;
+       });
     }
-  }, [sectorKey, lastRefresh])
+    setControls(data.controls.map((_, i) => i < 2))
+    setMetricsData(currentMetrics)
+
+    // Polling ke API Supabase (yang otomatis update ke lokal DB)
+    const fetchData = async () => {
+      try {
+        // Asumsikan sector.id adalah ID yang dikenali oleh Supabase (misal SEC-010)
+        // Jika tidak, kita hardcode ke SEC-010 sementara untuk demo
+        const fetchId = sector.id.includes('SEC') ? sector.id : 'SEC-010';
+        const res = await fetch(`${API_URL}/api/sensors/supabase/${fetchId}`)
+        if (res.ok) {
+          const supabaseData = await res.json()
+          const apiData = supabaseData.data || supabaseData; // Support format response baru
+          
+          setMetricsData(prev => prev.map(m => {
+            let newVal = undefined;
+            if (m.label.toLowerCase().includes('suhu') || m.label.toLowerCase().includes('temp')) newVal = apiData.temperature;
+            if (m.label.toLowerCase().includes('kelembapan') || m.label.toLowerCase().includes('humid')) newVal = apiData.humidity;
+            if (m.label.toLowerCase().includes('level air') || m.label.toLowerCase().includes('water')) newVal = apiData.water_level;
+            if (m.label.toLowerCase().includes('cahaya') || m.label.toLowerCase().includes('light')) newVal = apiData.light_level;
+            
+            if (newVal !== undefined) {
+               const unit = m.value.replace(/[0-9.-]/g, '');
+               return { ...m, value: `${newVal}${unit}` }
+            }
+            return m;
+          }))
+          
+          if (apiData.pumpStatus) {
+             const isPumpOn = apiData.pumpStatus.toUpperCase() === 'ON';
+             setControls(prev => {
+                const newCtrl = [...prev];
+                if (newCtrl.length > 0) newCtrl[0] = isPumpOn; // Asumsikan kontrol pertama adalah pompa
+                return newCtrl;
+             })
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch from supabase proxy', e)
+      }
+    }
+    
+    fetchData()
+    const interval = setInterval(fetchData, 10000)
+    return () => clearInterval(interval)
+  }, [sectorKey, lastRefresh, sector.metrics, sector.id])
 
   const handleAiEvaluate = async () => {
     setShowAiModal(true)
