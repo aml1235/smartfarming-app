@@ -10,152 +10,99 @@ interface SectorDashboardProps {
   loggedInUser?: any
 }
 
-const SECTOR_DATA: Record<SectorId, {
-  metrics: { label: string; value: string; color: string; icon: string }[]
-  controls: { label: string; desc: string; icon: string; hasTimeSetting?: boolean }[]
-}> = {
-  kandang: {
-    metrics: [
-      { label: 'Suhu', value: '0°C', color: '#E65100', icon: '🌡️' },
-      { label: 'Kelembapan', value: '0%', color: '#1565C0', icon: '💧' },
-      { label: 'Populasi Aktif', value: '0', color: '#E65100', icon: '🐓' },
-      { label: 'Level Pakan', value: '0%', color: '#795548', icon: '🌾' },
-      { label: 'Air Minum', value: '0%', color: '#1565C0', icon: '💧' },
-    ],
-    controls: [
-      { label: 'Pemberian Pakan Otomatis', desc: 'Jadwal waktu pakan', icon: '🌾', hasTimeSetting: true },
-      { label: 'Pompa Air Minum', desc: 'Pengisian otomatis', icon: '💧', hasTimeSetting: false },
-      { label: 'Lampu Kandang', desc: 'Pencahayaan kandang', icon: '💡', hasTimeSetting: false },
-    ],
-  },
-  kolam: {
-    metrics: [
-      { label: 'pH Air', value: '0', color: '#1565C0', icon: '🧪' },
-      { label: 'Suhu Air', value: '0°C', color: '#E65100', icon: '🌡️' },
-      { label: 'Kekeruhan', value: '-', color: '#059669', icon: '💧' },
-      { label: 'Oksigen Terlarut', value: '0 mg/L', color: '#059669', icon: '🫧' },
-      { label: 'Populasi Ikan', value: '0', color: '#1565C0', icon: '🐟' },
-      { label: 'Volume Air', value: '0%', color: '#1565C0', icon: '🌊' },
-    ],
-    controls: [
-      { label: 'Aerator Kolam', desc: 'Sirkulasi oksigen', icon: '🫧' },
-      { label: 'Pompa Sirkulasi', desc: 'Filter air otomatis', icon: '🔄' },
-      { label: 'Pemberian Pakan', desc: 'Jadwal 07:00 & 16:00', icon: '🐟' },
-    ],
-  },
-  hidroponik: {
-    metrics: [
-      { label: 'Level Air', value: '0%', color: '#1565C0', icon: '🌊' },
-      { label: 'Suhu Lingkungan', value: '0°C', color: '#E65100', icon: '🌡️' },
-    ],
-    controls: [
-      { label: 'Pompa Air', desc: 'Aliran sirkulasi', icon: '🔄', hasTimeSetting: false },
-    ],
-  },
-  irigasi: {
-    metrics: [
-      { label: 'Kelembapan Tanah', value: '0%', color: '#E65100', icon: '🌱' },
-      { label: 'Status', value: '-', color: '#C62828', icon: '⚠️' },
-      { label: 'Lahan Total', value: '0 Ha', color: 'var(--text-primary)', icon: '🗺️' },
-      { label: 'Terakhir Irigasi', value: '-', color: '#6B7280', icon: '🕒' },
-      { label: 'Volume Air', value: '0%', color: '#1565C0', icon: '💧' },
-      { label: 'Suhu Tanah', value: '0°C', color: '#795548', icon: '🌡️' },
-    ],
-    controls: [
-      { label: 'Sprinkler Otomatis', desc: 'Irigasi area utama', icon: '🌧️' },
-      { label: 'Irigasi Tetes', desc: 'Area tanaman sensitif', icon: '💧' },
-      { label: 'Sensor Kelembapan', desc: 'Monitoring tanah', icon: '📡' },
-    ],
-  },
+// Helper untuk UI mapping berdasarkan nama key dari DB (Bukan hardcode data, hanya icon/warna)
+const getMetricUI = (key: string) => {
+  const k = key.toLowerCase()
+  if (k.includes('suhu') || k.includes('temp')) return { label: 'Suhu', icon: '🌡️', color: '#E65100', isProgress: false }
+  if (k.includes('kelembapan') || k.includes('humid')) return { label: 'Kelembapan', icon: '💧', color: '#1565C0', isProgress: true }
+  if (k.includes('cahaya') || k.includes('light')) return { label: 'Intensitas Cahaya', icon: '☀️', color: '#F59E0B', isProgress: false }
+  if (k.includes('air') || k.includes('water')) return { label: 'Level Air', icon: '🌊', color: '#1565C0', isProgress: true }
+  if (k.includes('ph')) return { label: 'pH', icon: '🧪', color: '#059669', isProgress: false }
+  if (k.includes('populasi')) return { label: 'Populasi', icon: '🐓', color: '#795548', isProgress: false }
+  return { label: key, icon: '📊', color: '#6B7280', isProgress: false }
 }
 
 export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) {
-  const sectorKey = (sector.id.split('_')[0] as SectorId) || sector.id
-  const isDevelopment = sectorKey === 'kolam' || sectorKey === 'irigasi'
-  const data = SECTOR_DATA[sectorKey] || SECTOR_DATA.kandang
-  
-  const [controls, setControls] = useState(data.controls.map((_, i) => i < 2))
-  const [metricsData, setMetricsData] = useState(data.metrics)
-  const [tempData] = useState(generateTempData)
+  const [metricsData, setMetricsData] = useState<any[]>([])
+  const [controls, setControls] = useState<{key: string, label: string, isOn: boolean}[]>([])
+  const [tempData, setTempData] = useState<any[]>([])
   const [lastRefresh, setLastRefresh] = useState(new Date())
 
   const [showAiModal, setShowAiModal] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState<any>(null)
 
+  // 1. Ambil data metrics real-time dari Supabase
   useEffect(() => {
-    // Inisialisasi awal dari SECTOR_DATA
-    let currentMetrics = [...data.metrics]
-    
-    // Timpa dengan data dari database (sector.metrics) jika ada
-    if (sector.metrics && typeof sector.metrics === 'object') {
-       currentMetrics = currentMetrics.map(m => {
-          // Cari apakah ada key di metrics yang cocok (misal Suhu -> temperature)
-          let dbVal = undefined;
-          if (m.label.toLowerCase().includes('suhu') || m.label.toLowerCase().includes('temp')) dbVal = sector.metrics?.temperature;
-          if (m.label.toLowerCase().includes('kelembapan') || m.label.toLowerCase().includes('humid')) dbVal = sector.metrics?.humidity;
-          if (m.label.toLowerCase().includes('level air') || m.label.toLowerCase().includes('water')) dbVal = sector.metrics?.water_level;
-          if (m.label.toLowerCase().includes('cahaya') || m.label.toLowerCase().includes('light')) dbVal = sector.metrics?.light_level;
-          
-          if (dbVal !== undefined) {
-             const unit = m.value.replace(/[0-9.-]/g, ''); // Ambil unit aslinya (misal °C, %)
-             return { ...m, value: `${dbVal}${unit}` }
-          }
-          return m;
-       });
-    }
-    setControls(data.controls.map((_, i) => i < 2))
-    setMetricsData(currentMetrics)
-
-    // Polling ke API Supabase (yang otomatis update ke lokal DB)
-    const fetchData = async () => {
+    const fetchRealtime = async () => {
       try {
-        // Asumsikan sector.id adalah ID yang dikenali oleh Supabase (misal SEC-010)
-        // Jika tidak, kita hardcode ke SEC-010 sementara untuk demo
-        const fetchId = sector.id.includes('SEC') ? sector.id : 'SEC-010';
-        const res = await fetch(`${API_URL}/api/sensors/supabase/${fetchId}`)
+        const sectorId = sector.sector_id || sector.id
+        const res = await fetch(`${API_URL}/api/sensors/supabase/${sectorId}`)
         if (res.ok) {
           const supabaseData = await res.json()
-          const apiData = supabaseData.data || supabaseData; // Support format response baru
+          const apiData = supabaseData.data || supabaseData;
           
-          setMetricsData(prev => prev.map(m => {
-            let newVal = undefined;
-            if (m.label.toLowerCase().includes('suhu') || m.label.toLowerCase().includes('temp')) newVal = apiData.temperature;
-            if (m.label.toLowerCase().includes('kelembapan') || m.label.toLowerCase().includes('humid')) newVal = apiData.humidity;
-            if (m.label.toLowerCase().includes('level air') || m.label.toLowerCase().includes('water')) newVal = apiData.water_level;
-            if (m.label.toLowerCase().includes('cahaya') || m.label.toLowerCase().includes('light')) newVal = apiData.light_level;
+          const newMetrics = []
+          const newControls = []
+
+          // Parsing DB keys
+          for (const key in apiData) {
+            if (key === 'id' || key === 'created_at' || key === 'sector_id') continue;
             
-            if (newVal !== undefined) {
-               const unit = m.value.replace(/[0-9.-]/g, '');
-               return { ...m, value: `${newVal}${unit}` }
+            if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {
+               newControls.push({
+                  key: key,
+                  label: key.includes('pump') ? 'Pompa Air' : 'Relay Control',
+                  isOn: String(apiData[key]).toUpperCase() === 'ON'
+               })
+            } else {
+               const ui = getMetricUI(key)
+               newMetrics.push({
+                 key,
+                 label: ui.label,
+                 value: apiData[key],
+                 color: ui.color,
+                 icon: ui.icon,
+                 isProgress: ui.isProgress
+               })
             }
-            return m;
-          }))
-          
-          if (apiData.pumpStatus) {
-             const isPumpOn = apiData.pumpStatus.toUpperCase() === 'ON';
-             setControls(prev => {
-                const newCtrl = [...prev];
-                if (newCtrl.length > 0) newCtrl[0] = isPumpOn; // Asumsikan kontrol pertama adalah pompa
-                return newCtrl;
-             })
           }
+          
+          setMetricsData(newMetrics)
+          setControls(newControls)
         }
       } catch (e) {
-        console.error('Failed to fetch from supabase proxy', e)
+        console.error('Failed to fetch realtime data', e)
       }
     }
     
-    fetchData()
-    const interval = setInterval(fetchData, 10000)
+    fetchRealtime()
+    const interval = setInterval(fetchRealtime, 10000)
     return () => clearInterval(interval)
-  }, [sectorKey, lastRefresh, sector.metrics, sector.id])
+  }, [sector, lastRefresh])
+
+  // 2. Ambil data chart (logs) dari DB lokal
+  useEffect(() => {
+    const fetchLogs = async () => {
+       try {
+          const sectorId = sector.sector_id || sector.id
+          const res = await fetch(`${API_URL}/api/sectors/${sectorId}/logs`)
+          if (res.ok) {
+             const data = await res.json()
+             setTempData(data)
+          }
+       } catch (e) {
+          console.error('Failed to fetch chart data', e)
+       }
+    }
+    fetchLogs()
+  }, [sector, lastRefresh])
 
   const handleAiEvaluate = async () => {
     setShowAiModal(true)
     setAiLoading(true)
     try {
-      const res = await fetch(`${API_URL}/api/sectors/${sector.id}/evaluate`)
+      const res = await fetch(`${API_URL}/api/sectors/${sector.sector_id || sector.id}/evaluate`)
       const evalData = await res.json()
       setAiResult(evalData)
     } catch (e) {
@@ -166,41 +113,49 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
     }
   }
 
-  const toggleControl = (idx: number) => {
-    const newState = !controls[idx];
-    setControls(prev => prev.map((v, i) => i === idx ? newState : v));
+  const toggleControl = async (ctrlKey: string, currentState: boolean) => {
+    const newState = !currentState;
+    const commandStr = newState ? 'ON' : 'OFF';
+    
+    // Update local state instantly for UI responsiveness
+    setControls(prev => prev.map(c => c.key === ctrlKey ? { ...c, isOn: newState } : c));
     
     // Log activity
     if (loggedInUser) {
       const actionStr = newState ? 'mengaktifkan' : 'mematikan';
-      const targetStr = `${data.controls[idx].label} (${sector.name})`;
       fetch(`${API_URL}/api/activities`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           user_name: loggedInUser.name,
           action: actionStr,
-          target: targetStr
+          target: `${ctrlKey} (${sector.name})`
         })
       }).catch(err => console.error(err));
     }
-  }
 
-  if (isDevelopment) {
-    return (
-      <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh', textAlign: 'center' }}>
-        <div style={{ fontSize: 64, marginBottom: 16 }}>🚧</div>
-        <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 8 }}>Dalam Pengembangan Saja Dulu</h2>
-        <p style={{ color: 'var(--text-secondary)', maxWidth: 400 }}>Saat ini kami terfokus ke sistem Hidroponik dan Kandang Ayam. Fitur untuk {sector.name} akan hadir di pembaruan selanjutnya.</p>
-      </div>
-    )
+    try {
+        const sectorId = sector.sector_id || sector.id
+        await fetch(`${API_URL}/api/sector/${sectorId}/control`, {
+           method: 'POST',
+           headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+           },
+           body: JSON.stringify({ command: commandStr })
+        });
+    } catch (e) {
+        console.error('Control failed', e);
+        // Revert UI if failed
+        setControls(prev => prev.map(c => c.key === ctrlKey ? { ...c, isOn: currentState } : c));
+    }
   }
 
   return (
     <div className="sector-dash fade-up">
       <div className="sector-dash-header">
-        <div className="sector-dash-icon" style={{ background: sector.colorLight }}>
-          {sector.icon}
+        <div className="sector-dash-icon" style={{ background: sector.colorLight || '#f0f0f0' }}>
+          {sector.icon || '🌱'}
         </div>
         <div>
           <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{sector.name}</h2>
@@ -221,12 +176,16 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
 
       {/* Metrics Grid */}
       <div className="sector-dash-grid">
-        {metricsData.map(m => (
-          <div key={m.label} className="sector-dash-metric">
+        {metricsData.length > 0 ? metricsData.map(m => (
+          <div key={m.key} className="sector-dash-metric">
             <div className="metric-label">{m.icon} {m.label}</div>
-            <div className="metric-value" style={{ color: m.color }}>{m.value}</div>
+            <div className="metric-value" style={{ color: m.color }}>
+              {m.value} {m.isProgress ? '%' : (m.key.toLowerCase().includes('temp') ? '°C' : '')}
+            </div>
           </div>
-        ))}
+        )) : (
+          <div style={{ padding: 20, color: 'var(--text-secondary)' }}>Menunggu data sensor masuk...</div>
+        )}
       </div>
 
       {/* Chart + Controls Row */}
@@ -235,71 +194,75 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
         <div className="card" style={{ padding: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Grafik Suhu Harian</div>
-              <div style={{ fontSize: 13, color: 'var(--text-primary)', marginTop: 2 }}>Data hari ini — diperbarui setiap menit</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Grafik Riwayat</div>
+              <div style={{ fontSize: 13, color: 'var(--text-primary)', marginTop: 2 }}>24 Jam Terakhir</div>
             </div>
-            <div className="badge badge-amber"><IcActivity size={11} /> Batas: 35°C</div>
+            <div className="badge badge-amber"><IcActivity size={11} /> Data Historis</div>
           </div>
-          <ResponsiveContainer width="100%" height={180}>
-            <AreaChart data={tempData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id={`grad-${sector.id}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={sector.color} stopOpacity={0.15} />
-                  <stop offset="95%" stopColor={sector.color} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-              <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-secondary)' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: 'var(--text-secondary)' }} axisLine={false} tickLine={false} domain={[24, 36]} />
-              <Tooltip content={<ChartTooltip />} />
-              <Area type="monotone" dataKey="suhu" stroke={sector.color} strokeWidth={2} fill={`url(#grad-${sector.id})`} dot={false} />
-            </AreaChart>
-          </ResponsiveContainer>
+          {tempData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={180}>
+              <AreaChart data={tempData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id={`grad-chart`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-secondary)' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: 'var(--text-secondary)' }} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTooltip />} />
+                {/* Dynamically render lines for available keys in chart */}
+                <Area type="monotone" dataKey="temperature" stroke="#E65100" strokeWidth={2} fill="transparent" dot={false} />
+                <Area type="monotone" dataKey="humidity" stroke="#1565C0" strokeWidth={2} fill={`url(#grad-chart)`} dot={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+             <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                Belum ada riwayat data di database lokal
+             </div>
+          )}
         </div>
 
         {/* Control Panel */}
         <div className="card" style={{ padding: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>Panel Kontrol</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>Panel Kontrol DB</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {data.controls.map((ctrl, idx) => (
-              <div key={ctrl.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--bg-base)', borderRadius: 12, gap: 12, border: '1px solid var(--border-color, transparent)' }}>
+            {controls.length > 0 ? controls.map((ctrl) => (
+              <div key={ctrl.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--bg-base)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 20 }}>{ctrl.icon}</span>
+                  <span style={{ fontSize: 20 }}>🔄</span>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{ctrl.label}</div>
-                    <div style={{ fontSize: 12, color: controls[idx] ? '#10b981' : 'var(--text-secondary)', marginTop: 1 }}>
-                      {controls[idx] ? `Aktif — ${ctrl.desc}` : 'Nonaktif'}
+                    <div style={{ fontSize: 12, color: ctrl.isOn ? '#10b981' : 'var(--text-secondary)', marginTop: 1 }}>
+                      {ctrl.isOn ? `ON` : 'OFF'}
                     </div>
-                    {ctrl.hasTimeSetting && controls[idx] && (
-                      <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Jadwal:</span>
-                        <input type="time" defaultValue="06:00" style={{ padding: '2px 6px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)' }} />
-                        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>&amp;</span>
-                        <input type="time" defaultValue="17:00" style={{ padding: '2px 6px', fontSize: 11, borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)' }} />
-                      </div>
-                    )}
                   </div>
                 </div>
-                <Toggle isOn={controls[idx]} onChange={() => toggleControl(idx)} />
+                <Toggle isOn={ctrl.isOn} onChange={() => toggleControl(ctrl.key, ctrl.isOn)} />
               </div>
-            ))}
+            )) : (
+              <div style={{ padding: 20, color: 'var(--text-secondary)', textAlign: 'center' }}>Tidak ada status kontrol dari sensor di database.</div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Progress Bars */}
       <div className="card" style={{ padding: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>Level Sumber Daya</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>Level Indikator (Persentase)</div>
         <div className="sector-dash-progress-grid">
-          {metricsData.filter(m => m.value.includes('%')).slice(0, 3).map(m => (
-            <div key={m.label}>
+          {metricsData.filter(m => m.isProgress).length > 0 ? metricsData.filter(m => m.isProgress).map(m => (
+            <div key={m.key}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>{m.icon} {m.label}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: m.color }}>{m.value}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: m.color }}>{m.value}%</span>
               </div>
-              <ProgressBar value={parseInt(m.value)} color={m.color} />
+              <ProgressBar value={parseInt(m.value) || 0} color={m.color} />
             </div>
-          ))}
+          )) : (
+             <div style={{ color: 'var(--text-secondary)' }}>Tidak ada data metrik persentase.</div>
+          )}
         </div>
       </div>
 
@@ -321,7 +284,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
             {aiLoading ? (
               <div style={{ padding: '40px 20px', textAlign: 'center' }}>
                 <div className="spinner" style={{ margin: '0 auto 16px', width: 30, height: 30, border: '3px solid var(--border-color)', borderTopColor: '#8B5CF6', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-                <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Sedang mengumpulkan & menganalisis data...</p>
+                <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Sedang mengumpulkan & menganalisis data riwayat database...</p>
               </div>
             ) : aiResult ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -339,7 +302,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                 </div>
                 {aiResult.data_points !== undefined && (
                   <div style={{ fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center', marginTop: 8 }}>
-                    Dianalisis berdasarkan {aiResult.data_points} titik data dalam 24 jam terakhir.
+                    Dianalisis berdasarkan {aiResult.data_points} titik data dalam 24 jam terakhir di database lokal.
                   </div>
                 )}
               </div>
@@ -351,5 +314,3 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
     </div>
   )
 }
-
-

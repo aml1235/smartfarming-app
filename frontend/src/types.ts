@@ -5,14 +5,16 @@ export type StatusLevel = 'baik' | 'normal' | 'peringatan' | 'kritis'
 export type AdminTab = 'dashboard' | 'users' | 'assign' | 'activity' | 'settings'
 
 export interface Sector {
-  id: SectorId
+  id: string | number
+  sector_id?: string
   name: string
   unit: string
-  icon: string
-  color: string
-  colorLight: string
+  icon?: string
+  color?: string
+  colorLight?: string
   status: StatusLevel
-  lastUpdate: string
+  lastUpdate?: string
+  metrics?: any
 }
 
 export interface User {
