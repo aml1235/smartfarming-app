@@ -27,6 +27,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
   const [controls, setControls] = useState<{key: string, label: string, isOn: boolean}[]>([
     { key: 'pump_status', label: 'Pompa Air', isOn: true }
   ])
+  const [userOverrides, setUserOverrides] = useState<Record<string, {isOn: boolean, time: number}>>({})
   const [tempData, setTempData] = useState<any[]>([])
   const [lastRefresh, setLastRefresh] = useState(new Date())
 
@@ -53,32 +54,49 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                const newControls = []
                for (const key in latest) {
                  if (key === 'time') continue;
-                 if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {
-                   newControls.push({
-                      key: key,
-                      label: key.includes('pump') ? 'Pompa Air' : 'Relay Control',
-                      isOn: String(latest[key]).toUpperCase() === 'ON' || String(latest[key]) === '1'
-                   })
-                 } else {
-                   const ui = getMetricUI(key)
-                   newMetrics.push({
-                     key,
-                     label: ui.label,
-                     value: latest[key],
-                     color: ui.color,
-                     icon: ui.icon,
-                     isProgress: ui.isProgress
-                   })
-                 }
+                  if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {
+                    const isPumpOn = String(latest[key]).toUpperCase() === 'ON' || String(latest[key]) === '1'
+                    newControls.push({
+                       key: key,
+                       label: key.includes('pump') ? 'Pompa Air' : 'Relay Control',
+                       isOn: isPumpOn
+                    })
+                  } else {
+                    const ui = getMetricUI(key)
+                    newMetrics.push({
+                      key,
+                      label: ui.label,
+                      value: latest[key],
+                      color: ui.color,
+                      icon: ui.icon,
+                      isProgress: ui.isProgress
+                    })
+                  }
                }
                if (newControls.length === 0) {
                  newControls.push({ key: 'pump_status', label: 'Pompa Air', isOn: true });
                }
+
+               // Apply user overrides if they happened within the last 60 seconds
+               const finalControls = newControls.map(c => {
+                 if (userOverrides[c.key] && (Date.now() - userOverrides[c.key].time < 60000)) {
+                   return { ...c, isOn: userOverrides[c.key].isOn };
+                 }
+                 return c;
+               });
+
                setMetricsData(newMetrics)
-               setControls(newControls)
+               setControls(finalControls)
              } else {
                setMetricsData([])
-               setControls([{ key: 'pump_status', label: 'Pompa Air', isOn: true }])
+               const defaultControls = [{ key: 'pump_status', label: 'Pompa Air', isOn: true }];
+               const finalControls = defaultControls.map(c => {
+                 if (userOverrides[c.key] && (Date.now() - userOverrides[c.key].time < 60000)) {
+                   return { ...c, isOn: userOverrides[c.key].isOn };
+                 }
+                 return c;
+               });
+               setControls(finalControls)
              }
           }
        } catch (e) {
@@ -109,7 +127,8 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
     const newState = !currentState;
     const commandStr = newState ? 'ON' : 'OFF';
     
-    // Update local state instantly for UI responsiveness
+    // Update local state instantly and record the override time
+    setUserOverrides(prev => ({ ...prev, [ctrlKey]: { isOn: newState, time: Date.now() } }));
     setControls(prev => prev.map(c => c.key === ctrlKey ? { ...c, isOn: newState } : c));
     
     // Log activity

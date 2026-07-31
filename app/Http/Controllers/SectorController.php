@@ -47,22 +47,63 @@ class SectorController extends Controller
             ]);
         }
 
-        // Contoh Rule-Based Logic sederhana
         $avgTemp = round($logs->whereIn('type', ['suhu', 'temperature', 'temp'])->avg('value') ?? 0, 1);
         $avgHum = round($logs->whereIn('type', ['kelembapan', 'humidity', 'hum'])->avg('value') ?? 0, 1);
+        $avgWater = round($logs->whereIn('type', ['water_level', 'air', 'waterLevel'])->avg('value') ?? 0, 1);
+        $avgLight = round($logs->whereIn('type', ['light_level', 'cahaya', 'lightLevel'])->avg('value') ?? 0, 1);
 
-        $kesimpulan = "Kondisi sektor terpantau normal berdasarkan rata-rata suhu {$avgTemp}C dan kelembapan {$avgHum}%.";
+        $hasHum = $logs->whereIn('type', ['kelembapan', 'humidity', 'hum'])->count() > 0;
+
+        $kesimpulan = "Kondisi sektor terpantau normal.";
         $rekomendasi = "Lanjutkan pemantauan rutin.";
         $status = "Normal";
 
-        if ($avgTemp > 30) {
-            $kesimpulan = "Suhu rata-rata sangat panas ({$avgTemp}C).";
-            $rekomendasi = "Nyalakan kipas pendingin atau semprotan air untuk menurunkan suhu.";
-            $status = "Peringatan";
-        } elseif ($avgHum > 0 && $avgHum < 50) {
-            $kesimpulan = "Kelembapan terlalu rendah ({$avgHum}%).";
-            $rekomendasi = "Nyalakan pompa air/irigasi untuk menjaga kelembapan.";
-            $status = "Perhatian";
+        $analisa = [];
+        if ($avgTemp > 0) {
+            if ($avgTemp > 30) {
+                $analisa[] = "Suhu rata-rata sangat panas ({$avgTemp}°C).";
+                $status = "Peringatan";
+            } elseif ($avgTemp < 20) {
+                $analisa[] = "Suhu rata-rata cukup dingin ({$avgTemp}°C).";
+            } else {
+                $analisa[] = "Suhu optimal ({$avgTemp}°C).";
+            }
+        }
+
+        if ($hasHum) {
+            if ($avgHum < 50) {
+                $analisa[] = "Kelembapan udara terlalu rendah ({$avgHum}%).";
+                if ($status == "Normal") $status = "Perhatian";
+            } else {
+                $analisa[] = "Kelembapan udara normal ({$avgHum}%).";
+            }
+        }
+
+        if ($avgWater > 0) {
+            if ($avgWater < 30) {
+                $analisa[] = "Level air/nutrisi menipis ({$avgWater}%).";
+                $status = "Peringatan";
+            } else {
+                $analisa[] = "Kapasitas air aman ({$avgWater}%).";
+            }
+        }
+
+        if ($avgLight > 0) {
+            if ($avgLight < 200) {
+                $analisa[] = "Intensitas cahaya kurang ({$avgLight}).";
+            } else {
+                $analisa[] = "Intensitas cahaya cukup ({$avgLight}).";
+            }
+        }
+
+        if (count($analisa) > 0) {
+            $kesimpulan = implode(' ', $analisa);
+        }
+
+        if ($status == "Peringatan") {
+            $rekomendasi = "Segera lakukan tindakan perbaikan (cek pompa/kipas pendingin/level air).";
+        } elseif ($status == "Perhatian") {
+            $rekomendasi = "Tingkatkan frekuensi penyiraman atau sirkulasi udara.";
         }
 
         return response()->json([
