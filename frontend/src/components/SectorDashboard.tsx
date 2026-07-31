@@ -71,6 +71,9 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                }
                setMetricsData(newMetrics)
                setControls(newControls)
+             } else {
+               setMetricsData([])
+               setControls([])
              }
           }
        } catch (e) {

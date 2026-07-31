@@ -367,7 +367,7 @@ export default function App() {
           ) : page !== 'overview' ? (
             /* Individual Sector Dashboard */
             sectors.find(s => s.id === page) ? (
-              <SectorDashboard sector={sectors.find(s => s.id === page)!} loggedInUser={loggedInUser} />
+              <SectorDashboard key={page} sector={sectors.find(s => s.id === page)!} loggedInUser={loggedInUser} />
             ) : (
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>🌱</div>
