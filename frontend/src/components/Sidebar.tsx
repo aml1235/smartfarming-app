@@ -9,19 +9,21 @@ interface SidebarProps {
   onLogout: () => void;
   isAdmin?: boolean;
   assignedSectors?: string[];
+  dynamicSectors?: any[];
 }
 
-export function Sidebar({ activeId, onSelect, alertCount, unitAktif, onLogout, isAdmin, assignedSectors }: SidebarProps) {
+export function Sidebar({ activeId, onSelect, alertCount, unitAktif, onLogout, isAdmin, assignedSectors, dynamicSectors }: SidebarProps) {
   const userNav: { id: PageId; label: string; icon: string }[] = [
     { id: 'overview', label: 'Dashboard', icon: '📊' },
-    { id: 'kandang', label: 'Kandang Ayam', icon: '🐓' },
-    { id: 'kolam', label: 'Kolam Ikan', icon: '🐟' },
-    { id: 'hidroponik', label: 'Hidroponik', icon: '🌿' },
-    { id: 'irigasi', label: 'Irigasi Tanah', icon: '🌱' },
+    ...(dynamicSectors || []).map(s => ({
+       id: s.id as PageId,
+       label: s.name,
+       icon: s.icon || '🌿'
+    }))
   ]
   
   const filteredUserNav = userNav.filter(item => 
-    isAdmin || item.id === 'overview' || (assignedSectors && assignedSectors.includes(item.id))
+    isAdmin || item.id === 'overview' || (assignedSectors && assignedSectors.includes(item.id as string))
   );
 
   const adminNav: { id: AdminTab; label: string; icon: React.ReactNode }[] = [

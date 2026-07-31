@@ -284,6 +284,7 @@ export default function App() {
           onLogout={handleLogout}
           isAdmin={loggedInUser?.role === 'admin'}
           assignedSectors={loggedInUser?.assignedSectors || []}
+          dynamicSectors={sectors}
         />
       </div>
 
@@ -363,13 +364,7 @@ export default function App() {
               user={loggedInUser}
               onUpdateUser={(updatedUser) => setLoggedInUser(prev => prev ? { ...prev, ...updatedUser } : updatedUser)}
             />
-          ) : ['kolam', 'irigasi'].includes(page) ? (
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🚧</div>
-              <h2 style={{ color: 'var(--text-primary)', marginBottom: 8 }}>Dalam Pengembangan</h2>
-              <p>Fitur {page === 'kolam' ? 'Kolam Ikan' : 'Irigasi Tanah'} sedang dalam tahap pengembangan.</p>
-            </div>
-          ) : ['kandang', 'hidroponik'].includes(page) ? (
+          ) : page !== 'overview' ? (
             /* Individual Sector Dashboard */
             sectors.find(s => s.id === page) ? (
               <SectorDashboard sector={sectors.find(s => s.id === page)!} loggedInUser={loggedInUser} />

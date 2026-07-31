@@ -243,7 +243,11 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
       ctrl1: 'Sprinkler Otomatis', ctrl2: 'Irigasi Tetes',
     },
   }
-  const cfg = configs[String(sector.id).split('_')[0] as SectorId] || configs['irigasi'] // Fallback if custom ID
+  const effectiveId = String(sector.id).toLowerCase().includes('sec-010') || String(sector.id).toLowerCase().includes('hidro') ? 'hidroponik' 
+                    : String(sector.id).toLowerCase().includes('kandang') ? 'kandang'
+                    : String(sector.id).toLowerCase().includes('kolam') ? 'kolam'
+                    : String(sector.id).split('_')[0];
+  const cfg = configs[effectiveId as SectorId] || configs['irigasi']
 
   return (
     <div className="modal-overlay" onClick={onBack}>
