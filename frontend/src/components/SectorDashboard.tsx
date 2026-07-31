@@ -24,7 +24,9 @@ const getMetricUI = (key: string) => {
 
 export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) {
   const [metricsData, setMetricsData] = useState<any[]>([])
-  const [controls, setControls] = useState<{key: string, label: string, isOn: boolean}[]>([])
+  const [controls, setControls] = useState<{key: string, label: string, isOn: boolean}[]>([
+    { key: 'pump_status', label: 'Pompa Air', isOn: true }
+  ])
   const [tempData, setTempData] = useState<any[]>([])
   const [lastRefresh, setLastRefresh] = useState(new Date())
 
@@ -69,11 +71,14 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                    })
                  }
                }
+               if (newControls.length === 0) {
+                 newControls.push({ key: 'pump_status', label: 'Pompa Air', isOn: true });
+               }
                setMetricsData(newMetrics)
                setControls(newControls)
              } else {
                setMetricsData([])
-               setControls([])
+               setControls([{ key: 'pump_status', label: 'Pompa Air', isOn: true }])
              }
           }
        } catch (e) {
