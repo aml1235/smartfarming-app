@@ -469,12 +469,12 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
                   </div>
                 </td>
                 {SECTORS.map(sec => {
-                  const isAssigned = user.assignedSectors.includes(sec.id);
+                  const isAssigned = user.assignedSectors.includes(sec.id as any);
                   return (
                     <td key={sec.id} style={{ padding: '16px' }}>
                       <button
                         className={`assign-checkbox ${isAssigned ? 'checked' : ''}`}
-                        onClick={() => handleToggleSectorAssign(user.id, sec.id)}
+                        onClick={() => handleToggleSectorAssign(user.id, String(sec.id) as any)}
                         style={{
                           width: '28px', height: '28px', borderRadius: '8px',
                           border: `2px solid ${isAssigned ? '#10b981' : 'var(--border-color)'}`,

@@ -270,7 +270,7 @@ export default function App() {
   }
 
   // USER DASHBOARD
-  const userSectors = sectors.filter(s => loggedInUser?.role === 'admin' || loggedInUser?.assignedSectors?.includes(s.id));
+  const userSectors = sectors.filter(s => loggedInUser?.role === 'admin' || loggedInUser?.assignedSectors?.includes(s.id as any));
   const alertCountFiltered = userSectors.filter(s => s.status === 'peringatan' || s.status === 'kritis').length;
 
   return (
@@ -280,7 +280,7 @@ export default function App() {
           activeId={page}
           onSelect={id => { setPage(id); setSidebarOpen(false) }}
           alertCount={alertCount}
-          unitAktif={sectors.filter(s => loggedInUser?.role === 'admin' || loggedInUser?.assignedSectors?.includes(s.id)).length}
+          unitAktif={sectors.filter(s => loggedInUser?.role === 'admin' || loggedInUser?.assignedSectors?.includes(s.id as any)).length}
           onLogout={handleLogout}
           isAdmin={loggedInUser?.role === 'admin'}
           assignedSectors={loggedInUser?.assignedSectors || []}
@@ -407,7 +407,7 @@ export default function App() {
                   <h2 style={{ margin: '2px 0 0', fontSize: 20, fontWeight: 800, color: 'var(--text-primary)' }}>Semua Sektor Pertanian</h2>
                 </div>
                 <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                  {loggedInUser?.role !== 'admin' && loggedInUser?.assignedSectors?.length === 0 ? '0' : sectors.filter(s => loggedInUser?.role === 'admin' || loggedInUser?.assignedSectors?.includes(s.id)).length} sektor aktif
+                  {loggedInUser?.role !== 'admin' && loggedInUser?.assignedSectors?.length === 0 ? '0' : sectors.filter(s => loggedInUser?.role === 'admin' || loggedInUser?.assignedSectors?.includes(s.id as any)).length} sektor aktif
                 </span>
               </div>
 
@@ -420,11 +420,11 @@ export default function App() {
               ) : (
                 <div className="sector-grid">
                   {sectors
-                    .filter(s => loggedInUser?.role === 'admin' || loggedInUser?.assignedSectors?.includes(s.id))
+                    .filter(s => loggedInUser?.role === 'admin' || loggedInUser?.assignedSectors?.includes(s.id as any))
                     .map(s => (
                     <SectorCard
                       key={s.id}
-                      sector={{ ...s, metrics: <OverviewMetrics id={['kandang','kolam','hidroponik','irigasi'].includes(s.id) ? s.id as SectorId : (s.id.split('_')[0] as SectorId)} /> }}
+                      sector={{ ...s, metrics: <OverviewMetrics id={['kandang','kolam','hidroponik','irigasi'].includes(s.id as any) ? s.id as SectorId : (String(s.id).split('_')[0] as SectorId)} /> }}
                       onOpen={() => openDetail(s)}
                     />
                   ))}
@@ -436,8 +436,8 @@ export default function App() {
       </div>
 
       {/* Modals */}
-      {detailSector && detailSector.id.startsWith('kandang') && <KandangDetail sector={detailSector} onBack={closeDetail} />}
-      {detailSector && !detailSector.id.startsWith('kandang') && <GenericDetail sector={detailSector} onBack={closeDetail} />}
+      {detailSector && String(detailSector.id).startsWith('kandang') && <KandangDetail sector={detailSector} onBack={closeDetail} />}
+      {detailSector && !String(detailSector.id).startsWith('kandang') && <GenericDetail sector={detailSector} onBack={closeDetail} />}
       {showAddModal && <AddSectorModal onClose={() => setShowAddModal(false)} onAdd={handleAddSector} />}
       {renderLogoutModal()}
     </div>
