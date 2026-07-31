@@ -64,7 +64,7 @@ class SensorController extends Controller
                 }
 
                 // 2. Update metrics di tabel sectors
-                $sector = Sector::where('id', $sectorId)->first();
+                $sector = Sector::where('sector_id', $sectorId)->first();
                 if ($sector) {
                     $metrics = $sector->metrics ?? [];
                     // Simpan seluruh data ke metrics termasuk pump_status
