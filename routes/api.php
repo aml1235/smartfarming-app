@@ -47,7 +47,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Endpoint untuk menerima data dari perangkat IoT (ESP32 / NodeMCU)
 Route::post('/sensors', [\App\Http\Controllers\SensorController::class, 'store']);
-Route::post('/sensor-update', [\App\Http\Controllers\SensorController::class, 'store']); // Alias untuk Arduino lama
 Route::get('/sensors/supabase/{sectorId}', [\App\Http\Controllers\SensorController::class, 'getSupabaseData']);
 
 // Notification routes
