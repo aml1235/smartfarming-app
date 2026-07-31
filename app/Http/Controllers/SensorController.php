@@ -11,31 +11,91 @@ class SensorController extends Controller
 {
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'sector_id' => 'required|string',
-            'type' => 'required|string',
-            'value' => 'required|numeric'
-        ]);
+        $payload = $request->all();
+        $sectorId = $payload['sector_id'] ?? 'SEC-010'; // Default jika tidak dikirim
+        $sector = Sector::where('id', $sectorId)->first();
+        
+        $metrics = $sector ? ($sector->metrics ?? []) : [];
+        $savedLogs = [];
 
-        // 1. Simpan ke sensor_logs
-        $log = SensorLog::create($validated);
+        // Jika format adalah { type: '...', value: ... }
+        if (isset($payload['type']) && isset($payload['value'])) {
+            $log = SensorLog::create([
+                'sector_id' => $sectorId,
+                'type' => $payload['type'],
+                'value' => $payload['value']
+            ]);
+            $metrics[$payload['type']] = $payload['value'];
+            $savedLogs[] = $log;
+        } else {
+            // Jika format adalah { temperature: 28.5, waterLevel: 80, ... }
+            $validTypes = ['temperature', 'humidity', 'waterLevel', 'lightLevel', 'water_level', 'light_level', 'pumpStatus', 'pump_status'];
+            foreach ($payload as $key => $value) {
+                if (in_array($key, $validTypes)) {
+                    // Simpan history hanya untuk numerik
+                    if (is_numeric($value)) {
+                        $savedLogs[] = SensorLog::create([
+                            'sector_id' => $sectorId,
+                            'type' => $key,
+                            'value' => (float) $value
+                        ]);
+                    }
+                    $metrics[$key] = $value;
+                }
+            }
+        }
 
-        // 2. Update metrics di tabel sectors
-        $sector = Sector::where('id', $validated['sector_id'])->first();
         if ($sector) {
-            $metrics = $sector->metrics ?? [];
-            $metrics[$validated['type']] = $validated['value'];
             $sector->metrics = $metrics;
             $sector->save();
         }
 
-        return response()->json(['message' => 'Data sensor berhasil disimpan', 'data' => $log], 201);
+        // Forward data ke Supabase agar web lama tetap berfungsi
+        $supabaseUrl = config('services.supabase.url');
+        $supabaseKey = config('services.supabase.key');
+
+        if ($supabaseUrl && $supabaseKey) {
+            $supabasePayload = ['sector_id' => $sectorId];
+            
+            if (isset($payload['type']) && isset($payload['value'])) {
+                // Map single type ke kolom Supabase
+                $typeMap = [
+                    'temperature' => 'temperature',
+                    'humidity' => 'humidity',
+                    'waterLevel' => 'water_level',
+                    'lightLevel' => 'light_level'
+                ];
+                $col = $typeMap[$payload['type']] ?? $payload['type'];
+                $supabasePayload[$col] = (float) $payload['value'];
+            } else {
+                if (isset($payload['temperature'])) $supabasePayload['temperature'] = (float) $payload['temperature'];
+                if (isset($payload['humidity'])) $supabasePayload['humidity'] = (float) $payload['humidity'];
+                if (isset($payload['waterLevel']) || isset($payload['water_level'])) $supabasePayload['water_level'] = (float) ($payload['waterLevel'] ?? $payload['water_level']);
+                if (isset($payload['lightLevel']) || isset($payload['light_level'])) $supabasePayload['light_level'] = (float) ($payload['lightLevel'] ?? $payload['light_level']);
+                if (isset($payload['pumpStatus']) || isset($payload['pump_status'])) $supabasePayload['pump_status'] = $payload['pumpStatus'] ?? $payload['pump_status'];
+            }
+
+            Http::withHeaders([
+                'apikey' => $supabaseKey,
+                'Authorization' => 'Bearer ' . $supabaseKey,
+                'Content-Type' => 'application/json',
+                'Prefer' => 'return=minimal'
+            ])->post($supabaseUrl . '/rest/v1/sensor_data', $supabasePayload);
+        }
+
+        return response()->json(['message' => 'Data sensor berhasil disimpan', 'data' => $savedLogs], 201);
     }
 
     public function getSupabaseData($sectorId)
     {
-        $url = config('services.supabase.url') . '/rest/v1/sensor_data';
+        $url = config('services.supabase.url');
         $key = config('services.supabase.key');
+
+        if (!$url || !$key) {
+            return response()->json(['message' => 'Supabase not configured on server'], 404);
+        }
+
+        $url = $url . '/rest/v1/sensor_data';
 
         $response = Http::withHeaders([
             'apikey' => $key,
