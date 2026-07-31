@@ -48,8 +48,8 @@ class SectorController extends Controller
         }
 
         // Contoh Rule-Based Logic sederhana
-        $avgTemp = round($logs->where('type', 'suhu')->avg('value') ?? 0, 1);
-        $avgHum = round($logs->where('type', 'kelembapan')->avg('value') ?? 0, 1);
+        $avgTemp = round($logs->whereIn('type', ['suhu', 'temperature', 'temp'])->avg('value') ?? 0, 1);
+        $avgHum = round($logs->whereIn('type', ['kelembapan', 'humidity', 'hum'])->avg('value') ?? 0, 1);
 
         $kesimpulan = "Kondisi sektor terpantau normal berdasarkan rata-rata suhu {$avgTemp}C dan kelembapan {$avgHum}%.";
         $rekomendasi = "Lanjutkan pemantauan rutin.";
