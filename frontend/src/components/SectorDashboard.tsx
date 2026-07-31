@@ -57,7 +57,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                    newControls.push({
                       key: key,
                       label: key.includes('pump') ? 'Pompa Air' : 'Relay Control',
-                      isOn: String(latest[key]).toUpperCase() === 'ON'
+                      isOn: String(latest[key]).toUpperCase() === 'ON' || String(latest[key]) === '1'
                    })
                  } else {
                    const ui = getMetricUI(key)

@@ -32,15 +32,19 @@ class SensorController extends Controller
             $validTypes = ['temperature', 'humidity', 'waterLevel', 'lightLevel', 'water_level', 'light_level', 'pumpStatus', 'pump_status'];
             foreach ($payload as $key => $value) {
                 if (in_array($key, $validTypes)) {
+                    $logValue = $value;
+                    if (strtoupper($value) === 'ON') $logValue = 1;
+                    if (strtoupper($value) === 'OFF') $logValue = 0;
+
                     // Simpan history hanya untuk numerik
-                    if (is_numeric($value)) {
+                    if (is_numeric($logValue)) {
                         $savedLogs[] = SensorLog::create([
                             'sector_id' => $sectorId,
                             'type' => $key,
-                            'value' => (float) $value
+                            'value' => (float) $logValue
                         ]);
                     }
-                    $metrics[$key] = $value;
+                    $metrics[$key] = $logValue;
                 }
             }
         }
