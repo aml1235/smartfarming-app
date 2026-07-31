@@ -50,6 +50,39 @@ class SensorController extends Controller
             $sector->save();
         }
 
+        // Forward data ke Supabase agar web lama tetap berfungsi
+        $supabaseUrl = config('services.supabase.url');
+        $supabaseKey = config('services.supabase.key');
+
+        if ($supabaseUrl && $supabaseKey) {
+            $supabasePayload = ['sector_id' => $sectorId];
+            
+            if (isset($payload['type']) && isset($payload['value'])) {
+                // Map single type ke kolom Supabase
+                $typeMap = [
+                    'temperature' => 'temperature',
+                    'humidity' => 'humidity',
+                    'waterLevel' => 'water_level',
+                    'lightLevel' => 'light_level'
+                ];
+                $col = $typeMap[$payload['type']] ?? $payload['type'];
+                $supabasePayload[$col] = (float) $payload['value'];
+            } else {
+                if (isset($payload['temperature'])) $supabasePayload['temperature'] = (float) $payload['temperature'];
+                if (isset($payload['humidity'])) $supabasePayload['humidity'] = (float) $payload['humidity'];
+                if (isset($payload['waterLevel']) || isset($payload['water_level'])) $supabasePayload['water_level'] = (float) ($payload['waterLevel'] ?? $payload['water_level']);
+                if (isset($payload['lightLevel']) || isset($payload['light_level'])) $supabasePayload['light_level'] = (float) ($payload['lightLevel'] ?? $payload['light_level']);
+                if (isset($payload['pumpStatus']) || isset($payload['pump_status'])) $supabasePayload['pump_status'] = $payload['pumpStatus'] ?? $payload['pump_status'];
+            }
+
+            Http::withHeaders([
+                'apikey' => $supabaseKey,
+                'Authorization' => 'Bearer ' . $supabaseKey,
+                'Content-Type' => 'application/json',
+                'Prefer' => 'return=minimal'
+            ])->post($supabaseUrl . '/rest/v1/sensor_data', $supabasePayload);
+        }
+
         return response()->json(['message' => 'Data sensor berhasil disimpan', 'data' => $savedLogs], 201);
     }
 
