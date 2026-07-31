@@ -55,7 +55,13 @@ class SensorController extends Controller
         $supabaseKey = config('services.supabase.key');
 
         if ($supabaseUrl && $supabaseKey) {
-            $supabasePayload = ['sector_id' => $sectorId];
+            // Map ID lokal ke UUID Supabase
+            $supabaseSectorId = $sectorId;
+            if ($sectorId === 'SEC-010' || $sectorId === 'hidroponik') {
+                $supabaseSectorId = 'fe8a27c7-0b04-4dc0-8f2b-fd56e2e721a2';
+            }
+
+            $supabasePayload = ['sector_id' => $supabaseSectorId];
             
             if (isset($payload['type']) && isset($payload['value'])) {
                 // Map single type ke kolom Supabase
