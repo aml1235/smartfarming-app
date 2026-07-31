@@ -6,11 +6,15 @@ import { IcCheck, IcChevronRight } from './Icons'
 
 import { API_URL } from '../constants'
 
-export function OverviewMetrics({ id }: { id: SectorId }) {
+export function OverviewMetrics({ id }: { id: string | number }) {
   const [hydroData, setHydroData] = React.useState({ waterLevel: 0, temp: 0 })
+  const effectiveId = String(id).toLowerCase().includes('sec-010') || String(id).toLowerCase().includes('hidro') ? 'hidroponik' 
+                    : String(id).toLowerCase().includes('kandang') ? 'kandang'
+                    : String(id).toLowerCase().includes('kolam') ? 'kolam'
+                    : 'irigasi';
 
   React.useEffect(() => {
-    if (id === 'hidroponik') {
+    if (effectiveId === 'hidroponik') {
       const fetchData = async () => {
         try {
           const res = await fetch(`${API_URL}/api/sensors/supabase/SEC-010`)
@@ -86,7 +90,7 @@ export function OverviewMetrics({ id }: { id: SectorId }) {
       </div>
     ),
   }
-  return metrics[id]
+  return metrics[effectiveId as SectorId] || metrics['irigasi']
 }
 
 export function SectorCard({ sector, onOpen }: { sector: Sector & { metrics: React.ReactNode }; onOpen: () => void }) {
