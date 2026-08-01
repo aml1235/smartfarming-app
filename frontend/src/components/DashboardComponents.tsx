@@ -7,7 +7,7 @@ import { IcCheck, IcChevronRight } from './Icons'
 import { API_URL } from '../constants'
 
 export function OverviewMetrics({ id }: { id: string | number }) {
-  const [hydroData, setHydroData] = React.useState({ waterLevel: 0, temp: 0 })
+  const [hydroData, setHydroData] = React.useState({ waterLevel: 0, temp: 0, humidity: 0, light: 0 })
   const effectiveId = String(id).toLowerCase().includes('sec-010') || String(id).toLowerCase().includes('hidro') ? 'hidroponik' 
                     : String(id).toLowerCase().includes('kandang') ? 'kandang'
                     : String(id).toLowerCase().includes('kolam') ? 'kolam'
@@ -21,7 +21,7 @@ export function OverviewMetrics({ id }: { id: string | number }) {
           const data = await res.json()
           if (data && data.length > 0) {
             const latest = data[data.length - 1]
-            setHydroData({ waterLevel: latest.water_level || 0, temp: latest.temperature || 0 })
+            setHydroData({ waterLevel: latest.water_level || 0, temp: latest.temperature || 0, humidity: latest.humidity || 0, light: latest.light_level || 0 })
           }
         } catch (err) {
           console.error(err)
@@ -69,19 +69,23 @@ export function OverviewMetrics({ id }: { id: string | number }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', gap: 8 }}>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
-            <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Level Air</div>
-            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>{hydroData.waterLevel}%</div>
-          </div>
-          <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Suhu Air</div>
             <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>{hydroData.temp}°C</div>
           </div>
-        </div>
-        <div>
-          <div className="metric-row-label" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
-            <span>🌊 Kapasitas Tangki</span><span style={{ fontWeight: 600, color: '#1565C0' }}>{hydroData.waterLevel}%</span>
+          <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
+            <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Kelembapan</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>{hydroData.humidity}%</div>
           </div>
-          <ProgressBar value={hydroData.waterLevel} color="#1565C0" />
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
+            <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Cahaya</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#F59E0B', marginTop: 1 }}>{hydroData.light} lux</div>
+          </div>
+          <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
+            <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Level Air</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>{hydroData.waterLevel}%</div>
+          </div>
         </div>
       </div>
     ),

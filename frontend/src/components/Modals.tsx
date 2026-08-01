@@ -187,7 +187,7 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
   const [pump, setPump] = useState(true)
   const [auto, setAuto] = useState(true)
   
-  const [hydroData, setHydroData] = useState({ waterLevel: 0, temp: 0, light: 0, pumpStatus: 'OFF' })
+  const [hydroData, setHydroData] = useState({ waterLevel: 0, temp: 0, humidity: 0, light: 0, pumpStatus: 'OFF' })
 
   useEffect(() => {
     const isHydro = String(sector.id).toLowerCase().includes('sec-010') || String(sector.id).toLowerCase().includes('hidro');
@@ -201,6 +201,7 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
              setHydroData({
                waterLevel: latest.water_level || 0,
                temp: latest.temperature || 0,
+               humidity: latest.humidity || 0,
                light: latest.light_level || 0,
                pumpStatus: latest.pump_status || 'OFF'
              })
@@ -228,9 +229,10 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
     },
     hidroponik: {
       metrics: [
-        { label: 'Level Air', value: `${hydroData.waterLevel}%`, color: '#1565C0' },
         { label: 'Suhu', value: `${hydroData.temp}°C`, color: '#E65100' },
+        { label: 'Kelembapan', value: `${hydroData.humidity}%`, color: '#1565C0' },
         { label: 'Intensitas Cahaya', value: `${hydroData.light} lux`, color: '#F59E0B' },
+        { label: 'Level Air', value: `${hydroData.waterLevel}%`, color: '#1565C0' },
       ],
       ctrl1: 'Pompa Sirkulasi', ctrl2: '',
     },
