@@ -21,7 +21,7 @@ export function OverviewMetrics({ id }: { id: string | number }) {
           const data = await res.json()
           if (data && data.length > 0) {
             const latest = data[data.length - 1]
-            setHydroData({ waterLevel: latest.water_level || 0, temp: latest.temperature || 0, humidity: latest.humidity || 0, light: latest.light_level || 0 })
+            setHydroData({ waterLevel: latest.waterLevel || latest.water_level || 0, temp: latest.temperature || 0, humidity: latest.humidity || 0, light: latest.lightLevel || latest.light_level || 0 })
           }
         } catch (err) {
           console.error(err)

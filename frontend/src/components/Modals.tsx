@@ -199,11 +199,11 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
           if (data && data.length > 0) {
              const latest = data[data.length - 1]
              setHydroData({
-               waterLevel: latest.water_level || 0,
+               waterLevel: latest.waterLevel || latest.water_level || 0,
                temp: latest.temperature || 0,
                humidity: latest.humidity || 0,
-               light: latest.light_level || 0,
-               pumpStatus: latest.pump_status || 'OFF'
+               light: latest.lightLevel || latest.light_level || 0,
+               pumpStatus: latest.pumpStatus || latest.pump_status || 'OFF'
              })
           }
         } catch (e) {
