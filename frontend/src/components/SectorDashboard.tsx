@@ -109,7 +109,15 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                setMetricsData(newMetrics)
                setControls(finalControls)
              } else {
-               setMetricsData([])
+               let fallbackMetrics: any[] = [];
+               if (sector.id.toString().toLowerCase().includes('kandang')) {
+                 fallbackMetrics = [
+                   { key: 'temperature', label: 'Suhu', value: 0, color: '#E65100', icon: '🌡️', isProgress: false },
+                   { key: 'humidity', label: 'Kelembapan', value: 0, color: '#1565C0', icon: '💧', isProgress: true },
+                   { key: 'waterLevel', label: 'Level Air', value: 0, color: '#1565C0', icon: '🌊', isProgress: true }
+                 ];
+               }
+               setMetricsData(fallbackMetrics)
                const defaultControls = [{ key: 'pump_status', label: 'Pompa Air', isOn: true }];
                const finalControls = defaultControls.map(c => {
                  if (userOverrides[c.key] && (Date.now() - userOverrides[c.key].time < 60000)) {
