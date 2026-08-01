@@ -17,7 +17,7 @@ export function OverviewMetrics({ id }: { id: string | number }) {
     if (effectiveId === 'hidroponik') {
       const fetchLatest = async () => {
         try {
-          const res = await fetch(`${API_URL}/api/sectors/${effectiveId}/logs`)
+          const res = await fetch(`${API_URL}/api/sectors/${id}/logs`)
           const data = await res.json()
           if (data && data.length > 0) {
             const latest = data[data.length - 1]

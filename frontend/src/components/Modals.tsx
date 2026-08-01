@@ -190,7 +190,8 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
   const [hydroData, setHydroData] = useState({ waterLevel: 0, temp: 0, light: 0, pumpStatus: 'OFF' })
 
   useEffect(() => {
-    if (sector.id === 'hidroponik') {
+    const isHydro = String(sector.id).toLowerCase().includes('sec-010') || String(sector.id).toLowerCase().includes('hidro');
+    if (isHydro) {
       const fetchData = async () => {
         try {
           const res = await fetch(`${API_URL}/api/sectors/${sector.id}/logs`)
