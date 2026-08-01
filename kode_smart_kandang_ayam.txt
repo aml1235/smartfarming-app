@@ -1,0 +1,380 @@
+/*
+  ============================================================================
+  SMART CHICKEN COOP - ESP32 DEVKIT V1  [MQTT VERSION]
+  ============================================================================
+  Fitur       : DHT22, MQ135(GPIO34), RTC DS3231, Relay 4CH Active LOW,
+                LCD I2C 20x4, WiFi, MQTT HiveMQ Cloud, Auto Reconnect
+  MQTT        : Publish JSON ke topik terpusat agar kompatibel dengan Laravel Backend
+  ============================================================================
+*/
+
+#include <WiFi.h>
+#include <Wire.h>
+#include <RTClib.h>
+#include <DHT.h>
+#include <LiquidCrystal_I2C.h>
+#include <PubSubClient.h>
+#include <WiFiClientSecure.h>
+#include <ArduinoJson.h> // Tambahan untuk memformat data jadi JSON agar sama dengan Hidroponik
+
+/* ============================================================================
+   KONFIGURASI WIFI & SECTOR ID
+   ============================================================================ */
+char ssid[] = "ucup";
+char pass[] = "elektro12345";
+const char* SECTOR_ID = "SEC-011"; // ID untuk Kandang Ayam
+
+/* ============================================================================
+   KONFIGURASI HIVEMQ CLOUD
+   ============================================================================ */
+const char* mqtt_server = "7953ca21897d4be78141b6206bf9c205.s1.eu.hivemq.cloud";  
+const int mqtt_port = 8883;                               
+const char* mqtt_user = "rendi";                  
+const char* mqtt_pass = "12345678";                  
+const char* client_id = "ESP32_KandangAyam_SEC011"; 
+
+/* ============================================================================
+   MQTT TOPICS (Disesuaikan agar seragam dengan backend Laravel)
+   ============================================================================ */
+const char* TOPIC_SENSOR = "smartfarming/poultry/sensor/SEC-011";
+const char* TOPIC_CMD = "smartfarming/poultry/cmd/SEC-011";
+
+/* ============================================================================
+   PIN HARDWARE
+   ============================================================================ */
+#define DHT_PIN     13
+#define DHT_TYPE    DHT22
+#define MQ135_PIN   34
+
+#define RELAY_LAMP      4
+#define RELAY_MOTOR     16
+#define RELAY_POMPA     17
+#define RELAY_EXHAUST   5
+
+#define RTC_SDA     22
+#define RTC_SCL     23
+#define LCD_SDA     18
+#define LCD_SCL     19
+#define LCD_COLS    20
+#define LCD_ROWS    4
+
+/* ============================================================================
+   OBJEK GLOBAL
+   ============================================================================ */
+DHT dht(DHT_PIN, DHT_TYPE);
+RTC_DS3231 rtc;
+LiquidCrystal_I2C* lcd = nullptr;
+
+WiFiClientSecure espClient;
+PubSubClient mqtt(espClient);
+
+/* ============================================================================
+   VARIABEL DATA & STATUS
+   ============================================================================ */
+float temperature = 0.0;
+float humidity = 0.0;
+int mq135Value = 0;
+float mq135Voltage = 0.0;
+
+bool lampStatus = false;
+bool exhaustStatus = false;
+bool motorStatus = false;
+bool pompaStatus = false;
+bool lampAutoMode = true;
+bool lampManualState = false;
+bool exhaustActive = false;
+
+bool lcdAvailable = false;
+bool rtcAvailable = false;
+uint8_t lcdAddress = 0x27;
+
+unsigned long lastMqttReconnectAttempt = 0;
+const unsigned long MQTT_RECONNECT_INTERVAL = 5000;
+
+unsigned long prevSensorMillis = 0;
+const unsigned long SENSOR_INTERVAL = 5000;
+
+unsigned long prevPublishMillis = 0;
+const unsigned long PUBLISH_INTERVAL = 5000;
+
+unsigned long prevLcdMillis = 0;
+const unsigned long LCD_INTERVAL = 1000;
+
+unsigned long prevSerialMillis = 0;
+const unsigned long SERIAL_INTERVAL = 2000;
+
+unsigned long prevWifiMillis = 0;
+const unsigned long WIFI_INTERVAL = 10000;
+
+unsigned long rtcMillisOffset = 0;
+DateTime rtcLastValid;
+const char* NAMA_HARI[] = {"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"};
+
+/* ============================================================================
+   VALIDASI RTC
+   ============================================================================ */
+bool isRTCValid(DateTime dt) {
+  if (dt.year() < 2024 || dt.year() > 2035) return false;
+  if (dt.month() < 1 || dt.month() > 12) return false;
+  if (dt.day() < 1 || dt.day() > 31) return false;
+  if (dt.hour() > 23) return false;
+  if (dt.minute() > 59) return false;
+  if (dt.second() > 59) return false;
+  return true;
+}
+
+DateTime getSafeTime() {
+  if (!rtcAvailable) {
+    return rtcLastValid + TimeSpan(millis() / 1000);
+  }
+  DateTime now = rtc.now();
+  if (!isRTCValid(now)) {
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    now = rtc.now();
+    rtcLastValid = now;
+    rtcMillisOffset = millis();
+  } else {
+    rtcLastValid = now;
+    rtcMillisOffset = millis();
+  }
+  return now;
+}
+
+/* ============================================================================
+   LCD INIT
+   ============================================================================ */
+uint8_t scanI2CAddress() {
+  const uint8_t addresses[] = {0x27, 0x3F};
+  for (uint8_t i = 0; i < 2; i++) {
+    Wire.beginTransmission(addresses[i]);
+    if (Wire.endTransmission() == 0) return addresses[i];
+  }
+  for (uint8_t addr = 8; addr < 120; addr++) {
+    Wire.beginTransmission(addr);
+    if (Wire.endTransmission() == 0) return addr;
+  }
+  return 0;
+}
+
+bool initLCD() {
+  lcdAddress = scanI2CAddress();
+  if (lcdAddress == 0) return false;
+  lcd = new LiquidCrystal_I2C(lcdAddress, LCD_COLS, LCD_ROWS);
+  lcd->init();
+  lcd->backlight();
+  lcd->clear();
+  lcd->setCursor(0, 0); lcd->print("  SMART CHICKEN COOP  ");
+  return true;
+}
+
+/* ============================================================================
+   MQTT CALLBACK (terima perintah dari web backend)
+   ============================================================================ */
+void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  String message = "";
+  for (unsigned int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+  message.trim();
+
+  Serial.println("[MQTT] Received JSON: " + message);
+
+  // Menerima data dalam format JSON dari Laravel { "lamp": "ON", "motor": "OFF" }
+  StaticJsonDocument<256> doc;
+  if (!deserializeJson(doc, message)) {
+    if (doc.containsKey("lamp")) {
+      lampManualState = (doc["lamp"] == "ON");
+      if (!lampAutoMode) {
+        lampStatus = lampManualState;
+        digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH);
+      }
+    }
+    if (doc.containsKey("motor")) {
+      motorStatus = (doc["motor"] == "ON");
+      digitalWrite(RELAY_MOTOR, motorStatus ? LOW : HIGH);
+    }
+    if (doc.containsKey("pompa")) {
+      pompaStatus = (doc["pompa"] == "ON");
+      digitalWrite(RELAY_POMPA, pompaStatus ? LOW : HIGH);
+    }
+    if (doc.containsKey("lampAutoMode")) {
+      lampAutoMode = (doc["lampAutoMode"] == "ON");
+      if (!lampAutoMode) {
+        lampStatus = lampManualState;
+        digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH);
+      }
+    }
+    publishMQTT(millis()); // Update status seketika
+  }
+}
+
+/* ============================================================================
+   MQTT RECONNECT
+   ============================================================================ */
+bool reconnectMQTT() {
+  if (!mqtt.connected()) {
+    Serial.print(F("[MQTT] Connecting..."));
+    if (mqtt.connect(client_id, mqtt_user, mqtt_pass)) {
+      Serial.println(F(" CONNECTED!"));
+      mqtt.subscribe(TOPIC_CMD);
+      Serial.println(F("[MQTT] Subscribed to CMD topic"));
+    } else {
+      Serial.print(F(" failed, rc="));
+      Serial.println(mqtt.state());
+    }
+  }
+  return mqtt.connected();
+}
+
+/* ============================================================================
+   SETUP
+   ============================================================================ */
+void setup() {
+  Serial.begin(115200);
+  while (!Serial && millis() < 1000);
+
+  pinMode(RELAY_LAMP, OUTPUT); pinMode(RELAY_MOTOR, OUTPUT);
+  pinMode(RELAY_POMPA, OUTPUT); pinMode(RELAY_EXHAUST, OUTPUT);
+  digitalWrite(RELAY_LAMP, HIGH); digitalWrite(RELAY_MOTOR, HIGH);
+  digitalWrite(RELAY_POMPA, HIGH); digitalWrite(RELAY_EXHAUST, HIGH);
+
+  dht.begin();
+  Wire.begin(LCD_SDA, LCD_SCL);
+  lcdAvailable = initLCD();
+
+  Wire1.begin(RTC_SDA, RTC_SCL);
+  if (!rtc.begin(&Wire1)) {
+    rtcAvailable = false; rtcLastValid = DateTime(F(__DATE__), F(__TIME__));
+  } else {
+    if (rtc.lostPower()) rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    rtcAvailable = true; rtcLastValid = rtc.now();
+  }
+
+  analogSetAttenuation(ADC_11db);
+  analogSetWidth(12);
+  pinMode(MQ135_PIN, INPUT);
+
+  WiFi.mode(WIFI_STA); WiFi.begin(ssid, pass);
+  while (WiFi.status() != WL_CONNECTED) delay(500);
+
+  espClient.setInsecure();
+  mqtt.setServer(mqtt_server, mqtt_port);
+  mqtt.setCallback(mqttCallback);
+  reconnectMQTT();
+}
+
+/* ============================================================================
+   LOOP
+   ============================================================================ */
+void loop() {
+  unsigned long currentMillis = millis();
+
+  if (!mqtt.connected()) {
+    if (currentMillis - lastMqttReconnectAttempt >= MQTT_RECONNECT_INTERVAL) {
+      lastMqttReconnectAttempt = currentMillis;
+      if (reconnectMQTT()) lastMqttReconnectAttempt = 0;
+    }
+  } else {
+    mqtt.loop();
+  }
+
+  readSensor(currentMillis);
+  wifiTask(currentMillis);
+  lampAutomation(currentMillis);
+  exhaustAutomation(currentMillis);
+  publishMQTT(currentMillis);
+  updateLCD(currentMillis);
+}
+
+void readSensor(unsigned long currentMillis) {
+  if (currentMillis - prevSensorMillis >= SENSOR_INTERVAL) {
+    prevSensorMillis = currentMillis;
+    float h = dht.readHumidity(); float t = dht.readTemperature();
+    if (!isnan(h) && !isnan(t)) { temperature = t; humidity = h; }
+    mq135Value = analogRead(MQ135_PIN);
+    mq135Voltage = mq135Value * (3.3 / 4095.0);
+  }
+}
+
+void wifiTask(unsigned long currentMillis) {
+  if (currentMillis - prevWifiMillis >= WIFI_INTERVAL) {
+    prevWifiMillis = currentMillis;
+    if (WiFi.status() != WL_CONNECTED) {
+      WiFi.disconnect(); WiFi.begin(ssid, pass);
+    }
+  }
+}
+
+void lampAutomation(unsigned long currentMillis) {
+  static bool lastAutoMode = true;
+  if (lampAutoMode) {
+    if (!lastAutoMode) lastAutoMode = true;
+    DateTime now = getSafeTime();
+    int currentHour = now.hour();
+    bool shouldLampOn = (currentHour >= 18 || currentHour < 6);
+    if (shouldLampOn != lampStatus) {
+      lampStatus = shouldLampOn;
+      digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH);
+      publishMQTT(millis());
+    }
+  } else {
+    if (lastAutoMode) {
+      lastAutoMode = false;
+      lampStatus = lampManualState;
+      digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH);
+      publishMQTT(millis());
+    }
+  }
+}
+
+void exhaustAutomation(unsigned long currentMillis) {
+  bool shouldExhaustOn = false;
+  if (!exhaustActive) {
+    if (temperature >= 32.0 || mq135Value >= 250) shouldExhaustOn = true;
+  } else {
+    if (temperature < 31.0 && mq135Value < 220) shouldExhaustOn = false;
+    else shouldExhaustOn = true;
+  }
+  if (shouldExhaustOn != exhaustStatus) {
+    exhaustStatus = shouldExhaustOn;
+    exhaustActive = shouldExhaustOn;
+    digitalWrite(RELAY_EXHAUST, exhaustStatus ? LOW : HIGH);
+    publishMQTT(millis());
+  }
+}
+
+void publishMQTT(unsigned long currentMillis) {
+  if (currentMillis - prevPublishMillis >= PUBLISH_INTERVAL) {
+    prevPublishMillis = currentMillis;
+    if (mqtt.connected()) {
+      StaticJsonDocument<512> doc;
+      doc["temperature"] = round(temperature * 10) / 10.0;
+      doc["humidity"] = round(humidity * 10) / 10.0;
+      doc["ammonia"] = mq135Value; // MQ135 value
+      
+      // Status Relay/Sistem
+      doc["lampStatus"] = lampStatus ? "ON" : "OFF";
+      doc["exhaustStatus"] = exhaustStatus ? "ON" : "OFF";
+      doc["motorStatus"] = motorStatus ? "ON" : "OFF";
+      doc["pumpStatus"] = pompaStatus ? "ON" : "OFF"; // Menggunakan key pumpStatus yang dibaca Laravel
+      doc["lampAutoMode"] = lampAutoMode ? "ON" : "OFF";
+
+      String payload; 
+      serializeJson(doc, payload);
+      mqtt.publish(TOPIC_SENSOR, payload.c_str());
+      
+      Serial.println(F("[MQTT] JSON Data published"));
+    }
+  }
+}
+
+void updateLCD(unsigned long currentMillis) {
+  if (!lcdAvailable || lcd == nullptr) return;
+  if (currentMillis - prevLcdMillis >= LCD_INTERVAL) {
+    prevLcdMillis = currentMillis;
+    DateTime now = getSafeTime();
+    lcd->setCursor(0, 0); lcd->print("Suhu  : "); lcd->print(temperature, 1); lcd->print(" C ");
+    lcd->setCursor(0, 1); lcd->print("Amonia: "); lcd->print(mq135Value); lcd->print("   ");
+    lcd->setCursor(0, 3); lcd->print("Lampu : "); lcd->print(lampStatus ? "ON " : "OFF");
+  }
+}

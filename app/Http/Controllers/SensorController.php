@@ -54,7 +54,7 @@ class SensorController extends Controller
             $sector->save();
         }
 
-        return response()->json(['message' => 'Data sensor berhasil disimpan', 'data' => $savedLogs], 201);
+        return response()->json(['message' => 'Data sensor berhasil disimpan', 'data' => $savedLogs], 200);
     }
 
 }

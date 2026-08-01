@@ -178,11 +178,38 @@ class SectorController extends Controller
             'target' => "Sektor $sector_id"
         ]);
 
-        // Simpan command di cache (berlaku selama 5 menit)
-        \Illuminate\Support\Facades\Cache::put("pump_command_{$sector_id}", $command, now()->addMinutes(5));
+        // Publish to MQTT
+        try {
+            $server   = env('MQTT_HOST', 'broker.hivemq.com');
+            $port     = env('MQTT_PORT', 1883);
+            $clientId = env('MQTT_CLIENT_ID', 'laravel_pub_' . uniqid());
+            $username = env('MQTT_USERNAME');
+            $password = env('MQTT_PASSWORD');
+
+            $connectionSettings = (new \PhpMqtt\Client\ConnectionSettings)
+                ->setUsername($username)
+                ->setPassword($password)
+                ->setUseTls(env('MQTT_TLS', false));
+
+            $mqtt = new \PhpMqtt\Client\MqttClient($server, $port, $clientId);
+            $mqtt->connect($connectionSettings, true);
+            
+            // Publish ke topik hydroponic
+            $topic = "smartfarming/hydroponic/cmd/{$sector_id}";
+            $payload = json_encode(['status' => $command]);
+            $mqtt->publish($topic, $payload, 0);
+            
+            $mqtt->disconnect();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('MQTT Publish Error: ' . $e->getMessage());
+            return response()->json([
+                'message' => "Gagal mengirim perintah ke pompa sektor $sector_id via MQTT",
+                'error' => $e->getMessage()
+            ], 500);
+        }
 
         return response()->json([
-            'message' => "Perintah $command berhasil dikirim ke pompa sektor $sector_id"
+            'message' => "Perintah $command berhasil dikirim ke pompa sektor $sector_id via MQTT"
         ]);
     }
 
