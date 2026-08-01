@@ -287,7 +287,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                     setSch: setKandangLightSchedule 
                   },
                   { 
-                    label: 'Conveyor Pakan', 
+                    label: 'Conveyor Kotoran', 
                     icon: '⚙️', 
                     val: kandangConveyorOn, 
                     set: setKandangConveyorOn, 

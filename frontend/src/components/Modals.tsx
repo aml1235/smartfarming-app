@@ -163,7 +163,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
                     setSch: setLightSchedule 
                   },
                   { 
-                    label: 'Conveyor Pakan', 
+                    label: 'Conveyor Kotoran', 
                     icon: '⚙️', 
                     val: conveyorOn, 
                     set: setConveyorOn, 
