@@ -75,40 +75,44 @@ class MqttListen extends Command
 
     private function processSensorData($sectorId, $message)
     {
-        $payload = json_decode($message, true);
-        if (!$payload) {
-            $this->error("Invalid JSON payload.");
-            return;
-        }
-
-        $sector = Sector::where('sector_id', $sectorId)->first();
-        if (!$sector) {
-            $this->error("Sector {$sectorId} not found.");
-            return;
-        }
-
-        $metrics = $sector->metrics ?? [];
-        $validTypes = ['temperature', 'humidity', 'waterLevel', 'lightLevel', 'water_level', 'light_level', 'pumpStatus', 'pump_status'];
-
-        foreach ($payload as $key => $value) {
-            if (in_array($key, $validTypes)) {
-                $logValue = $value;
-                if (strtoupper((string)$value) === 'ON') $logValue = 1;
-                if (strtoupper((string)$value) === 'OFF') $logValue = 0;
-
-                if (is_numeric($logValue)) {
-                    SensorLog::create([
-                        'sector_id' => $sectorId,
-                        'type' => $key,
-                        'value' => (float) $logValue
-                    ]);
-                }
-                $metrics[$key] = $logValue;
+        try {
+            $payload = json_decode($message, true);
+            if (!$payload) {
+                $this->error("Invalid JSON payload.");
+                return;
             }
-        }
 
-        $sector->metrics = $metrics;
-        $sector->save();
-        $this->info("Data saved for sector {$sectorId}");
+            $sector = Sector::where('sector_id', $sectorId)->first();
+            if (!$sector) {
+                $this->error("Sector {$sectorId} not found di Database Lokal. Pastikan database Anda hidup dan ID-nya cocok.");
+                return;
+            }
+
+            $metrics = $sector->metrics ?? [];
+            $validTypes = ['temperature', 'humidity', 'waterLevel', 'lightLevel', 'water_level', 'light_level', 'pumpStatus', 'pump_status'];
+
+            foreach ($payload as $key => $value) {
+                if (in_array($key, $validTypes)) {
+                    $logValue = $value;
+                    if (strtoupper((string)$value) === 'ON') $logValue = 1;
+                    if (strtoupper((string)$value) === 'OFF') $logValue = 0;
+
+                    if (is_numeric($logValue)) {
+                        SensorLog::create([
+                            'sector_id' => $sectorId,
+                            'type' => $key,
+                            'value' => (float) $logValue
+                        ]);
+                    }
+                    $metrics[$key] = $logValue;
+                }
+            }
+
+            $sector->metrics = $metrics;
+            $sector->save();
+            $this->info("✅ Data saved for sector {$sectorId}");
+        } catch (\Exception $e) {
+            $this->error("❌ Gagal menyimpan ke Database: " . $e->getMessage());
+        }
     }
 }
