@@ -45,9 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 
-// Endpoint untuk menerima data dari perangkat IoT (ESP32 / NodeMCU)
-Route::post('/sensors', [\App\Http\Controllers\SensorController::class, 'store']);
-Route::post('/sensor-update', [\App\Http\Controllers\SensorController::class, 'store']); // Alias untuk Arduino lama
+// Endpoint HTTP lama untuk sensor telah dihapus dan sepenuhnya digantikan oleh arsitektur MQTT.
 Route::get('/debug-logs', function() {
     return \App\Models\SensorLog::orderBy('created_at', 'desc')->take(5)->get();
 });
