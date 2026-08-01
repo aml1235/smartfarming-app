@@ -34,6 +34,27 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
   const [showAiModal, setShowAiModal] = useState(false)
   const [aiLoading, setAiLoading] = useState(false)
   const [aiResult, setAiResult] = useState<any>(null)
+  
+  // States khusus Kandang Ayam
+  const isKandang = sector.id.toString().toLowerCase().includes('kandang')
+  const [kandangPumpOn, setKandangPumpOn] = useState(() => localStorage.getItem('kandang_pump_on') === 'true')
+  const [kandangPumpSchedule, setKandangPumpSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_pump_sch') || '{"on": "06:00", "off": "18:00"}'))
+  const [kandangLightOn, setKandangLightOn] = useState(() => localStorage.getItem('kandang_light_on') === 'true')
+  const [kandangLightSchedule, setKandangLightSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_light_sch') || '{"on": "18:00", "off": "06:00"}'))
+  const [kandangConveyorOn, setKandangConveyorOn] = useState(() => localStorage.getItem('kandang_conveyor_on') === 'true')
+  const [kandangConveyorSchedule, setKandangConveyorSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_conveyor_sch') || '{"on": "07:00", "off": "07:15"}'))
+
+  useEffect(() => {
+    if (isKandang) {
+      localStorage.setItem('kandang_pump_on', kandangPumpOn.toString())
+      localStorage.setItem('kandang_pump_sch', JSON.stringify(kandangPumpSchedule))
+      localStorage.setItem('kandang_light_on', kandangLightOn.toString())
+      localStorage.setItem('kandang_light_sch', JSON.stringify(kandangLightSchedule))
+      localStorage.setItem('kandang_conveyor_on', kandangConveyorOn.toString())
+      localStorage.setItem('kandang_conveyor_sch', JSON.stringify(kandangConveyorSchedule))
+    }
+  }, [kandangPumpOn, kandangPumpSchedule, kandangLightOn, kandangLightSchedule, kandangConveyorOn, kandangConveyorSchedule, isKandang])
+
   // Real-time data from local API fallback
   useEffect(() => {
     // Supabase has been removed based on request.
@@ -237,9 +258,70 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
 
         {/* Control Panel */}
         <div className="card" style={{ padding: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>Panel Kontrol DB</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>Panel Kontrol & Otomatisasi</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {controls.length > 0 ? controls.map((ctrl) => (
+            {isKandang ? (
+              [
+                  { 
+                    label: 'Pompa Air', 
+                    icon: '💧', 
+                    val: kandangPumpOn, 
+                    set: setKandangPumpOn, 
+                    sch: kandangPumpSchedule, 
+                    setSch: setKandangPumpSchedule 
+                  },
+                  { 
+                    label: 'Lampu Penerangan', 
+                    icon: '💡', 
+                    val: kandangLightOn, 
+                    set: setKandangLightOn, 
+                    sch: kandangLightSchedule, 
+                    setSch: setKandangLightSchedule 
+                  },
+                  { 
+                    label: 'Conveyor Pakan', 
+                    icon: '⚙️', 
+                    val: kandangConveyorOn, 
+                    set: setKandangConveyorOn, 
+                    sch: kandangConveyorSchedule, 
+                    setSch: setKandangConveyorSchedule 
+                  },
+                ].map(ctrl => (
+                  <div key={ctrl.label} style={{ display: 'flex', flexDirection: 'column', padding: '12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12, border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>{ctrl.icon}</span>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{ctrl.label}</div>
+                          <div style={{ fontSize: 11, color: ctrl.val ? '#2E7D32' : '#9CA3AF' }}>{ctrl.val ? 'Status: Menyala' : 'Status: Mati'}</div>
+                        </div>
+                      </div>
+                      <Toggle isOn={ctrl.val} onChange={ctrl.set} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500, flex: 1 }}>Jadwal Timer:</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 10, color: '#6B7280' }}>Nyala</span>
+                        <input 
+                          type="time" 
+                          value={ctrl.sch.on} 
+                          onChange={e => ctrl.setSch({ ...ctrl.sch, on: e.target.value })}
+                          style={{ padding: '4px 6px', border: '1px solid #e4e7ec', borderRadius: 4, fontSize: 11, outline: 'none', background: 'transparent' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 10, color: '#6B7280' }}>Mati</span>
+                        <input 
+                          type="time" 
+                          value={ctrl.sch.off} 
+                          onChange={e => ctrl.setSch({ ...ctrl.sch, off: e.target.value })}
+                          style={{ padding: '4px 6px', border: '1px solid #e4e7ec', borderRadius: 4, fontSize: 11, outline: 'none', background: 'transparent' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))
+            ) : controls.length > 0 ? controls.map((ctrl) => (
               <div key={ctrl.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--bg-base)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 20 }}>🔄</span>
