@@ -57,14 +57,58 @@ export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd:
 }
 
 export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () => void }) {
-  const [feedAuto, setFeedAuto] = useState(true)
-  const [drinkAuto, setDrinkAuto] = useState(true)
-  const [fanOn, setFanOn] = useState(false)
-  const [temp] = useState(0)
-  const [waterLevel] = useState(0)
-  const [feedLevel] = useState(0)
-  const [tempData] = useState(generateTempData)
+  const [kandangData, setKandangData] = useState({ temp: 0, humidity: 0, waterLevel: 0 })
+  const [tempData, setTempData] = useState(generateTempData)
   const [lastRefresh, setLastRefresh] = useState(new Date())
+
+  // Controls (localStorage initial state)
+  const [pumpOn, setPumpOn] = useState(() => localStorage.getItem('kandang_pump_on') === 'true')
+  const [pumpSchedule, setPumpSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_pump_sch') || '{"on": "06:00", "off": "18:00"}'))
+  
+  const [lightOn, setLightOn] = useState(() => localStorage.getItem('kandang_light_on') === 'true')
+  const [lightSchedule, setLightSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_light_sch') || '{"on": "18:00", "off": "06:00"}'))
+
+  const [conveyorOn, setConveyorOn] = useState(() => localStorage.getItem('kandang_conveyor_on') === 'true')
+  const [conveyorSchedule, setConveyorSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_conveyor_sch') || '{"on": "07:00", "off": "07:15"}'))
+
+  // Save to local storage on change
+  useEffect(() => {
+    localStorage.setItem('kandang_pump_on', pumpOn.toString())
+    localStorage.setItem('kandang_pump_sch', JSON.stringify(pumpSchedule))
+    localStorage.setItem('kandang_light_on', lightOn.toString())
+    localStorage.setItem('kandang_light_sch', JSON.stringify(lightSchedule))
+    localStorage.setItem('kandang_conveyor_on', conveyorOn.toString())
+    localStorage.setItem('kandang_conveyor_sch', JSON.stringify(conveyorSchedule))
+  }, [pumpOn, pumpSchedule, lightOn, lightSchedule, conveyorOn, conveyorSchedule])
+
+  const fetchLatest = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/sectors/${sector.id}/logs`)
+      const data = await res.json()
+      if (data && data.length > 0) {
+        const latest = data[data.length - 1]
+        setKandangData({
+           temp: latest.temperature || 0,
+           humidity: latest.humidity || 0,
+           waterLevel: latest.waterLevel || latest.water_level || 0
+        })
+        
+        const chartData = data.map((d: any) => ({
+          time: d.time,
+          suhu: d.temperature || 0
+        }))
+        if (chartData.length > 0) setTempData(chartData)
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  useEffect(() => {
+    fetchLatest()
+    const interval = setInterval(fetchLatest, 10000)
+    return () => clearInterval(interval)
+  }, [sector.id])
 
   return (
     <div className="modal-overlay" onClick={onBack}>
@@ -78,11 +122,11 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
             <div style={{ width: 36, height: 36, borderRadius: 10, background: sector.colorLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{sector.icon}</div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>{sector.name}</div>
-              <div style={{ fontSize: 12, color: '#6B7280' }}>Detail Monitoring — Sektor A</div>
+              <div style={{ fontSize: 12, color: '#6B7280' }}>Detail Monitoring Real-time</div>
             </div>
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button onClick={() => setLastRefresh(new Date())} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid #e4e7ec', borderRadius: 7, padding: '6px 10px', cursor: 'pointer', color: '#6B7280', fontSize: 12 }}>
+            <button onClick={() => { setLastRefresh(new Date()); fetchLatest(); }} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: '1px solid #e4e7ec', borderRadius: 7, padding: '6px 10px', cursor: 'pointer', color: '#6B7280', fontSize: 12 }}>
               <IcRefresh /> Perbarui
             </button>
             <span style={{ fontSize: 11, color: '#9CA3AF' }}>{lastRefresh.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -90,90 +134,104 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
         </div>
 
         <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20, maxHeight: 'calc(90vh - 80px)', overflowY: 'auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 16 }}>
-            <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase', alignSelf: 'flex-start' }}>Suhu Real-Time</div>
-              <TempGauge value={temp} min={15} max={45} />
-              <div className="badge badge-green" style={{ fontSize: 11 }}><IcCheck /> Dalam Rentang Normal</div>
-            </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+            <StatCard label="Suhu Ruangan" value={`${kandangData.temp}°C`} sub="Terpantau" icon={<IcThermometer size={16} />} color="#E65100" bg="#fff3e0" />
+            <StatCard label="Kelembapan" value={`${kandangData.humidity}%`} sub="Terpantau" icon={<IcDroplets size={16} />} color="#1565C0" bg="#e3f0ff" />
+            <StatCard label="Level Air Minum" value={`${kandangData.waterLevel}%`} sub="Kapasitas Tangki" icon={<span style={{ fontSize: 14 }}>💧</span>} color="#1565C0" bg="#e3f0ff" />
+          </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <StatCard label="Kelembapan" value="0%" sub="-" icon={<IcDroplets size={16} />} color="#1565C0" bg="#e3f0ff" />
-                <StatCard label="Populasi Aktif" value="0" sub="-" icon={<span style={{ fontSize: 14 }}>🐓</span>} color="#E65100" bg="#fff3e0" />
-                <StatCard label="Level Pakan" value={`${feedLevel}%`} sub="-" icon={<span style={{ fontSize: 14 }}>🌾</span>} color="#795548" bg="#f9f5f3" />
-                <StatCard label="Suhu Luar" value="0°C" sub="-" icon={<IcThermometer size={16} />} color="#C62828" bg="#ffebee" />
-              </div>
-
-              <div className="card" style={{ padding: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12 }}>Panel Kontrol</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {[
-                    { label: 'Kontrol Pemberian Pakan Otomatis', desc: feedAuto ? 'Aktif — jadwal 06:00 & 17:00' : 'Nonaktif — mode manual', val: feedAuto, set: setFeedAuto, icon: '🌾' },
-                    { label: 'Monitor Air Minum Otomatis', desc: drinkAuto ? 'Aktif — pengisian otomatis' : 'Nonaktif — mode manual', val: drinkAuto, set: setDrinkAuto, icon: '💧' },
-                    { label: 'Kipas Exhaust', desc: fanOn ? 'Menyala — ventilasi aktif' : 'Mati', val: fanOn, set: setFanOn, icon: '🌬️' },
-                  ].map(ctrl => (
-                    <div key={ctrl.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="card" style={{ padding: 20 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>Panel Kontrol & Otomatisasi</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  { 
+                    label: 'Pompa Air', 
+                    icon: '💧', 
+                    val: pumpOn, 
+                    set: setPumpOn, 
+                    sch: pumpSchedule, 
+                    setSch: setPumpSchedule 
+                  },
+                  { 
+                    label: 'Lampu Penerangan', 
+                    icon: '💡', 
+                    val: lightOn, 
+                    set: setLightOn, 
+                    sch: lightSchedule, 
+                    setSch: setLightSchedule 
+                  },
+                  { 
+                    label: 'Conveyor Pakan', 
+                    icon: '⚙️', 
+                    val: conveyorOn, 
+                    set: setConveyorOn, 
+                    sch: conveyorSchedule, 
+                    setSch: setConveyorSchedule 
+                  },
+                ].map(ctrl => (
+                  <div key={ctrl.label} style={{ display: 'flex', flexDirection: 'column', padding: '12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12, border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 16 }}>{ctrl.icon}</span>
+                        <span style={{ fontSize: 18 }}>{ctrl.icon}</span>
                         <div>
                           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{ctrl.label}</div>
-                          <div style={{ fontSize: 11, color: ctrl.val ? '#2E7D32' : '#9CA3AF' }}>{ctrl.desc}</div>
+                          <div style={{ fontSize: 11, color: ctrl.val ? '#2E7D32' : '#9CA3AF' }}>{ctrl.val ? 'Status: Menyala' : 'Status: Mati'}</div>
                         </div>
                       </div>
                       <Toggle isOn={ctrl.val} onChange={ctrl.set} />
                     </div>
-                  ))}
-                </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500, flex: 1 }}>Jadwal Timer:</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 10, color: '#6B7280' }}>Nyala</span>
+                        <input 
+                          type="time" 
+                          value={ctrl.sch.on} 
+                          onChange={e => ctrl.setSch({ ...ctrl.sch, on: e.target.value })}
+                          style={{ padding: '4px 6px', border: '1px solid #e4e7ec', borderRadius: 4, fontSize: 11, outline: 'none', background: 'transparent' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 10, color: '#6B7280' }}>Mati</span>
+                        <input 
+                          type="time" 
+                          value={ctrl.sch.off} 
+                          onChange={e => ctrl.setSch({ ...ctrl.sch, off: e.target.value })}
+                          style={{ padding: '4px 6px', border: '1px solid #e4e7ec', borderRadius: 4, fontSize: 11, outline: 'none', background: 'transparent' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
 
-          <div className="card" style={{ padding: 20 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Grafik Suhu Harian</div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>Data hari ini — diperbarui setiap menit</div>
-              </div>
-              <div className="badge badge-amber"><IcActivity size={11} /> Batas atas: 35°C</div>
-            </div>
-            <ResponsiveContainer width="100%" height={160}>
-              <AreaChart data={tempData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#E65100" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#E65100" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} domain={[24, 36]} />
-                <Tooltip content={<ChartTooltip />} />
-                <Area type="monotone" dataKey="suhu" stroke="#E65100" strokeWidth={2} fill="url(#tempGrad)" dot={false} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="card" style={{ padding: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 14 }}>Monitor Air Minum</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500 }}>Level Tangki</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: '#1565C0' }}>{waterLevel}%</span>
+            <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Grafik Suhu Harian</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>Data hari ini — diperbarui otomatis</div>
                 </div>
-                <ProgressBar value={waterLevel} color="#1565C0" />
-                <div style={{ fontSize: 11, color: '#6B7280', marginTop: 4 }}>Kapasitas: 500L</div>
+                <div className="badge badge-amber"><IcActivity size={11} /> Batas atas: 35°C</div>
               </div>
-              <div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, marginBottom: 4 }}>Kualitas Air</div>
-                <div className="badge badge-green" style={{ marginBottom: 4 }}><IcCheck /> Layak Minum</div>
-                <div style={{ fontSize: 11, color: '#6B7280' }}>TDS: 0 ppm • pH: 0</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', fontWeight: 500, marginBottom: 4 }}>Konsumsi Hari Ini</div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>0 L</div>
-                <div style={{ fontSize: 11, color: '#6B7280' }}>Rata-rata: 0L/ekor</div>
+              <div style={{ flex: 1, minHeight: 220 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={tempData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#E65100" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="#E65100" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                    <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} domain={[24, 36]} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Area type="monotone" dataKey="suhu" stroke="#E65100" strokeWidth={2} fill="url(#tempGrad)" dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </div>

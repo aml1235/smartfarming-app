@@ -8,20 +8,25 @@ import { API_URL } from '../constants'
 
 export function OverviewMetrics({ id }: { id: string | number }) {
   const [hydroData, setHydroData] = React.useState({ waterLevel: 0, temp: 0, humidity: 0, light: 0 })
+  const [kandangData, setKandangData] = React.useState({ temp: 0, humidity: 0, waterLevel: 0 })
   const effectiveId = String(id).toLowerCase().includes('sec-010') || String(id).toLowerCase().includes('hidro') ? 'hidroponik' 
                     : String(id).toLowerCase().includes('kandang') ? 'kandang'
                     : String(id).toLowerCase().includes('kolam') ? 'kolam'
                     : 'irigasi';
 
   React.useEffect(() => {
-    if (effectiveId === 'hidroponik') {
+    if (effectiveId === 'hidroponik' || effectiveId === 'kandang') {
       const fetchLatest = async () => {
         try {
           const res = await fetch(`${API_URL}/api/sectors/${id}/logs`)
           const data = await res.json()
           if (data && data.length > 0) {
             const latest = data[data.length - 1]
-            setHydroData({ waterLevel: latest.waterLevel || latest.water_level || 0, temp: latest.temperature || 0, humidity: latest.humidity || 0, light: latest.lightLevel || latest.light_level || 0 })
+            if (effectiveId === 'hidroponik') {
+              setHydroData({ waterLevel: latest.waterLevel || latest.water_level || 0, temp: latest.temperature || 0, humidity: latest.humidity || 0, light: latest.lightLevel || latest.light_level || 0 })
+            } else if (effectiveId === 'kandang') {
+              setKandangData({ temp: latest.temperature || 0, humidity: latest.humidity || 0, waterLevel: latest.waterLevel || latest.water_level || 0 })
+            }
           }
         } catch (err) {
           console.error(err)
@@ -31,7 +36,7 @@ export function OverviewMetrics({ id }: { id: string | number }) {
       const interval = setInterval(fetchLatest, 10000)
       return () => clearInterval(interval)
     }
-  }, [id])
+  }, [id, effectiveId])
 
   const metrics: Record<SectorId, React.ReactNode> = {
     kandang: (
@@ -39,24 +44,18 @@ export function OverviewMetrics({ id }: { id: string | number }) {
         <div style={{ display: 'flex', gap: 8 }}>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Suhu</div>
-            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>0°C</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>{kandangData.temp}°C</div>
           </div>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Kelembapan</div>
-            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>0%</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>{kandangData.humidity}%</div>
           </div>
         </div>
         <div>
           <div className="metric-row-label" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
-            <span>🌾 Pakan</span><span style={{ fontWeight: 600, color: '#795548' }}>0%</span>
+            <span>💧 Level Air</span><span style={{ fontWeight: 600, color: '#1565C0' }}>{kandangData.waterLevel}%</span>
           </div>
-          <ProgressBar value={0} color="#795548" />
-        </div>
-        <div>
-          <div className="metric-row-label" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
-            <span>💧 Air Minum</span><span style={{ fontWeight: 600, color: '#1565C0' }}>0%</span>
-          </div>
-          <ProgressBar value={0} color="#1565C0" />
+          <ProgressBar value={kandangData.waterLevel} color="#1565C0" />
         </div>
       </div>
     ),
