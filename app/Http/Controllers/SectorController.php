@@ -15,8 +15,17 @@ class SectorController extends Controller
 
     public function logs($id)
     {
+        $latestLog = SensorLog::where('sector_id', $id)->latest('created_at')->first();
+
+        if (!$latestLog) {
+            return response()->json([]);
+        }
+
+        $endTime = $latestLog->created_at;
+        $startTime = (clone $endTime)->subHours(24);
+
         $logs = SensorLog::where('sector_id', $id)
-            ->where('created_at', '>=', now()->subHours(24))
+            ->where('created_at', '>=', $startTime)
             ->orderBy('created_at', 'asc')
             ->get();
 
@@ -35,17 +44,22 @@ class SectorController extends Controller
 
     public function evaluate($id)
     {
-        $logs = SensorLog::where('sector_id', $id)
-            ->where('created_at', '>=', now()->subHours(24))
-            ->get();
+        $latestLog = SensorLog::where('sector_id', $id)->latest('created_at')->first();
 
-        if ($logs->isEmpty()) {
+        if (!$latestLog) {
             return response()->json([
                 'status' => 'Data Tidak Cukup',
-                'kesimpulan' => 'Belum ada data sensor dalam 24 jam terakhir untuk dianalisa.',
+                'kesimpulan' => 'Belum ada data sensor sama sekali di database lokal.',
                 'rekomendasi' => 'Pastikan alat IoT menyala dan terhubung ke jaringan.'
             ]);
         }
+
+        $endTime = $latestLog->created_at;
+        $startTime = (clone $endTime)->subHours(24);
+
+        $logs = SensorLog::where('sector_id', $id)
+            ->where('created_at', '>=', $startTime)
+            ->get();
 
         $hasTemp = $logs->whereIn('type', ['suhu', 'temperature', 'temp'])->count() > 0;
         $hasHum = $logs->whereIn('type', ['kelembapan', 'humidity', 'hum'])->count() > 0;
