@@ -83,7 +83,16 @@ export default function App() {
             } else {
               const apiSectors = data.map((d: any) => {
                 const base = SECTORS.find(s => s.id === d.sector_id) || SECTORS[0];
-                return { ...base, ...d, id: d.sector_id, metrics: d.metrics };
+                let lastUpdateStr = base.lastUpdate;
+                if (d.updated_at) {
+                  const updateTime = new Date(d.updated_at);
+                  const diffMins = Math.floor((Date.now() - updateTime.getTime()) / 60000);
+                  if (diffMins < 1) lastUpdateStr = 'Baru saja';
+                  else if (diffMins < 60) lastUpdateStr = `${diffMins} mnt lalu`;
+                  else if (diffMins < 1440) lastUpdateStr = `${Math.floor(diffMins/60)} jam lalu`;
+                  else lastUpdateStr = `${Math.floor(diffMins/1440)} hari lalu`;
+                }
+                return { ...base, ...d, id: d.sector_id, metrics: d.metrics, lastUpdate: lastUpdateStr };
               });
               setSectors(apiSectors);
             }
