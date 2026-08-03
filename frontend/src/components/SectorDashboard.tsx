@@ -69,8 +69,9 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                const latest = data[data.length - 1]
                const newMetrics = []
                const newControls = []
+               const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'water_level', 'lampstatus', 'conveyorstatus', 'lampautomode', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id'];
                for (const key in latest) {
-                 if (key === 'time') continue;
+                 if (ignoreKeys.includes(key.toLowerCase())) continue;
                   if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {
                     const isPumpOn = String(latest[key]).toUpperCase() === 'ON' || String(latest[key]) === '1'
                     newControls.push({
