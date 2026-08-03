@@ -18,10 +18,26 @@ export function OverviewMetrics({ id }: { id: string | number }) {
     if (effectiveId === 'hidroponik' || effectiveId === 'kandang') {
       const fetchLatest = async () => {
         try {
+          let latest: any = {};
+          try {
+            const sectorRes = await fetch(`${API_URL}/api/sectors/${id}`)
+            const sectorData = await sectorRes.json()
+            if (sectorData && sectorData.metrics) {
+              if (typeof sectorData.metrics === 'string') {
+                try { latest = JSON.parse(sectorData.metrics) } catch(e) {}
+              } else {
+                latest = { ...sectorData.metrics }
+              }
+            }
+          } catch(e) {}
+
           const res = await fetch(`${API_URL}/api/sectors/${id}/logs`)
           const data = await res.json()
           if (data && data.length > 0) {
-            const latest = data[data.length - 1]
+            latest = { ...latest, ...data[data.length - 1] }
+          }
+          
+          if (Object.keys(latest).length > 0) {
             if (effectiveId === 'hidroponik') {
               setHydroData({ waterLevel: latest.waterLevel || latest.water_level || 0, temp: latest.temperature || 0, humidity: latest.humidity || 0, light: latest.lightLevel || latest.light_level || 0 })
             } else if (effectiveId === 'kandang') {
