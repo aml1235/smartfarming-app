@@ -79,7 +79,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
              if (Object.keys(latest).length > 0) {
                const newMetrics = []
                const newControls = []
-               const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'water_level', 'lampstatus', 'conveyorstatus', 'lampautomode', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id'];
+               const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'water_level', 'lampstatus', 'conveyorstatus', 'lampautomode', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust'];
                for (const key in latest) {
                  if (ignoreKeys.includes(key.toLowerCase())) continue;
                   if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {
@@ -286,17 +286,13 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                     label: 'Lampu Penerangan', 
                     icon: '💡', 
                     val: kandangLightOn, 
-                    set: () => toggleKandangControl('lamp', kandangLightOn, setKandangLightOn), 
-                    sch: kandangLightSchedule, 
-                    setSch: setKandangLightSchedule 
+                    set: () => toggleKandangControl('lamp', kandangLightOn, setKandangLightOn)
                   },
                   { 
                     label: 'Conveyor Kotoran', 
                     icon: '⚙️', 
                     val: kandangConveyorOn, 
-                    set: () => toggleKandangControl('conveyor', kandangConveyorOn, setKandangConveyorOn), 
-                    sch: kandangConveyorSchedule, 
-                    setSch: setKandangConveyorSchedule 
+                    set: () => toggleKandangControl('conveyor', kandangConveyorOn, setKandangConveyorOn)
                   },
                 ].map(ctrl => (
                   <div key={ctrl.label} style={{ display: 'flex', flexDirection: 'column', padding: '12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12, border: '1px solid var(--border-color)' }}>
@@ -309,27 +305,6 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                         </div>
                       </div>
                       <Toggle isOn={ctrl.val} onChange={ctrl.set as any} />
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500, flex: 1 }}>Jadwal Timer:</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 10, color: '#6B7280' }}>Nyala</span>
-                        <input 
-                          type="time" 
-                          value={ctrl.sch.on} 
-                          onChange={e => ctrl.setSch({ ...ctrl.sch, on: e.target.value })}
-                          style={{ padding: '4px 6px', border: '1px solid #e4e7ec', borderRadius: 4, fontSize: 11, outline: 'none', background: 'transparent' }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 10, color: '#6B7280' }}>Mati</span>
-                        <input 
-                          type="time" 
-                          value={ctrl.sch.off} 
-                          onChange={e => ctrl.setSch({ ...ctrl.sch, off: e.target.value })}
-                          style={{ padding: '4px 6px', border: '1px solid #e4e7ec', borderRadius: 4, fontSize: 11, outline: 'none', background: 'transparent' }}
-                        />
-                      </div>
                     </div>
                   </div>
                 ))
