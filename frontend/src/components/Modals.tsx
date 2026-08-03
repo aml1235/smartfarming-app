@@ -79,15 +79,28 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
     try {
       const res = await fetch(`${API_URL}/api/sectors/${sector.id}/logs`)
       const data = await res.json()
+      
+      let latest: any = {};
+      if (typeof sector.metrics === 'string') {
+        try { latest = JSON.parse(sector.metrics) } catch(e) {}
+      } else if (sector.metrics) {
+        latest = { ...sector.metrics };
+      }
+
       if (data && data.length > 0) {
-        const latest = data[data.length - 1]
+        latest = { ...latest, ...data[data.length - 1] };
+      }
+
+      if (Object.keys(latest).length > 0) {
         setKandangData({
            temp: latest.temperature || 0,
            humidity: latest.humidity || 0,
            waterLevel: latest.waterLevel || latest.water_level || 0,
            ammonia: latest.ammonia || latest.mq135 || 0
         })
-        
+      }
+      
+      if (data && data.length > 0) {
         const chartData = data.map((d: any) => ({
           time: d.time,
           suhu: d.temperature || 0
@@ -96,6 +109,26 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
       }
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  const toggleKandangControl = async (target: string, currentState: boolean, setLocalState: any) => {
+    const newState = !currentState;
+    setLocalState(newState); // Optimistic UI update
+
+    try {
+        const sectorId = sector.sector_id || sector.id;
+        await fetch(`${API_URL}/api/sector/${sectorId}/control`, {
+           method: 'POST',
+           headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+           },
+           body: JSON.stringify({ command: newState ? 'ON' : 'OFF', target })
+        });
+    } catch (e) {
+        console.error('Kandang control failed', e);
+        setLocalState(currentState); // Revert on fail
     }
   }
 
@@ -146,17 +179,13 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
                     label: 'Lampu Penerangan', 
                     icon: '💡', 
                     val: lightOn, 
-                    set: setLightOn, 
-                    sch: lightSchedule, 
-                    setSch: setLightSchedule 
+                    set: () => toggleKandangControl('lamp', lightOn, setLightOn), 
                   },
                   { 
                     label: 'Conveyor Kotoran', 
                     icon: '⚙️', 
                     val: conveyorOn, 
-                    set: setConveyorOn, 
-                    sch: conveyorSchedule, 
-                    setSch: setConveyorSchedule 
+                    set: () => toggleKandangControl('conveyor', conveyorOn, setConveyorOn), 
                   },
                 ].map(ctrl => (
                   <div key={ctrl.label} style={{ display: 'flex', flexDirection: 'column', padding: '12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12, border: '1px solid var(--border-color)' }}>

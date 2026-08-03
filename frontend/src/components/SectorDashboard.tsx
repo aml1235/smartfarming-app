@@ -65,7 +65,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
              const data = await res.json()
              setTempData(data)
              
-             let latest = {};
+             let latest: any = {};
              if (typeof sector.metrics === 'string') {
                try { latest = JSON.parse(sector.metrics) } catch(e) {}
              } else if (sector.metrics) {
