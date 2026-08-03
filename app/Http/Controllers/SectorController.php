@@ -180,10 +180,12 @@ class SectorController extends Controller
     public function control(Request $request, $sector_id)
     {
         $validated = $request->validate([
-            'command' => 'required|in:ON,OFF'
+            'command' => 'required|in:ON,OFF',
+            'target' => 'nullable|string'
         ]);
 
         $command = $validated['command'];
+        $target = $validated['target'] ?? 'pump';
         
         // Catat aktivitas (Opsional, agar muncul di activity log)
         \App\Models\Activity::create([
@@ -208,10 +210,18 @@ class SectorController extends Controller
             $mqtt = new \PhpMqtt\Client\MqttClient($server, $port, $clientId);
             $mqtt->connect($connectionSettings, true);
             
-            // Publish ke topik hydroponic
-            $topic = "smartfarming/hydroponic/cmd/{$sector_id}";
-            $payload = json_encode(['status' => $command]);
-            $mqtt->publish($topic, $payload, 0);
+            if ($sector_id === 'SEC-011' || $sector_id === 'kandang') {
+                // Kandang Ayam (smartcoop)
+                $mqttTarget = $target; // e.g. lamp, conveyor, lampauto
+                $topic = "smartcoop/control/{$mqttTarget}";
+                $payload = ($command === 'ON') ? "1" : "0";
+                $mqtt->publish($topic, $payload, 1);
+            } else {
+                // Hydroponic or default
+                $topic = "smartfarming/hydroponic/cmd/{$sector_id}";
+                $payload = json_encode(['status' => $command]);
+                $mqtt->publish($topic, $payload, 0);
+            }
             
             $mqtt->disconnect();
         } catch (\Exception $e) {

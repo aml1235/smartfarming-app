@@ -177,12 +177,32 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
               'Content-Type': 'application/json',
               'Accept': 'application/json'
            },
-           body: JSON.stringify({ command: commandStr })
+           body: JSON.stringify({ command: commandStr, target: ctrlKey })
         });
     } catch (e) {
         console.error('Control failed', e);
         // Revert UI if failed
         setControls(prev => prev.map(c => c.key === ctrlKey ? { ...c, isOn: currentState } : c));
+    }
+  }
+
+  const toggleKandangControl = async (target: string, currentState: boolean, setLocalState: any) => {
+    const newState = !currentState;
+    setLocalState(newState); // Optimistic UI update
+
+    try {
+        const sectorId = sector.sector_id || sector.id;
+        await fetch(`${API_URL}/api/sector/${sectorId}/control`, {
+           method: 'POST',
+           headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+           },
+           body: JSON.stringify({ command: newState ? 'ON' : 'OFF', target })
+        });
+    } catch (e) {
+        console.error('Kandang control failed', e);
+        setLocalState(currentState); // Revert on fail
     }
   }
 
@@ -269,7 +289,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                     label: 'Lampu Penerangan', 
                     icon: '💡', 
                     val: kandangLightOn, 
-                    set: setKandangLightOn, 
+                    set: () => toggleKandangControl('lamp', kandangLightOn, setKandangLightOn), 
                     sch: kandangLightSchedule, 
                     setSch: setKandangLightSchedule 
                   },
@@ -277,7 +297,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                     label: 'Conveyor Kotoran', 
                     icon: '⚙️', 
                     val: kandangConveyorOn, 
-                    set: setKandangConveyorOn, 
+                    set: () => toggleKandangControl('conveyor', kandangConveyorOn, setKandangConveyorOn), 
                     sch: kandangConveyorSchedule, 
                     setSch: setKandangConveyorSchedule 
                   },
@@ -291,7 +311,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                           <div style={{ fontSize: 11, color: ctrl.val ? '#2E7D32' : '#9CA3AF' }}>{ctrl.val ? 'Status: Menyala' : 'Status: Mati'}</div>
                         </div>
                       </div>
-                      <Toggle isOn={ctrl.val} onChange={ctrl.set} />
+                      <Toggle isOn={ctrl.val} onChange={ctrl.set as any} />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
                       <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500, flex: 1 }}>Jadwal Timer:</div>
