@@ -30,6 +30,8 @@ class MqttListen extends Command
      */
     public function handle()
     {
+        date_default_timezone_set('Asia/Jakarta');
+        config(['app.timezone' => 'Asia/Jakarta']);
         $server   = env('MQTT_HOST', 'broker.hivemq.com');
         $port     = env('MQTT_PORT', 1883);
         $clientId = env('MQTT_CLIENT_ID', 'laravel_backend_' . uniqid());
