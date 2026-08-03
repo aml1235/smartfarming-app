@@ -1,9 +1,9 @@
 import React from 'react'
 
-export function Toggle({ isOn, onChange, label }: { isOn: boolean; onChange: (v: boolean) => void; label?: string }) {
+export function Toggle({ isOn, onChange, label, disabled }: { isOn: boolean; onChange: (v: boolean) => void; label?: string; disabled?: boolean }) {
   return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-      <div className="toggle-wrap" onClick={() => onChange(!isOn)}>
+    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1 }}>
+      <div className="toggle-wrap" onClick={() => !disabled && onChange(!isOn)}>
         <div className="toggle-track" style={{ background: isOn ? '#10b981' : 'var(--border-color)' }} />
         <div className="toggle-thumb" style={{ transform: isOn ? 'translateX(20px)' : 'translateX(0)', background: '#fff' }} />
       </div>

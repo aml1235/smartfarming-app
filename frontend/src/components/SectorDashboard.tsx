@@ -42,6 +42,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
   const [kandangConveyorOn, setKandangConveyorOn] = useState(() => localStorage.getItem('kandang_conveyor_on') === 'true')
   const [kandangConveyorSchedule, setKandangConveyorSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_conveyor_sch') || '{"on": "07:00", "off": "07:15"}'))
   const [kandangAutoMode, setKandangAutoMode] = useState(() => localStorage.getItem('kandang_auto_mode') !== 'false')
+  const [kandangPompaOn, setKandangPompaOn] = useState(() => localStorage.getItem('kandang_pompa_on') === 'true')
 
   useEffect(() => {
     if (isKandang) {
@@ -50,8 +51,9 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
       localStorage.setItem('kandang_conveyor_on', kandangConveyorOn.toString())
       localStorage.setItem('kandang_conveyor_sch', JSON.stringify(kandangConveyorSchedule))
       localStorage.setItem('kandang_auto_mode', kandangAutoMode.toString())
+      localStorage.setItem('kandang_pompa_on', kandangPompaOn.toString())
     }
-  }, [kandangLightOn, kandangLightSchedule, kandangConveyorOn, kandangConveyorSchedule, kandangAutoMode, isKandang])
+  }, [kandangLightOn, kandangLightSchedule, kandangConveyorOn, kandangConveyorSchedule, kandangAutoMode, kandangPompaOn, isKandang])
 
   // Real-time data from local API fallback
   useEffect(() => {
@@ -82,11 +84,12 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                  if (isKandang) {
                    if (latest.lampstatus !== undefined) setKandangLightOn(String(latest.lampstatus) === '1');
                    if (latest.conveyorstatus !== undefined) setKandangConveyorOn(String(latest.conveyorstatus) === '1');
+                   if (latest.pompastatus !== undefined) setKandangPompaOn(String(latest.pompastatus) === '1');
                    if (latest.lampautomode !== undefined) setKandangAutoMode(String(latest.lampautomode) === '1');
                  }
                  const newMetrics = []
                  const newControls = []
-                 const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'water_level', 'lampstatus', 'conveyorstatus', 'lampautomode', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust'];
+                 const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'water_level', 'lampstatus', 'conveyorstatus', 'lampautomode', 'pompastatus', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust'];
                  for (const key in latest) {
                  if (ignoreKeys.includes(key.toLowerCase())) continue;
                   if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {
@@ -299,13 +302,20 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                     label: 'Lampu Penerangan', 
                     icon: '💡', 
                     val: kandangLightOn, 
-                    set: () => toggleKandangControl('lamp', kandangLightOn, setKandangLightOn)
+                    set: () => toggleKandangControl('lamp', kandangLightOn, setKandangLightOn),
+                    disabled: kandangAutoMode
                   },
                   { 
                     label: 'Conveyor Kotoran', 
                     icon: '⚙️', 
                     val: kandangConveyorOn, 
                     set: () => toggleKandangControl('conveyor', kandangConveyorOn, setKandangConveyorOn)
+                  },
+                  { 
+                    label: 'Pompa Air Minum', 
+                    icon: '🌊', 
+                    val: kandangPompaOn, 
+                    set: () => toggleKandangControl('pompa', kandangPompaOn, setKandangPompaOn)
                   },
                 ].map(ctrl => (
                   <div key={ctrl.label} style={{ display: 'flex', flexDirection: 'column', padding: '12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12, border: '1px solid var(--border-color)' }}>
@@ -317,7 +327,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                           <div style={{ fontSize: 11, color: ctrl.val ? '#2E7D32' : '#9CA3AF' }}>{ctrl.val ? 'Status: Menyala' : 'Status: Mati'}</div>
                         </div>
                       </div>
-                      <Toggle isOn={ctrl.val} onChange={ctrl.set as any} />
+                      <Toggle isOn={ctrl.val} onChange={ctrl.set as any} disabled={ctrl.disabled} />
                     </div>
                   </div>
                 ))
