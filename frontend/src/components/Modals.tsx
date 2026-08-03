@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { API_URL } from '../constants'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Sector, SectorId } from '../types'
-import { generateTempData } from '../constants'
 import { Toggle, ProgressBar, TempGauge, StatCard, ChartTooltip } from './UIComponents'
 import { IcArrowLeft, IcRefresh, IcCheck, IcDroplets, IcThermometer, IcActivity, IcX, IcPlus } from './Icons'
 
@@ -58,7 +57,7 @@ export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd:
 
 export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () => void }) {
   const [kandangData, setKandangData] = useState({ temp: 0, humidity: 0, waterLevel: 0 })
-  const [tempData, setTempData] = useState(generateTempData)
+  const [tempData, setTempData] = useState<any[]>([])
   const [lastRefresh, setLastRefresh] = useState(new Date())
 
   // Controls (localStorage initial state)

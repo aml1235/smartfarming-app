@@ -78,22 +78,5 @@ class DatabaseSeeder extends Seeder
             'action' => 'mengaktifkan',
             'target' => 'Pompa Air Minum (Kandang Ayam)'
         ]);
-        \App\Models\Notification::create([
-            'title' => 'Suhu Ekstrem',
-            'message' => 'Suhu di kandang ayam mencapai 32C. Harap segera periksa pendingin.',
-            'type' => 'alert'
-        ]);
-
-        \App\Models\Notification::create([
-            'title' => 'Level Air Rendah',
-            'message' => 'Volume air di penampungan utama irigasi berada di bawah batas aman.',
-            'type' => 'warning'
-        ]);
-
-        \App\Models\Notification::create([
-            'title' => 'Laporan Harian',
-            'message' => 'Laporan evaluasi semua sektor untuk hari ini sudah tersedia.',
-            'type' => 'info'
-        ]);
     }
 }

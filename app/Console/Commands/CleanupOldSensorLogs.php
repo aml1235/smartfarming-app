@@ -29,8 +29,9 @@ class CleanupOldSensorLogs extends Command
     {
         $thresholdDate = Carbon::now()->subDays(7);
         
-        $deletedCount = SensorLog::where('created_at', '<', $thresholdDate)->delete();
+        $deletedLogs = SensorLog::where('created_at', '<', $thresholdDate)->delete();
+        $deletedNotifs = \App\Models\Notification::where('created_at', '<', $thresholdDate)->delete();
         
-        $this->info("Berhasil menghapus {$deletedCount} baris data sensor lama.");
+        $this->info("Berhasil menghapus {$deletedLogs} data sensor lama dan {$deletedNotifs} notifikasi lama.");
     }
 }
