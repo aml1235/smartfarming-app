@@ -52,11 +52,9 @@ class MqttListen extends Command
             $mqtt->connect($connectionSettings, $clean_session);
             $this->info("Connected successfully!");
 
-            // Subscribe menggunakan wildcard '+' untuk menangkap data dari semua sektor (hydroponic & poultry)
-            $topic = 'smartfarming/+/sensor/+';
-            $this->info("Subscribing to topic: {$topic}");
+            $this->info("Subscribing to smartfarming and smartcoop topics...");
 
-            $mqtt->subscribe($topic, function (string $topic, string $message) {
+            $mqtt->subscribe('smartfarming/+/sensor/+', function (string $topic, string $message) {
                 $this->info(sprintf("Received message on topic [%s]: %s", $topic, $message));
                 
                 // Topik format: smartfarming/{tipe}/sensor/{sector_id}
@@ -66,10 +64,72 @@ class MqttListen extends Command
                 $this->processSensorData($sectorId, $message);
             }, 0);
 
+            // Subscribe untuk Kandang Ayam (smartcoop/#)
+            $mqtt->subscribe('smartcoop/#', function (string $topic, string $message) {
+                $this->info(sprintf("Received smartcoop message [%s]: %s", $topic, $message));
+                $this->processSmartcoopData($topic, $message);
+            }, 0);
+
             $mqtt->loop(true);
             $mqtt->disconnect();
         } catch (Exception $e) {
             $this->error('MQTT Error: ' . $e->getMessage());
+        }
+    }
+
+    private function processSmartcoopData($topic, $message)
+    {
+        try {
+            // Find Kandang Ayam sector
+            $sector = Sector::where('name', 'ILIKE', '%kandang%')->orWhere('sector_id', 'LIKE', '%kandang%')->first();
+            if (!$sector) {
+                $this->error("Sector Kandang Ayam not found di Database.");
+                return;
+            }
+
+            $topicParts = explode('/', $topic);
+            $metricType = end($topicParts); // e.g. temp, humidity, waterlevel, dll
+
+            // Map MQTT topic ke tipe metrics di DB
+            $metricMap = [
+                'temp' => 'temperature',
+                'humidity' => 'humidity',
+                'mq135' => 'ammonia',
+                'waterlevel' => 'waterLevel',
+                'lamp' => 'lampStatus',
+                'conveyor' => 'conveyorStatus',
+                'pompa' => 'pumpStatus',
+                'lampauto' => 'lampAutoMode',
+                'time' => 'lastSync',
+                'system' => 'systemStatus',
+            ];
+
+            $type = $metricMap[$metricType] ?? $metricType;
+            
+            $logValue = $message;
+            if (strtoupper((string)$message) === 'ON') $logValue = 1;
+            if (strtoupper((string)$message) === 'OFF') $logValue = 0;
+            if (strtoupper((string)$message) === 'TRUE') $logValue = 1;
+            if (strtoupper((string)$message) === 'FALSE') $logValue = 0;
+
+            // Simpan ke log jika datanya berupa angka (sensor)
+            if (is_numeric($logValue) && !in_array($type, ['lastSync', 'systemStatus'])) {
+                SensorLog::create([
+                    'sector_id' => $sector->sector_id,
+                    'type' => $type,
+                    'value' => (float) $logValue
+                ]);
+            }
+
+            // Update state metrics di sektor
+            $metrics = is_string($sector->metrics) ? json_decode($sector->metrics, true) : ($sector->metrics ?? []);
+            $metrics[$type] = $logValue;
+            $sector->metrics = $metrics;
+            $sector->save();
+            $this->info("✅ Data saved for smartcoop metric {$type} (Sector: {$sector->sector_id})");
+
+        } catch (\Exception $e) {
+            $this->error("❌ Gagal menyimpan ke Database smartcoop: " . $e->getMessage());
         }
     }
 
@@ -88,7 +148,7 @@ class MqttListen extends Command
                 return;
             }
 
-            $metrics = $sector->metrics ?? [];
+            $metrics = is_string($sector->metrics) ? json_decode($sector->metrics, true) : ($sector->metrics ?? []);
             $validTypes = ['temperature', 'humidity', 'waterLevel', 'lightLevel', 'water_level', 'light_level', 'pumpStatus', 'pump_status'];
 
             foreach ($payload as $key => $value) {
