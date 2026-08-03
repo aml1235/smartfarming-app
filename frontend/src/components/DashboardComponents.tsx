@@ -10,7 +10,7 @@ export function OverviewMetrics({ id }: { id: string | number }) {
   const [hydroData, setHydroData] = React.useState({ waterLevel: 0, temp: 0, humidity: 0, light: 0 })
   const [kandangData, setKandangData] = React.useState({ temp: 0, humidity: 0, waterLevel: 0 })
   const effectiveId = String(id).toLowerCase().includes('sec-010') || String(id).toLowerCase().includes('hidro') ? 'hidroponik' 
-                    : String(id).toLowerCase().includes('kandang') ? 'kandang'
+                    : String(id).toLowerCase().includes('sec-011') || String(id).toLowerCase().includes('kandang') ? 'kandang'
                     : String(id).toLowerCase().includes('kolam') ? 'kolam'
                     : 'irigasi';
 
