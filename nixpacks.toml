@@ -8,4 +8,4 @@ aptPkgs = ["php8.2-pgsql", "php8.2-pdo", "php8.2-mbstring", "php8.2-xml", "php8.
 cmds = ["composer install --no-dev --optimize-autoloader --no-interaction"]
 
 [start]
-cmd = "php artisan config:clear && php artisan migrate --force && php artisan mqtt:listen & php artisan mqtt:listen --broker=coop & php artisan serve --host=0.0.0.0 --port=$PORT"
+cmd = "bash start.sh"
