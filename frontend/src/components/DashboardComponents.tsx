@@ -8,7 +8,7 @@ import { API_URL } from '../constants'
 
 export function OverviewMetrics({ id }: { id: string | number }) {
   const [hydroData, setHydroData] = React.useState({ waterLevel: 0, temp: 0, humidity: 0, light: 0 })
-  const [kandangData, setKandangData] = React.useState({ temp: 0, humidity: 0, waterLevel: 0 })
+  const [kandangData, setKandangData] = React.useState({ temp: 0, humidity: 0, waterLevel: 0, ammonia: 0 })
   const effectiveId = String(id).toLowerCase().includes('sec-010') || String(id).toLowerCase().includes('hidro') ? 'hidroponik' 
                     : String(id).toLowerCase().includes('sec-011') || String(id).toLowerCase().includes('kandang') ? 'kandang'
                     : String(id).toLowerCase().includes('kolam') ? 'kolam'
@@ -25,7 +25,7 @@ export function OverviewMetrics({ id }: { id: string | number }) {
             if (effectiveId === 'hidroponik') {
               setHydroData({ waterLevel: latest.waterLevel || latest.water_level || 0, temp: latest.temperature || 0, humidity: latest.humidity || 0, light: latest.lightLevel || latest.light_level || 0 })
             } else if (effectiveId === 'kandang') {
-              setKandangData({ temp: latest.temperature || 0, humidity: latest.humidity || 0, waterLevel: latest.waterLevel || latest.water_level || 0 })
+              setKandangData({ temp: latest.temperature || 0, humidity: latest.humidity || 0, waterLevel: latest.waterLevel || latest.water_level || 0, ammonia: latest.ammonia || latest.mq135 || 0 })
             }
           }
         } catch (err) {
@@ -49,6 +49,12 @@ export function OverviewMetrics({ id }: { id: string | number }) {
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Kelembapan</div>
             <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>{kandangData.humidity}%</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
+            <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Amonia</div>
+            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#059669', marginTop: 1 }}>{kandangData.ammonia}</div>
           </div>
         </div>
         <div>

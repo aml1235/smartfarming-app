@@ -56,7 +56,7 @@ export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd:
 }
 
 export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () => void }) {
-  const [kandangData, setKandangData] = useState({ temp: 0, humidity: 0, waterLevel: 0 })
+  const [kandangData, setKandangData] = useState({ temp: 0, humidity: 0, waterLevel: 0, ammonia: 0 })
   const [tempData, setTempData] = useState<any[]>([])
   const [lastRefresh, setLastRefresh] = useState(new Date())
 
@@ -84,7 +84,8 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
         setKandangData({
            temp: latest.temperature || 0,
            humidity: latest.humidity || 0,
-           waterLevel: latest.waterLevel || latest.water_level || 0
+           waterLevel: latest.waterLevel || latest.water_level || 0,
+           ammonia: latest.ammonia || latest.mq135 || 0
         })
         
         const chartData = data.map((d: any) => ({
@@ -129,9 +130,10 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
 
         <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20, maxHeight: 'calc(90vh - 80px)', overflowY: 'auto' }}>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16 }}>
             <StatCard label="Suhu Ruangan" value={`${kandangData.temp}°C`} sub="Terpantau" icon={<IcThermometer size={16} />} color="#E65100" bg="#fff3e0" />
             <StatCard label="Kelembapan" value={`${kandangData.humidity}%`} sub="Terpantau" icon={<IcDroplets size={16} />} color="#1565C0" bg="#e3f0ff" />
+            <StatCard label="Amonia" value={`${kandangData.ammonia}`} sub="Kualitas Udara" icon={<span style={{ fontSize: 14 }}>💨</span>} color="#059669" bg="#d1fae5" />
             <StatCard label="Level Air Minum" value={`${kandangData.waterLevel}%`} sub="Kapasitas Tangki" icon={<span style={{ fontSize: 14 }}>💧</span>} color="#1565C0" bg="#e3f0ff" />
           </div>
 
@@ -167,27 +169,6 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
                         </div>
                       </div>
                       <Toggle isOn={ctrl.val} onChange={ctrl.set} />
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500, flex: 1 }}>Jadwal Timer:</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 10, color: '#6B7280' }}>Nyala</span>
-                        <input 
-                          type="time" 
-                          value={ctrl.sch.on} 
-                          onChange={e => ctrl.setSch({ ...ctrl.sch, on: e.target.value })}
-                          style={{ padding: '4px 6px', border: '1px solid #e4e7ec', borderRadius: 4, fontSize: 11, outline: 'none', background: 'transparent' }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 10, color: '#6B7280' }}>Mati</span>
-                        <input 
-                          type="time" 
-                          value={ctrl.sch.off} 
-                          onChange={e => ctrl.setSch({ ...ctrl.sch, off: e.target.value })}
-                          style={{ padding: '4px 6px', border: '1px solid #e4e7ec', borderRadius: 4, fontSize: 11, outline: 'none', background: 'transparent' }}
-                        />
-                      </div>
                     </div>
                   </div>
                 ))}

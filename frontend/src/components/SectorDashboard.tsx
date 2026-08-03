@@ -65,8 +65,18 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
              const data = await res.json()
              setTempData(data)
              
+             let latest = {};
+             if (typeof sector.metrics === 'string') {
+               try { latest = JSON.parse(sector.metrics) } catch(e) {}
+             } else if (sector.metrics) {
+               latest = { ...sector.metrics };
+             }
+
              if (data && data.length > 0) {
-               const latest = data[data.length - 1]
+               latest = { ...latest, ...data[data.length - 1] };
+             }
+
+             if (Object.keys(latest).length > 0) {
                const newMetrics = []
                const newControls = []
                const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'water_level', 'lampstatus', 'conveyorstatus', 'lampautomode', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id'];
@@ -106,23 +116,8 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                setMetricsData(newMetrics)
                setControls(finalControls)
              } else {
-               let fallbackMetrics: any[] = [];
-               if (sector.id.toString().toLowerCase().includes('kandang') || sector.id === 'SEC-011') {
-                 fallbackMetrics = [
-                   { key: 'temperature', label: 'Suhu', value: 0, color: '#E65100', icon: '🌡️', isProgress: false },
-                   { key: 'humidity', label: 'Kelembapan', value: 0, color: '#1565C0', icon: '💧', isProgress: true },
-                   { key: 'waterLevel', label: 'Level Air', value: 0, color: '#1565C0', icon: '🌊', isProgress: true }
-                 ];
-               }
-               setMetricsData(fallbackMetrics)
-               const defaultControls = [{ key: 'pump_status', label: 'Pompa Air', isOn: true }];
-               const finalControls = defaultControls.map(c => {
-                 if (userOverrides[c.key] && (Date.now() - userOverrides[c.key].time < 60000)) {
-                   return { ...c, isOn: userOverrides[c.key].isOn };
-                 }
-                 return c;
-               });
-               setControls(finalControls)
+               setMetricsData([])
+               setControls([])
              }
           }
        } catch (e) {
