@@ -123,7 +123,7 @@ class MqttListen extends Command
             if (strtoupper((string)$message) === 'FALSE') $logValue = 0;
 
             // Simpan ke log jika datanya berupa angka (sensor)
-            if (is_numeric($logValue) && !in_array($type, ['lastSync', 'systemStatus'])) {
+            if (is_numeric($logValue) && !in_array($type, ['lastSync', 'systemStatus', 'lampStatus', 'conveyorStatus', 'pumpStatus', 'lampAutoMode', 'mq135volt', 'watervoltage', 'wateradc'])) {
                 SensorLog::create([
                     'sector_id' => $sector->sector_id,
                     'type' => $type,
