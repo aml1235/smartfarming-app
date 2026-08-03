@@ -62,9 +62,6 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
   const [lastRefresh, setLastRefresh] = useState(new Date())
 
   // Controls (localStorage initial state)
-  const [pumpOn, setPumpOn] = useState(() => localStorage.getItem('kandang_pump_on') === 'true')
-  const [pumpSchedule, setPumpSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_pump_sch') || '{"on": "06:00", "off": "18:00"}'))
-  
   const [lightOn, setLightOn] = useState(() => localStorage.getItem('kandang_light_on') === 'true')
   const [lightSchedule, setLightSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_light_sch') || '{"on": "18:00", "off": "06:00"}'))
 
@@ -73,13 +70,11 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
 
   // Save to local storage on change
   useEffect(() => {
-    localStorage.setItem('kandang_pump_on', pumpOn.toString())
-    localStorage.setItem('kandang_pump_sch', JSON.stringify(pumpSchedule))
     localStorage.setItem('kandang_light_on', lightOn.toString())
     localStorage.setItem('kandang_light_sch', JSON.stringify(lightSchedule))
     localStorage.setItem('kandang_conveyor_on', conveyorOn.toString())
     localStorage.setItem('kandang_conveyor_sch', JSON.stringify(conveyorSchedule))
-  }, [pumpOn, pumpSchedule, lightOn, lightSchedule, conveyorOn, conveyorSchedule])
+  }, [lightOn, lightSchedule, conveyorOn, conveyorSchedule])
 
   const fetchLatest = async () => {
     try {
@@ -146,14 +141,6 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
               <div style={{ fontSize: 12, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>Panel Kontrol & Otomatisasi</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {[
-                  { 
-                    label: 'Pompa Air', 
-                    icon: '💧', 
-                    val: pumpOn, 
-                    set: setPumpOn, 
-                    sch: pumpSchedule, 
-                    setSch: setPumpSchedule 
-                  },
                   { 
                     label: 'Lampu Penerangan', 
                     icon: '💡', 
