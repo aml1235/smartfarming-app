@@ -20,8 +20,9 @@ export function OverviewMetrics({ id }: { id: string | number }) {
         try {
           let latest: any = {};
           try {
-            const sectorRes = await fetch(`${API_URL}/api/sectors/${id}`)
-            const sectorData = await sectorRes.json()
+            const sectorRes = await fetch(`${API_URL}/api/sectors`)
+            const sectors = await sectorRes.json()
+            const sectorData = sectors.find((s: any) => s.sector_id === id || s.id === id)
             if (sectorData && sectorData.metrics) {
               if (typeof sectorData.metrics === 'string') {
                 try { latest = JSON.parse(sectorData.metrics) } catch(e) {}
