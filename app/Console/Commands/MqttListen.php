@@ -34,7 +34,8 @@ class MqttListen extends Command
         config(['app.timezone' => 'Asia/Jakarta']);
         
         $brokerType = $this->option('broker');
-        $prefix = $this->option('broker') == 'local' ? 'LOCAL_MQTT_' : 'MQTT_';
+        $prefix = $brokerType === 'coop' ? 'MQTT_COOP_' : 'MQTT_';
+        
         $server   = env($prefix . 'HOST', env('MQTT_HOST', 'broker.hivemq.com'));
         $port     = env($prefix . 'PORT', env('MQTT_PORT', 1883));
         $clientId = env($prefix . 'CLIENT_ID', env('MQTT_CLIENT_ID', 'laravel_listener')) . '_' . uniqid();

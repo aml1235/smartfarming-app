@@ -196,16 +196,19 @@ class SectorController extends Controller
 
         // Publish to MQTT
         try {
-            $server   = env('MQTT_HOST', 'broker.hivemq.com');
-            $port     = env('MQTT_PORT', 1883);
-            $clientId = env('MQTT_CLIENT_ID', 'laravel_pub_' . uniqid());
-            $username = env('MQTT_USERNAME');
-            $password = env('MQTT_PASSWORD');
+            $isKandang = ($sector_id === 'SEC-011' || $sector_id === 'kandang');
+            $prefix = $isKandang ? 'MQTT_COOP_' : 'MQTT_';
+
+            $server   = env($prefix . 'HOST', env('MQTT_HOST', 'broker.hivemq.com'));
+            $port     = env($prefix . 'PORT', env('MQTT_PORT', 1883));
+            $clientId = env($prefix . 'CLIENT_ID', env('MQTT_CLIENT_ID', 'laravel_pub_' . uniqid())) . '_' . uniqid();
+            $username = env($prefix . 'USERNAME', env('MQTT_USERNAME'));
+            $password = env($prefix . 'PASSWORD', env('MQTT_PASSWORD'));
 
             $connectionSettings = (new \PhpMqtt\Client\ConnectionSettings)
                 ->setUsername($username)
                 ->setPassword($password)
-                ->setUseTls(env('MQTT_TLS', false));
+                ->setUseTls(env($prefix . 'TLS', env('MQTT_TLS', false)));
 
             $mqtt = new \PhpMqtt\Client\MqttClient($server, $port, $clientId);
             $mqtt->connect($connectionSettings, true);
