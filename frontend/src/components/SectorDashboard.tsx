@@ -41,6 +41,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
   const [kandangLightSchedule, setKandangLightSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_light_sch') || '{"on": "18:00", "off": "06:00"}'))
   const [kandangConveyorOn, setKandangConveyorOn] = useState(() => localStorage.getItem('kandang_conveyor_on') === 'true')
   const [kandangConveyorSchedule, setKandangConveyorSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_conveyor_sch') || '{"on": "07:00", "off": "07:15"}'))
+  const [kandangAutoMode, setKandangAutoMode] = useState(() => localStorage.getItem('kandang_auto_mode') !== 'false')
 
   useEffect(() => {
     if (isKandang) {
@@ -48,8 +49,9 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
       localStorage.setItem('kandang_light_sch', JSON.stringify(kandangLightSchedule))
       localStorage.setItem('kandang_conveyor_on', kandangConveyorOn.toString())
       localStorage.setItem('kandang_conveyor_sch', JSON.stringify(kandangConveyorSchedule))
+      localStorage.setItem('kandang_auto_mode', kandangAutoMode.toString())
     }
-  }, [kandangLightOn, kandangLightSchedule, kandangConveyorOn, kandangConveyorSchedule, isKandang])
+  }, [kandangLightOn, kandangLightSchedule, kandangConveyorOn, kandangConveyorSchedule, kandangAutoMode, isKandang])
 
   // Real-time data from local API fallback
   useEffect(() => {
@@ -76,11 +78,16 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                latest = { ...latest, ...data[data.length - 1] };
              }
 
-             if (Object.keys(latest).length > 0) {
-               const newMetrics = []
-               const newControls = []
-               const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'water_level', 'lampstatus', 'conveyorstatus', 'lampautomode', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust'];
-               for (const key in latest) {
+               if (Object.keys(latest).length > 0) {
+                 if (isKandang) {
+                   if (latest.lampstatus !== undefined) setKandangLightOn(String(latest.lampstatus) === '1');
+                   if (latest.conveyorstatus !== undefined) setKandangConveyorOn(String(latest.conveyorstatus) === '1');
+                   if (latest.lampautomode !== undefined) setKandangAutoMode(String(latest.lampautomode) === '1');
+                 }
+                 const newMetrics = []
+                 const newControls = []
+                 const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'water_level', 'lampstatus', 'conveyorstatus', 'lampautomode', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust'];
+                 for (const key in latest) {
                  if (ignoreKeys.includes(key.toLowerCase())) continue;
                   if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {
                     const isPumpOn = String(latest[key]).toUpperCase() === 'ON' || String(latest[key]) === '1'
@@ -282,6 +289,12 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {isKandang ? (
               [
+                  { 
+                    label: 'Otomatisasi Waktu (18:00 - 06:00)', 
+                    icon: '🤖', 
+                    val: kandangAutoMode, 
+                    set: () => toggleKandangControl('lampauto', kandangAutoMode, setKandangAutoMode)
+                  },
                   { 
                     label: 'Lampu Penerangan', 
                     icon: '💡', 

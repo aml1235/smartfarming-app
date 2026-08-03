@@ -67,13 +67,16 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
   const [conveyorOn, setConveyorOn] = useState(() => localStorage.getItem('kandang_conveyor_on') === 'true')
   const [conveyorSchedule, setConveyorSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_conveyor_sch') || '{"on": "07:00", "off": "07:15"}'))
 
+  const [autoMode, setAutoMode] = useState(() => localStorage.getItem('kandang_auto_mode') !== 'false')
+
   // Save to local storage on change
   useEffect(() => {
     localStorage.setItem('kandang_light_on', lightOn.toString())
     localStorage.setItem('kandang_light_sch', JSON.stringify(lightSchedule))
     localStorage.setItem('kandang_conveyor_on', conveyorOn.toString())
     localStorage.setItem('kandang_conveyor_sch', JSON.stringify(conveyorSchedule))
-  }, [lightOn, lightSchedule, conveyorOn, conveyorSchedule])
+    localStorage.setItem('kandang_auto_mode', autoMode.toString())
+  }, [lightOn, lightSchedule, conveyorOn, conveyorSchedule, autoMode])
 
   const fetchLatest = async () => {
     try {
@@ -98,6 +101,9 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
            waterLevel: latest.waterLevel || latest.water_level || 0,
            ammonia: latest.ammonia || latest.mq135 || 0
         })
+        if (latest.lampstatus !== undefined) setLightOn(String(latest.lampstatus) === '1');
+        if (latest.conveyorstatus !== undefined) setConveyorOn(String(latest.conveyorstatus) === '1');
+        if (latest.lampautomode !== undefined) setAutoMode(String(latest.lampautomode) === '1');
       }
       
       if (data && data.length > 0) {
@@ -175,6 +181,12 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
               <div style={{ fontSize: 12, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>Panel Kontrol & Otomatisasi</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {[
+                  { 
+                    label: 'Otomatisasi Waktu (18:00 - 06:00)', 
+                    icon: '🤖', 
+                    val: autoMode, 
+                    set: () => toggleKandangControl('lampauto', autoMode, setAutoMode), 
+                  },
                   { 
                     label: 'Lampu Penerangan', 
                     icon: '💡', 
