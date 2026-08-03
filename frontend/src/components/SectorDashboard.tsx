@@ -37,8 +37,6 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
   
   // States khusus Kandang Ayam
   const isKandang = sector.id.toString().toLowerCase().includes('kandang')
-  const [kandangPumpOn, setKandangPumpOn] = useState(() => localStorage.getItem('kandang_pump_on') === 'true')
-  const [kandangPumpSchedule, setKandangPumpSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_pump_sch') || '{"on": "06:00", "off": "18:00"}'))
   const [kandangLightOn, setKandangLightOn] = useState(() => localStorage.getItem('kandang_light_on') === 'true')
   const [kandangLightSchedule, setKandangLightSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_light_sch') || '{"on": "18:00", "off": "06:00"}'))
   const [kandangConveyorOn, setKandangConveyorOn] = useState(() => localStorage.getItem('kandang_conveyor_on') === 'true')
@@ -46,14 +44,12 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
 
   useEffect(() => {
     if (isKandang) {
-      localStorage.setItem('kandang_pump_on', kandangPumpOn.toString())
-      localStorage.setItem('kandang_pump_sch', JSON.stringify(kandangPumpSchedule))
       localStorage.setItem('kandang_light_on', kandangLightOn.toString())
       localStorage.setItem('kandang_light_sch', JSON.stringify(kandangLightSchedule))
       localStorage.setItem('kandang_conveyor_on', kandangConveyorOn.toString())
       localStorage.setItem('kandang_conveyor_sch', JSON.stringify(kandangConveyorSchedule))
     }
-  }, [kandangPumpOn, kandangPumpSchedule, kandangLightOn, kandangLightSchedule, kandangConveyorOn, kandangConveyorSchedule, isKandang])
+  }, [kandangLightOn, kandangLightSchedule, kandangConveyorOn, kandangConveyorSchedule, isKandang])
 
   // Real-time data from local API fallback
   useEffect(() => {
@@ -270,14 +266,6 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {isKandang ? (
               [
-                  { 
-                    label: 'Pompa Air', 
-                    icon: '💧', 
-                    val: kandangPumpOn, 
-                    set: setKandangPumpOn, 
-                    sch: kandangPumpSchedule, 
-                    setSch: setKandangPumpSchedule 
-                  },
                   { 
                     label: 'Lampu Penerangan', 
                     icon: '💡', 
