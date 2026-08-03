@@ -16,7 +16,7 @@ class MqttListen extends Command
      *
      * @var string
      */
-    protected $signature = 'mqtt:listen';
+    protected $signature = 'mqtt:listen {--broker=default : Which broker to connect to (default, coop)}';
 
     /**
      * The console command description.
@@ -32,11 +32,15 @@ class MqttListen extends Command
     {
         date_default_timezone_set('Asia/Jakarta');
         config(['app.timezone' => 'Asia/Jakarta']);
-        $server   = env('MQTT_HOST', 'broker.hivemq.com');
-        $port     = env('MQTT_PORT', 1883);
-        $clientId = env('MQTT_CLIENT_ID', 'laravel_backend_' . uniqid());
-        $username = env('MQTT_USERNAME');
-        $password = env('MQTT_PASSWORD');
+        
+        $brokerType = $this->option('broker');
+        $prefix = $brokerType === 'coop' ? 'MQTT_COOP_' : 'MQTT_';
+
+        $server   = env($prefix . 'HOST', env('MQTT_HOST', 'broker.hivemq.com'));
+        $port     = env($prefix . 'PORT', env('MQTT_PORT', 1883));
+        $clientId = env($prefix . 'CLIENT_ID', 'laravel_backend_' . uniqid());
+        $username = env($prefix . 'USERNAME');
+        $password = env($prefix . 'PASSWORD');
         
         $clean_session = true;
 
@@ -45,7 +49,7 @@ class MqttListen extends Command
             ->setPassword($password)
             ->setKeepAliveInterval(60)
             ->setConnectTimeout(3)
-            ->setUseTls(env('MQTT_TLS', false));
+            ->setUseTls(env($prefix . 'TLS', env('MQTT_TLS', false)));
 
         $mqtt = new MqttClient($server, $port, $clientId);
 
@@ -83,7 +87,11 @@ class MqttListen extends Command
     {
         try {
             // Find Kandang Ayam sector
-            $sector = Sector::where('name', 'ILIKE', '%kandang%')->orWhere('sector_id', 'LIKE', '%kandang%')->first();
+            $sector = Sector::where('name', 'ILIKE', '%kandang%')
+                ->orWhere('sector_id', 'LIKE', '%kandang%')
+                ->orWhere('name', 'ILIKE', '%sec-011%')
+                ->orWhere('sector_id', 'LIKE', '%sec-011%')
+                ->first();
             if (!$sector) {
                 $this->error("Sector Kandang Ayam not found di Database.");
                 return;
