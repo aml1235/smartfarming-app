@@ -51,35 +51,38 @@ class MqttListen extends Command
             ->setConnectTimeout(3)
             ->setUseTls(env($prefix . 'TLS', env('MQTT_TLS', false)));
 
-        $mqtt = new MqttClient($server, $port, $clientId);
+        while (true) {
+            try {
+                $this->info("Connecting to MQTT Broker at {$server}:{$port}...");
+                $mqtt = new MqttClient($server, $port, $clientId);
+                $mqtt->connect($connectionSettings, $clean_session);
+                $this->info("Connected successfully!");
 
-        try {
-            $this->info("Connecting to MQTT Broker at {$server}:{$port}...");
-            $mqtt->connect($connectionSettings, $clean_session);
-            $this->info("Connected successfully!");
+                $this->info("Subscribing to smartfarming and smartcoop topics...");
 
-            $this->info("Subscribing to smartfarming and smartcoop topics...");
+                $mqtt->subscribe('smartfarming/+/sensor/+', function (string $topic, string $message) {
+                    $this->info(sprintf("Received message on topic [%s]: %s", $topic, $message));
+                    
+                    // Topik format: smartfarming/{tipe}/sensor/{sector_id}
+                    $topicParts = explode('/', $topic);
+                    $sectorId = end($topicParts);
+                    
+                    $this->processSensorData($sectorId, $message);
+                }, 0);
 
-            $mqtt->subscribe('smartfarming/+/sensor/+', function (string $topic, string $message) {
-                $this->info(sprintf("Received message on topic [%s]: %s", $topic, $message));
-                
-                // Topik format: smartfarming/{tipe}/sensor/{sector_id}
-                $topicParts = explode('/', $topic);
-                $sectorId = end($topicParts);
-                
-                $this->processSensorData($sectorId, $message);
-            }, 0);
+                // Subscribe untuk Kandang Ayam (smartcoop/#)
+                $mqtt->subscribe('smartcoop/#', function (string $topic, string $message) {
+                    $this->info(sprintf("Received smartcoop message [%s]: %s", $topic, $message));
+                    $this->processSmartcoopData($topic, $message);
+                }, 0);
 
-            // Subscribe untuk Kandang Ayam (smartcoop/#)
-            $mqtt->subscribe('smartcoop/#', function (string $topic, string $message) {
-                $this->info(sprintf("Received smartcoop message [%s]: %s", $topic, $message));
-                $this->processSmartcoopData($topic, $message);
-            }, 0);
-
-            $mqtt->loop(true);
-            $mqtt->disconnect();
-        } catch (Exception $e) {
-            $this->error('MQTT Error: ' . $e->getMessage());
+                $mqtt->loop(true);
+                $mqtt->disconnect();
+            } catch (Exception $e) {
+                $this->error('MQTT Error: ' . $e->getMessage());
+                $this->info('Reconnecting in 5 seconds...');
+                sleep(5);
+            }
         }
     }
 
