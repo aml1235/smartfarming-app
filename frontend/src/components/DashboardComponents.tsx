@@ -91,7 +91,7 @@ export function OverviewMetrics({ id }: { id: string | number }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', gap: 8 }}>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
-            <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Suhu Air</div>
+            <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Suhu</div>
             <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>{hydroData.temp}°C</div>
           </div>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>

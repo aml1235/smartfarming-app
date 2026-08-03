@@ -142,6 +142,77 @@ class SectorController extends Controller
                     $analisa[] = "Volume air tandon cukup (jarak {$avgWater} cm).";
                 }
             }
+        } elseif (strtolower($id) === 'kandang' || strtolower($id) === 'sec-011') {
+            // --- SEKTOR KANDANG AYAM ---
+            $hasAmmonia = $logs->whereIn('type', ['ammonia', 'mq135', 'nh3'])->count() > 0;
+            $avgAmmonia = $hasAmmonia ? round($logs->whereIn('type', ['ammonia', 'mq135', 'nh3'])->avg('value'), 1) : null;
+
+            // --- Aturan Suhu ---
+            if ($hasTemp) {
+                if ($avgTemp > 30) {
+                    $analisa[] = "Suhu panas ({$avgTemp}°C), rawan Heat Stress.";
+                    $status = "Perhatian";
+                    $rekomendasiUtama = "Nyalakan kipas exhaust atau perbaiki sirkulasi udara.";
+                } elseif ($avgTemp >= 24 && $avgTemp <= 28) {
+                    $analisa[] = "Suhu ideal ({$avgTemp}°C).";
+                } elseif ($avgTemp < 24) {
+                    $analisa[] = "Suhu agak dingin ({$avgTemp}°C).";
+                    if ($status == "Normal") $status = "Perhatian";
+                } else {
+                    $analisa[] = "Suhu cukup aman ({$avgTemp}°C).";
+                }
+            }
+
+            // --- Aturan Kelembapan ---
+            if ($hasHum) {
+                if ($avgHum > 75) {
+                    $analisa[] = "Kelembapan tinggi ({$avgHum}%), memicu kotoran basah dan amonia.";
+                    if ($status != "Peringatan") $status = "Perhatian";
+                    if ($rekomendasiUtama == "Lanjutkan pemantauan rutin.") $rekomendasiUtama = "Nyalakan kipas exhaust untuk membuang kelembapan dan amonia.";
+                } elseif ($avgHum >= 50 && $avgHum <= 70) {
+                    $analisa[] = "Kelembapan ideal ({$avgHum}%).";
+                } elseif ($avgHum < 50) {
+                    $analisa[] = "Kelembapan rendah ({$avgHum}%), awas debu.";
+                } else {
+                    $analisa[] = "Kelembapan agak tinggi ({$avgHum}%).";
+                }
+            }
+
+            // --- Aturan Amonia (NH3) ---
+            if ($hasAmmonia) {
+                if ($avgAmmonia > 25) {
+                    $analisa[] = "Kadar amonia KRITIS ({$avgAmmonia} ppm)! Merusak silia pada saluran pernapasan ayam, risiko kematian massal dan penyakit pernapasan (seperti CRD/Snot) tinggi.";
+                    $status = "Peringatan";
+                    $rekomendasiUtama = "DARURAT! Segera maksimalkan ventilasi (nyalakan seluruh exhaust), aktifkan conveyor kotoran, dan cek litter.";
+                } elseif ($avgAmmonia >= 20 && $avgAmmonia <= 25) {
+                    $analisa[] = "Kadar amonia Waspada ({$avgAmmonia} ppm). Ayam mulai rentan iritasi mata, radang tenggorokan, dan nafsu makan turun.";
+                    if ($status != "Peringatan") $status = "Perhatian";
+                    if ($rekomendasiUtama == "Lanjutkan pemantauan rutin." || $rekomendasiUtama == "Nyalakan kipas exhaust atau perbaiki sirkulasi udara.") {
+                        $rekomendasiUtama = "Aktifkan kipas exhaust dan jadwalkan pembersihan kotoran dengan conveyor.";
+                    }
+                } else {
+                    $analisa[] = "Kualitas udara sangat aman ({$avgAmmonia} ppm).";
+                }
+
+                // Cek Darurat (Kelembapan tinggi + Amonia tinggi)
+                if ($hasHum && $avgHum > 75 && $avgAmmonia >= 20) {
+                    $analisa[] = "KONDISI DARURAT: Kelembapan tinggi dan amonia tinggi terjadi bersamaan!";
+                    $status = "Peringatan";
+                    $rekomendasiUtama = "DARURAT! Segera bersihkan kotoran, keringkan area kandang, dan maksimalkan pembuangan udara.";
+                }
+            }
+
+            // --- Aturan Level Air ---
+            if ($hasWater) {
+                // Asumsi water_level dalam persen
+                if ($avgWater < 20) {
+                    $analisa[] = "Air minum di tandon hampir habis ({$avgWater}%).";
+                    if ($status == "Normal") $status = "Perhatian";
+                    if ($rekomendasiUtama == "Lanjutkan pemantauan rutin.") $rekomendasiUtama = "Segera nyalakan pompa untuk isi ulang tandon air minum agar ayam tidak dehidrasi.";
+                } else {
+                    $analisa[] = "Pasokan air minum aman ({$avgWater}%).";
+                }
+            }
         } else {
             // --- SEKTOR UMUM / DEFAULT ---
             if ($hasTemp) {

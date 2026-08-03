@@ -94,21 +94,30 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                  if (ignoreKeys.includes(key.toLowerCase())) continue;
                   if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {
                     const isPumpOn = String(latest[key]).toUpperCase() === 'ON' || String(latest[key]) === '1'
-                    newControls.push({
-                       key: key,
-                       label: key.includes('pump') ? 'Pompa Air' : 'Relay Control',
-                       isOn: isPumpOn
-                    })
+                    const label = key.toLowerCase().includes('pump') ? 'Pompa Air' : 'Relay Control'
+                    const existing = newControls.find(c => c.label === label)
+                    if (existing) {
+                       existing.isOn = isPumpOn
+                       existing.key = key
+                    } else {
+                       newControls.push({ key, label, isOn: isPumpOn })
+                    }
                   } else {
                     const ui = getMetricUI(key)
-                    newMetrics.push({
-                      key,
-                      label: ui.label,
-                      value: latest[key],
-                      color: ui.color,
-                      icon: ui.icon,
-                      isProgress: ui.isProgress
-                    })
+                    const existing = newMetrics.find(m => m.label === ui.label)
+                    if (existing) {
+                       existing.value = latest[key]
+                       existing.key = key
+                    } else {
+                       newMetrics.push({
+                         key,
+                         label: ui.label,
+                         value: latest[key],
+                         color: ui.color,
+                         icon: ui.icon,
+                         isProgress: ui.isProgress
+                       })
+                    }
                   }
                }
                if (newControls.length === 0) {
