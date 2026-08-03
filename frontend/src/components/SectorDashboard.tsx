@@ -109,7 +109,8 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                if (sector.id.toString().toLowerCase().includes('kandang') || sector.id === 'SEC-011') {
                  fallbackMetrics = [
                    { key: 'temperature', label: 'Suhu', value: 0, color: '#E65100', icon: '🌡️', isProgress: false },
-                   { key: 'humidity', label: 'Kelembapan', value: 0, color: '#1565C0', icon: '💧', isProgress: true }
+                   { key: 'humidity', label: 'Kelembapan', value: 0, color: '#1565C0', icon: '💧', isProgress: true },
+                   { key: 'waterLevel', label: 'Level Air', value: 0, color: '#1565C0', icon: '🌊', isProgress: true }
                  ];
                }
                setMetricsData(fallbackMetrics)
