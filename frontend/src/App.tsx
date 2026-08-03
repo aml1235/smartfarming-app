@@ -85,7 +85,13 @@ export default function App() {
                 const base = SECTORS.find(s => s.id === d.sector_id) || SECTORS[0];
                 let lastUpdateStr = base.lastUpdate;
                 if (d.updated_at) {
-                  const updateTime = new Date(d.updated_at);
+                  let updateTimeStr = d.updated_at;
+                  if (typeof updateTimeStr === 'string' && !updateTimeStr.includes('T')) {
+                     updateTimeStr = updateTimeStr.replace(' ', 'T') + 'Z';
+                  } else if (typeof updateTimeStr === 'string' && !updateTimeStr.endsWith('Z')) {
+                     updateTimeStr += 'Z';
+                  }
+                  const updateTime = new Date(updateTimeStr);
                   const diffMins = Math.floor((Date.now() - updateTime.getTime()) / 60000);
                   if (diffMins < 1) lastUpdateStr = 'Baru saja';
                   else if (diffMins < 60) lastUpdateStr = `${diffMins} mnt lalu`;
@@ -324,9 +330,9 @@ export default function App() {
 
           <div className="header-actions">
             <div className="date-time-wrapper" style={{ fontSize: 13, color: 'var(--text-secondary)', display: 'flex', gap: 4, alignItems: 'center' }}>
-              <span>{clock.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</span>
+              <span>{clock.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', timeZone: 'Asia/Jakarta' })}</span>
               <span style={{ color: 'var(--border-color)' }}>|</span>
-              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{clock.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+              <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{clock.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })}</span>
             </div>
 
             <button onClick={() => setDarkMode(!darkMode)} style={{ background: 'none', border: '1px solid var(--border-color)', cursor: 'pointer', borderRadius: 10, width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', transition: 'all 0.3s' }}>

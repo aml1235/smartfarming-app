@@ -274,6 +274,19 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
     }
   }, [sector.id])
 
+  const handlePumpChange = async (newState: boolean) => {
+    setPump(newState)
+    try {
+      await fetch(`${API_URL}/api/sector/${sector.id}/control`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: newState ? 'ON' : 'OFF' })
+      })
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   const configs: Record<SectorId, { metrics: { label: string; value: string; color: string }[]; ctrl1: string; ctrl2: string }> = {
     kandang: { metrics: [], ctrl1: '', ctrl2: '' },
     kolam: {
@@ -355,7 +368,7 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
                         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{cfg.ctrl1}</div>
                         <div style={{ fontSize: 12, color: pump ? '#2E7D32' : '#9CA3AF', marginTop: 1 }}>{pump ? 'Aktif' : 'Nonaktif'}</div>
                       </div>
-                      <Toggle isOn={pump} onChange={setPump} />
+                      <Toggle isOn={pump} onChange={handlePumpChange} />
                     </div>
                   )}
                   {cfg.ctrl2 && (
