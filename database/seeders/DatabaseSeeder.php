@@ -33,7 +33,7 @@ class DatabaseSeeder extends Seeder
         // 2. Setup Sectors
         $sectors = [
             [
-                'sector_id' => 'kandang',
+                'sector_id' => 'SEC-011',
                 'name' => 'Kandang Ayam',
                 'unit' => 'Peternakan',
                 'status' => 'baik',

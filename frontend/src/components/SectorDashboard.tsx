@@ -36,7 +36,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
   const [aiResult, setAiResult] = useState<any>(null)
   
   // States khusus Kandang Ayam
-  const isKandang = sector.id.toString().toLowerCase().includes('kandang')
+  const isKandang = sector.id.toString().toLowerCase().includes('kandang') || sector.id === 'SEC-011' || sector.name.toLowerCase().includes('kandang')
   const [kandangLightOn, setKandangLightOn] = useState(() => localStorage.getItem('kandang_light_on') === 'true')
   const [kandangLightSchedule, setKandangLightSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_light_sch') || '{"on": "18:00", "off": "06:00"}'))
   const [kandangConveyorOn, setKandangConveyorOn] = useState(() => localStorage.getItem('kandang_conveyor_on') === 'true')
@@ -106,11 +106,10 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                setControls(finalControls)
              } else {
                let fallbackMetrics: any[] = [];
-               if (sector.id.toString().toLowerCase().includes('kandang')) {
+               if (sector.id.toString().toLowerCase().includes('kandang') || sector.id === 'SEC-011') {
                  fallbackMetrics = [
                    { key: 'temperature', label: 'Suhu', value: 0, color: '#E65100', icon: '🌡️', isProgress: false },
-                   { key: 'humidity', label: 'Kelembapan', value: 0, color: '#1565C0', icon: '💧', isProgress: true },
-                   { key: 'waterLevel', label: 'Level Air', value: 0, color: '#1565C0', icon: '🌊', isProgress: true }
+                   { key: 'humidity', label: 'Kelembapan', value: 0, color: '#1565C0', icon: '💧', isProgress: true }
                  ];
                }
                setMetricsData(fallbackMetrics)

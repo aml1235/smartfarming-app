@@ -151,7 +151,7 @@ class MqttListen extends Command
             }
 
             $metrics = is_string($sector->metrics) ? json_decode($sector->metrics, true) : ($sector->metrics ?? []);
-            $validTypes = ['temperature', 'humidity', 'waterLevel', 'lightLevel', 'water_level', 'light_level', 'pumpStatus', 'pump_status'];
+            $validTypes = ['temperature', 'humidity', 'waterLevel', 'lightLevel', 'water_level', 'light_level', 'pumpStatus', 'pump_status', 'lampStatus', 'exhaustStatus', 'motorStatus', 'lampAutoMode'];
 
             foreach ($payload as $key => $value) {
                 if (in_array($key, $validTypes)) {
