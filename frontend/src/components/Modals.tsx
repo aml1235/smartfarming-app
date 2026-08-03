@@ -112,7 +112,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
       if (data && data.length > 0) {
         const chartData = data.map((d: any) => ({
           time: d.time,
-          suhu: d.temperature || 0
+          suhu: d.temperature // don't default to 0
         }))
         if (chartData.length > 0) setTempData(chartData)
       }
@@ -247,7 +247,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
                     <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} axisLine={false} tickLine={false} domain={[24, 36]} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Area type="monotone" dataKey="suhu" stroke="#E65100" strokeWidth={2} fill="url(#tempGrad)" dot={false} />
+                    <Area type="monotone" dataKey="suhu" stroke="#E65100" strokeWidth={2} fill="url(#tempGrad)" dot={false} connectNulls />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

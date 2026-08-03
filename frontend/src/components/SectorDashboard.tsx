@@ -275,8 +275,8 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                 <YAxis tick={{ fontSize: 10, fill: 'var(--text-secondary)' }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
                 {/* Dynamically render lines for available keys in chart */}
-                <Area type="monotone" dataKey="temperature" stroke="#E65100" strokeWidth={2} fill="transparent" dot={false} />
-                <Area type="monotone" dataKey="humidity" stroke="#1565C0" strokeWidth={2} fill={`url(#grad-chart)`} dot={false} />
+                <Area type="monotone" dataKey="temperature" stroke="#E65100" strokeWidth={2} fill="transparent" dot={false} connectNulls />
+                <Area type="monotone" dataKey="humidity" stroke="#1565C0" strokeWidth={2} fill={`url(#grad-chart)`} dot={false} connectNulls />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
