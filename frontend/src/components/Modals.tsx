@@ -304,7 +304,7 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
     },
   }
   const effectiveId = String(sector.id).toLowerCase().includes('sec-010') || String(sector.id).toLowerCase().includes('hidro') ? 'hidroponik' 
-                    : String(sector.id).toLowerCase().includes('kandang') ? 'kandang'
+                    : String(sector.id).toLowerCase().includes('sec-011') || String(sector.id).toLowerCase().includes('kandang') ? 'kandang'
                     : String(sector.id).toLowerCase().includes('kolam') ? 'kolam'
                     : String(sector.id).split('_')[0];
   const cfg = configs[effectiveId as SectorId] || configs['irigasi']

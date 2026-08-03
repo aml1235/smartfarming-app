@@ -446,8 +446,8 @@ export default function App() {
       </div>
 
       {/* Modals */}
-      {detailSector && String(detailSector.id).startsWith('kandang') && <KandangDetail sector={detailSector} onBack={closeDetail} />}
-      {detailSector && !String(detailSector.id).startsWith('kandang') && <GenericDetail sector={detailSector} onBack={closeDetail} />}
+      {detailSector && (String(detailSector.id).startsWith('kandang') || String(detailSector.id) === 'SEC-011') && <KandangDetail sector={detailSector} onBack={closeDetail} />}
+      {detailSector && !(String(detailSector.id).startsWith('kandang') || String(detailSector.id) === 'SEC-011') && <GenericDetail sector={detailSector} onBack={closeDetail} />}
       {showAddModal && <AddSectorModal onClose={() => setShowAddModal(false)} onAdd={handleAddSector} />}
       {renderLogoutModal()}
     </div>
