@@ -1,10 +1,11 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   IcLeaf, IcShield, IcActivity, IcZap, IcBarChart, IcUsers, IcGrid, IcBell, IcWaves, IcDroplets, IcSettings, IcLink, IcHome, IcSun, IcMoon, IcMail
 } from './Icons';
 
 interface LandingPageProps {
   onLogin: () => void;
+  onDownloadApk: () => void;
   darkMode: boolean;
   setDarkMode: (val: boolean) => void;
 }
@@ -96,7 +97,7 @@ const AnimatedCounter = ({ endValue, suffix = '', decimals = 0 }: { endValue: nu
   return <span ref={ref}>{decimals > 0 ? count.toFixed(decimals) : Math.floor(count)}{suffix}</span>;
 };
 
-export function LandingPage({ onLogin, darkMode, setDarkMode }: LandingPageProps) {
+export function LandingPage({ onLogin, onDownloadApk, darkMode, setDarkMode }: LandingPageProps) {
   const heroAnim = useVisible(0.1);
   const sectorsAnim = useVisible(0.1);
   const featuresAnim = useVisible(0.1);
@@ -184,9 +185,9 @@ export function LandingPage({ onLogin, darkMode, setDarkMode }: LandingPageProps
             <div style={{ display: 'flex', gap: '16px', marginBottom: '56px', flexWrap: 'wrap' }}>
               <button className="btn btn-primary" onClick={onLogin} style={{ padding: '16px 32px', fontSize: '1.1rem', borderRadius: '12px' }}>Mulai Sekarang</button>
 
-              <a href="/SmartFarming.apk" download="SmartFarming.apk" className="btn btn-secondary" style={{ padding: '16px 32px', fontSize: '1.1rem', borderRadius: '12px', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', color: 'var(--text-primary)', border: '1px solid var(--border-color)', fontWeight: 600 }}>
+              <button onClick={onDownloadApk} className="btn btn-secondary" style={{ padding: '16px 32px', fontSize: '1.1rem', borderRadius: '12px', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>
                 Unduh APK Android
-              </a>
+              </button>
             </div>
             <div style={{ display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
               <div>

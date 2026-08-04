@@ -82,10 +82,10 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
 
                if (Object.keys(latest).length > 0) {
                  if (isKandang) {
-                   if (latest.lampstatus !== undefined) setKandangLightOn(String(latest.lampstatus) === '1');
-                   if (latest.conveyorstatus !== undefined) setKandangConveyorOn(String(latest.conveyorstatus) === '1');
-                   if (latest.pompastatus !== undefined) setKandangPompaOn(String(latest.pompastatus) === '1');
-                   if (latest.lampautomode !== undefined) setKandangAutoMode(String(latest.lampautomode) === '1');
+                   if (latest.lampStatus !== undefined) setKandangLightOn(String(latest.lampStatus) === '1');
+                   if (latest.conveyorStatus !== undefined) setKandangConveyorOn(String(latest.conveyorStatus) === '1');
+                   if (latest.pumpStatus !== undefined) setKandangPompaOn(String(latest.pumpStatus) === '1');
+                   if (latest.lampAutoMode !== undefined) setKandangAutoMode(String(latest.lampAutoMode) === '1');
                  }
                  const newMetrics = []
                  const newControls = []
@@ -132,8 +132,11 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                  return c;
                });
 
-               setMetricsData(newMetrics)
-               setControls(finalControls)
+               const uniqueMetrics = Array.from(new Map(newMetrics.map(item => [item.label, item])).values());
+               const uniqueControls = Array.from(new Map(finalControls.map(item => [item.label, item])).values());
+
+               setMetricsData(uniqueMetrics)
+               setControls(uniqueControls)
              } else {
                setMetricsData([])
                setControls([])
@@ -319,12 +322,6 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                     icon: '⚙️', 
                     val: kandangConveyorOn, 
                     set: () => toggleKandangControl('conveyor', kandangConveyorOn, setKandangConveyorOn)
-                  },
-                  { 
-                    label: 'Pompa Air Minum', 
-                    icon: '🌊', 
-                    val: kandangPompaOn, 
-                    set: () => toggleKandangControl('pompa', kandangPompaOn, setKandangPompaOn)
                   },
                 ].map(ctrl => (
                   <div key={ctrl.label} style={{ display: 'flex', flexDirection: 'column', padding: '12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12, border: '1px solid var(--border-color)' }}>

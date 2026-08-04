@@ -11,6 +11,7 @@ import { AdminPage } from './components/AdminPage'
 import { SectorDashboard } from './components/SectorDashboard'
 import { NotificationsPage } from './components/NotificationsPage'
 import { SettingsPage } from './components/SettingsPage'
+import { ApkDownloadPage } from './components/ApkDownloadPage'
 import { IcMenu, IcLeaf, IcBell, IcPlus, IcSun, IcMoon } from './components/Icons'
 
 export default function App() {
@@ -257,12 +258,17 @@ export default function App() {
 
   // LANDING PAGE
   if (appView === 'landing') {
-    return <LandingPage onLogin={() => setAppView('login')} darkMode={darkMode} setDarkMode={setDarkMode} />
+    return <LandingPage onLogin={() => setAppView('login')} onDownloadApk={() => setAppView('apk_download')} darkMode={darkMode} setDarkMode={setDarkMode} />
   }
 
   // LOGIN PAGE
   if (appView === 'login') {
     return <LoginPage onLogin={handleLogin} onBack={() => setAppView('landing')} darkMode={darkMode} setDarkMode={setDarkMode} />
+  }
+
+  // APK DOWNLOAD PAGE
+  if (appView === 'apk_download') {
+    return <ApkDownloadPage onBack={() => setAppView('landing')} />
   }
 
   // SUPER ADMIN PANEL

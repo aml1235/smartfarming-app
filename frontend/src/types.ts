@@ -1,6 +1,6 @@
 export type SectorId = 'kandang' | 'kolam' | 'hidroponik' | 'irigasi'
 export type PageId = SectorId | 'overview' | 'notifications' | 'settings'
-export type AppView = 'landing' | 'login' | 'superadmin' | 'dashboard'
+export type AppView = 'landing' | 'login' | 'superadmin' | 'dashboard' | 'apk_download'
 export type StatusLevel = 'baik' | 'normal' | 'peringatan' | 'kritis'
 export type AdminTab = 'dashboard' | 'users' | 'assign' | 'activity' | 'settings'
 
