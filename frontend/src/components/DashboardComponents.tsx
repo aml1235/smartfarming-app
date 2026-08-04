@@ -40,8 +40,11 @@ export function OverviewMetrics({ id }: { id: string | number }) {
             const hum = reversedData.find((d: any) => d.humidity && Number(d.humidity) > 0)?.humidity || latest.humidity || 0;
             const validAmonia = reversedData.find((d: any) => (d.ammonia && Number(d.ammonia) > 0) || (d.mq135 && Number(d.mq135) > 0));
             const ammonia = validAmonia?.ammonia || validAmonia?.mq135 || latest.ammonia || latest.mq135 || 0;
-            const validWater = reversedData.find((d: any) => d.waterLevel || d.water_level);
-            const waterLevel = validWater?.waterLevel || validWater?.water_level || latest.waterLevel || latest.water_level || 0;
+            const validWater = reversedData.find((d: any) => (d.waterLevel && Number(d.waterLevel) > 0) || (d.water_level && Number(d.water_level) > 0));
+            let waterLevel = latest.waterLevel || latest.water_level || 0;
+            if (Number(waterLevel) === 0 && validWater) {
+               waterLevel = validWater.waterLevel || validWater.water_level;
+            }
             const validLight = reversedData.find((d: any) => d.lightLevel || d.light_level);
             const lightLevel = validLight?.lightLevel || validLight?.light_level || latest.lightLevel || latest.light_level || 0;
 

@@ -491,17 +491,12 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                         <span style={{ fontSize: 18 }}>🌾</span>
                         <div>
                           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Unit Pakan Otomatis</div>
-                          <div style={{ fontSize: 11, color: feederOnline ? '#2E7D32' : '#9CA3AF' }}>
-                             {feederOnline ? (feederStatus ? 'Status: Buka (Berjalan)' : `Online (Terakhir: ${feederLastFeed})`) : 'Status: Offline'}
+                          <div style={{ fontSize: 11, color: feederStatus ? '#2E7D32' : '#9CA3AF' }}>
+                             {feederStatus ? 'Status: Menyala' : (feederOnline ? `Online (Terakhir: ${feederLastFeed})` : 'Status: Offline')}
                           </div>
                         </div>
                       </div>
-                      <button 
-                        onClick={() => toggleKandangControl('feeder', feederStatus, setFeederStatus)} 
-                        style={{ padding: '6px 12px', borderRadius: 6, background: '#38bdf8', color: '#0b1120', fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer' }}
-                      >
-                        Beri Pakan
-                      </button>
+                      <Toggle isOn={feederStatus} onChange={() => toggleKandangControl('feeder', feederStatus, setFeederStatus)} />
                     </div>
 
                     <div style={{ display: 'flex', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
