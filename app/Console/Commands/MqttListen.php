@@ -166,6 +166,12 @@ class MqttListen extends Command
 
             foreach ($payload as $key => $value) {
                 if (in_array($key, $validTypes)) {
+                    // Normalisasi key
+                    $normalizedKey = $key;
+                    if ($key === 'water_level') $normalizedKey = 'waterLevel';
+                    if ($key === 'light_level') $normalizedKey = 'lightLevel';
+                    if ($key === 'pump_status') $normalizedKey = 'pumpStatus';
+
                     $logValue = $value;
                     if (strtoupper((string)$value) === 'ON') $logValue = 1;
                     if (strtoupper((string)$value) === 'OFF') $logValue = 0;
@@ -173,11 +179,16 @@ class MqttListen extends Command
                     if (is_numeric($logValue)) {
                         SensorLog::create([
                             'sector_id' => $sectorId,
-                            'type' => $key,
+                            'type' => $normalizedKey,
                             'value' => (float) $logValue
                         ]);
                     }
-                    $metrics[$key] = $logValue;
+                    $metrics[$normalizedKey] = $logValue;
+                    
+                    // Hapus key lama jika ada untuk membersihkan DB
+                    if ($normalizedKey !== $key && isset($metrics[$key])) {
+                        unset($metrics[$key]);
+                    }
                 }
             }
 
