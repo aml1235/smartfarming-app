@@ -368,14 +368,14 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                       <Toggle isOn={kandangLightOn} onChange={() => toggleKandangControl('lamp', kandangLightOn, setKandangLightOn)} disabled={kandangAutoMode} />
                     </div>
                     {kandangAutoMode && (
-                      <div style={{ display: 'flex', gap: 10, background: '#f9fafb', padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+                      <div style={{ display: 'flex', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>WAKTU MENYALA</div>
-                          <input type="time" value={kandangLightSchedule.on} onChange={e => handleConfigChange('lampon', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #d1d5db' }} />
+                          <input type="time" value={kandangLightSchedule.on} onChange={e => handleConfigChange('lampon', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)' }} />
                         </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>WAKTU MATI</div>
-                          <input type="time" value={kandangLightSchedule.off} onChange={e => handleConfigChange('lampoff', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #d1d5db' }} />
+                          <input type="time" value={kandangLightSchedule.off} onChange={e => handleConfigChange('lampoff', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)' }} />
                         </div>
                       </div>
                     )}
@@ -393,18 +393,18 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                       <Toggle isOn={kandangConveyorOn} onChange={() => toggleKandangControl('conveyor', kandangConveyorOn, setKandangConveyorOn)} />
                     </div>
                     
-                    <div style={{ display: 'flex', gap: 10, background: '#f9fafb', padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 1: ON</div>
-                        <input type="time" value={kandangConveyorSchedule.on} onChange={e => handleConfigChange('conveyoron', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #d1d5db' }} />
+                        <input type="time" value={kandangConveyorSchedule.on} onChange={e => handleConfigChange('conveyoron', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)' }} />
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 1: OFF</div>
-                        <input type="time" value={kandangConveyorSchedule.off} onChange={e => handleConfigChange('conveyoroff', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #d1d5db' }} />
+                        <input type="time" value={kandangConveyorSchedule.off} onChange={e => handleConfigChange('conveyoroff', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)' }} />
                       </div>
                     </div>
                     
-                    <div style={{ display: 'flex', gap: 10, background: '#f9fafb', padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                         <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
                           <span>JADWAL 2: ON</span>
@@ -412,11 +412,11 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                             {kandangConveyor2Schedule.en ? '(AKTIF)' : '(NONAKTIF)'}
                           </span>
                         </div>
-                        <input type="time" value={kandangConveyor2Schedule.on} disabled={!kandangConveyor2Schedule.en} onChange={e => handleConfigChange('conveyor2on', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #d1d5db', opacity: kandangConveyor2Schedule.en ? 1 : 0.5 }} />
+                        <input type="time" value={kandangConveyor2Schedule.on} disabled={!kandangConveyor2Schedule.en} onChange={e => handleConfigChange('conveyor2on', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', opacity: kandangConveyor2Schedule.en ? 1 : 0.5 }} />
                       </div>
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                         <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 2: OFF</div>
-                        <input type="time" value={kandangConveyor2Schedule.off} disabled={!kandangConveyor2Schedule.en} onChange={e => handleConfigChange('conveyor2off', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #d1d5db', opacity: kandangConveyor2Schedule.en ? 1 : 0.5 }} />
+                        <input type="time" value={kandangConveyor2Schedule.off} disabled={!kandangConveyor2Schedule.en} onChange={e => handleConfigChange('conveyor2off', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', opacity: kandangConveyor2Schedule.en ? 1 : 0.5 }} />
                       </div>
                     </div>
                   </div>

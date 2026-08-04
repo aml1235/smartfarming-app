@@ -139,6 +139,8 @@ class MqttListen extends Command
                     'type' => $type,
                     'value' => (float) $logValue
                 ]);
+                
+                $this->checkAlerts($sector->sector_id, $type, (float) $logValue);
             }
 
             // Update state metrics di sektor
@@ -189,6 +191,7 @@ class MqttListen extends Command
                             'type' => $normalizedKey,
                             'value' => (float) $logValue
                         ]);
+                        $this->checkAlerts($sectorId, $normalizedKey, (float) $logValue);
                     }
                     $metrics[$normalizedKey] = $logValue;
                     
@@ -204,6 +207,48 @@ class MqttListen extends Command
             $this->info("✅ Data saved for sector {$sectorId}");
         } catch (\Exception $e) {
             $this->error("❌ Gagal menyimpan ke Database: " . $e->getMessage());
+        }
+    }
+
+    private function checkAlerts($sectorId, $type, $value)
+    {
+        $title = null;
+        $message = null;
+        $notifType = 'alert';
+
+        if ($type === 'temperature' && $value > 35) {
+            $title = 'Suhu Kritis';
+            $message = "Suhu di sektor {$sectorId} mencapai {$value}°C. Harap segera periksa pendingin/kipas.";
+            $notifType = 'alert';
+        } elseif ($type === 'temperature' && $value > 0 && $value < 20) {
+            $title = 'Suhu Terlalu Dingin';
+            $message = "Suhu di sektor {$sectorId} turun menjadi {$value}°C. Harap periksa pemanas.";
+            $notifType = 'warning';
+        } elseif ($type === 'waterLevel' && $value > 0 && $value < 20) {
+            $title = 'Air Habis';
+            $message = "Level air di sektor {$sectorId} tersisa {$value}%. Segera isi tangki.";
+            $notifType = 'warning';
+        } elseif ($type === 'ammonia' && $value > 200) {
+            $title = 'Amonia Tinggi';
+            $message = "Kadar amonia di sektor {$sectorId} terlalu tinggi ({$value}). Kualitas udara memburuk.";
+            $notifType = 'alert';
+        }
+
+        if ($title) {
+            // Check if similar notification was sent in the last 30 minutes
+            $recent = \App\Models\Notification::where('title', $title)
+                ->where('created_at', '>=', now()->subMinutes(30))
+                ->first();
+                
+            if (!$recent) {
+                \App\Models\Notification::create([
+                    'title' => $title,
+                    'message' => $message,
+                    'type' => $notifType,
+                    'is_read' => false
+                ]);
+                $this->info("🔔 Alert sent: $title");
+            }
         }
     }
 }
