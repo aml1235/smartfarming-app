@@ -497,7 +497,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                         </div>
                       </div>
                       <button 
-                        onClick={() => toggleKandangControl('feeder', false, () => {})} 
+                        onClick={() => toggleKandangControl('feeder', feederStatus, setFeederStatus)} 
                         style={{ padding: '6px 12px', borderRadius: 6, background: '#38bdf8', color: '#0b1120', fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer' }}
                       >
                         Beri Pakan
