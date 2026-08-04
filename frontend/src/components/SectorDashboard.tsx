@@ -160,7 +160,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                  }
                  const newMetrics: any[] = []
                  const newControls: any[] = []
-                 const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'lampstatus', 'conveyorstatus', 'lampautomode', 'pompastatus', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust', 'lampon', 'lampoff', 'cv1on', 'cv1off', 'cv2on', 'cv2off', 'cv2en', 'conveyoron', 'conveyoroff', 'conveyor2on', 'conveyor2off', 'conveyor2en', 'feedersystem', 'lastfeed', 'feeder', 'feedtime1', 'feedtime2', 'feedtime2en', 'feedduration', 'feedangleopen', 'feedangleclose', 'feedangleopen2', 'feedangleclose2', 'feeddistfull', 'feeddistempty', 'feedmanual', 'feeddistance', 'feederstatus', 'feedersystemstatus'];
+                 const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'lampstatus', 'conveyorstatus', 'lampautomode', 'pompastatus', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust', 'lampon', 'lampoff', 'cv1on', 'cv1off', 'cv2on', 'cv2off', 'cv2en', 'conveyoron', 'conveyoroff', 'conveyor2on', 'conveyor2off', 'conveyor2en', 'feedersystem', 'lastfeed', 'feeder', 'feedtime1', 'feedtime2', 'feedtime2en', 'feedduration', 'feedangleopen', 'feedangleclose', 'feedangleopen2', 'feedangleclose2', 'feeddistfull', 'feeddistempty', 'feedmanual', 'feeddistance', 'feederstatus', 'feedersystemstatus', 'convrun', 'convpause', 'convspeed'];
                  for (const key in latest) {
                  if (ignoreKeys.includes(key.toLowerCase())) continue;
                   if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {

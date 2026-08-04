@@ -148,7 +148,7 @@ class MqttListen extends Command
             if (strtoupper((string)$message) === 'FALSE') $logValue = 0;
 
             // Simpan ke log jika datanya berupa angka (sensor)
-            if (is_numeric($logValue) && !in_array($type, ['lastSync', 'systemStatus', 'lampStatus', 'conveyorStatus', 'pumpStatus', 'lampAutoMode', 'mq135volt', 'watervoltage', 'wateradc', 'lampOn', 'lampOff', 'cv1On', 'cv1Off', 'cv2On', 'cv2Off', 'cv2En', 'feederStatus', 'lastFeed', 'feederSystemStatus', 'feedTime1', 'feedTime2', 'feedTime2En', 'feedDuration', 'feedAngleOpen', 'feedAngleClose', 'feedAngleOpen2', 'feedAngleClose2', 'feedDistFull', 'feedDistEmpty'])) {
+            if (is_numeric($logValue) && !in_array($type, ['lastSync', 'systemStatus', 'lampStatus', 'conveyorStatus', 'pumpStatus', 'lampAutoMode', 'mq135volt', 'watervoltage', 'wateradc', 'lampOn', 'lampOff', 'cv1On', 'cv1Off', 'cv2On', 'cv2Off', 'cv2En', 'feederStatus', 'lastFeed', 'feederSystemStatus', 'feedTime1', 'feedTime2', 'feedTime2En', 'feedDuration', 'feedAngleOpen', 'feedAngleClose', 'feedAngleOpen2', 'feedAngleClose2', 'feedDistFull', 'feedDistEmpty', 'convrun', 'convpause', 'convspeed'])) {
                 SensorLog::create([
                     'sector_id' => $sector->sector_id,
                     'type' => $type,
