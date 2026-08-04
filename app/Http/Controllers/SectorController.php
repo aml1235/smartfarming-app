@@ -352,6 +352,29 @@ class SectorController extends Controller
             $mqtt->publish($topic, $value, 1);
             
             $mqtt->disconnect();
+
+            // Optimistic update to DB so UI updates instantly
+            $metricMap = [
+                'lampon' => 'lampOn',
+                'lampoff' => 'lampOff',
+                'cv1on' => 'cv1On',
+                'cv1off' => 'cv1Off',
+                'conveyor2on' => 'cv2On',
+                'conveyor2off' => 'cv2Off',
+                'conveyor2en' => 'cv2En',
+                'feedtime1' => 'feedTime1',
+                'feedtime2' => 'feedTime2',
+                'feedtime2en' => 'feedTime2En',
+                'feedduration' => 'feedDuration',
+            ];
+            $dbKey = $metricMap[$target] ?? $target;
+            $sector = \App\Models\Sector::where('sector_id', $sector_id)->orWhere('id', $sector_id)->orWhere('name', 'ILIKE', '%kandang%')->first();
+            if ($sector) {
+                $metrics = is_string($sector->metrics) ? json_decode($sector->metrics, true) : ($sector->metrics ?? []);
+                $metrics[$dbKey] = $value;
+                $sector->metrics = $metrics;
+                $sector->save();
+            }
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('MQTT Publish Error (Config): ' . $e->getMessage());
             return response()->json([
