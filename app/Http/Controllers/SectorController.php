@@ -26,6 +26,13 @@ class SectorController extends Controller
 
         $logs = SensorLog::where('sector_id', $id)
             ->where('created_at', '>=', $startTime)
+            ->whereNotIn('type', [
+                'lastSync', 'systemStatus', 'lampStatus', 'conveyorStatus', 'pumpStatus', 'lampAutoMode', 
+                'mq135volt', 'watervoltage', 'wateradc', 'lampOn', 'lampOff', 'cv1On', 'cv1Off', 'cv2On', 'cv2Off', 
+                'cv2En', 'feederStatus', 'lastFeed', 'feederSystemStatus', 'feedTime1', 'feedTime2', 'feedTime2En', 
+                'feedDuration', 'feedAngleOpen', 'feedAngleClose', 'feedAngleOpen2', 'feedAngleClose2', 'feedDistFull', 
+                'feedDistEmpty', 'convrun', 'convpause', 'convspeed', 'ph', 'phvalue', 'conveyorstatus', 'lampautostatus'
+            ])
             ->orderBy('created_at', 'asc')
             ->get();
 
@@ -357,8 +364,8 @@ class SectorController extends Controller
             $metricMap = [
                 'lampon' => 'lampOn',
                 'lampoff' => 'lampOff',
-                'cv1on' => 'cv1On',
-                'cv1off' => 'cv1Off',
+                'conveyoron' => 'cv1On',
+                'conveyoroff' => 'cv1Off',
                 'conveyor2on' => 'cv2On',
                 'conveyor2off' => 'cv2Off',
                 'conveyor2en' => 'cv2En',
