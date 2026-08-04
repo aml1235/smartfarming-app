@@ -35,8 +35,9 @@ export default function App() {
           id: n.id.toString(),
           title: n.title,
           message: n.message,
-          time: new Date(n.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-          type: n.type,
+          time: new Date(n.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+          timestamp: new Date(n.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
+          type: n.type as 'alert' | 'info' | 'success' | 'warning',
           read: n.is_read
         }));
         setNotifications(mapped);
@@ -133,6 +134,11 @@ export default function App() {
       fetchUserData();
     }, 5000);
 
+    // Refresh notifikasi setiap 60 detik
+    const notifInterval = setInterval(() => {
+      fetchNotifications();
+    }, 60000);
+
     const headers: Record<string, string> = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -145,7 +151,7 @@ export default function App() {
       })
       .catch(err => console.log('API users error (using local state)', err));
 
-    return () => clearInterval(dataInterval);
+    return () => { clearInterval(dataInterval); clearInterval(notifInterval); };
   }, []);
 
   const [darkMode, setDarkMode] = useState<boolean>(() => {

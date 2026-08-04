@@ -16,7 +16,8 @@ Schedule::call(function () {
     // Menghapus data sensor lokal yang lebih tua dari 7 hari
     SensorLog::where('created_at', '<', Carbon::now()->subDays(7))->delete();
     
-    // Supabase logic removed
+    // Menghapus notifikasi yang lebih tua dari 7 hari
+    \App\Models\Notification::where('created_at', '<', Carbon::now()->subDays(7))->delete();
 
     // Menghapus log aktivitas yang lebih tua dari 30 hari
     Activity::where('created_at', '<', Carbon::now()->subDays(30))->delete();

@@ -19,7 +19,6 @@ const getMetricUI = (key: string) => {
   if (k.includes('air') || k.includes('water')) return { label: 'Level Air', icon: '🌊', color: '#1565C0', isProgress: true }
   if (k.includes('pakan') || k.includes('feedlevel')) return { label: 'Sisa Pakan', icon: '🌾', color: '#F59E0B', isProgress: true }
   if (k.includes('jarak') || k.includes('feeddist')) return { label: 'Jarak Pakan', icon: '📏', color: '#6B7280', isProgress: false }
-  if (k.includes('ph')) return { label: 'pH', icon: '🧪', color: '#059669', isProgress: false }
   if (k.includes('populasi')) return { label: 'Populasi', icon: '🐓', color: '#795548', isProgress: false }
   return { label: key, icon: '📊', color: '#6B7280', isProgress: false }
 }
@@ -160,7 +159,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                  }
                  const newMetrics: any[] = []
                  const newControls: any[] = []
-                 const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'lampstatus', 'conveyorstatus', 'lampautomode', 'pompastatus', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust', 'lampon', 'lampoff', 'cv1on', 'cv1off', 'cv2on', 'cv2off', 'cv2en', 'conveyoron', 'conveyoroff', 'conveyor2on', 'conveyor2off', 'conveyor2en', 'feedersystem', 'lastfeed', 'feeder', 'feedtime1', 'feedtime2', 'feedtime2en', 'feedduration', 'feedangleopen', 'feedangleclose', 'feedangleopen2', 'feedangleclose2', 'feeddistfull', 'feeddistempty', 'feedmanual', 'feeddistance', 'feederstatus', 'feedersystemstatus', 'convrun', 'convpause', 'convspeed'];
+                 const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'lampstatus', 'conveyorstatus', 'lampautomode', 'pompastatus', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust', 'lampon', 'lampoff', 'cv1on', 'cv1off', 'cv2on', 'cv2off', 'cv2en', 'conveyoron', 'conveyoroff', 'conveyor2on', 'conveyor2off', 'conveyor2en', 'feedersystem', 'lastfeed', 'feeder', 'feedtime1', 'feedtime2', 'feedtime2en', 'feedduration', 'feedangleopen', 'feedangleclose', 'feedangleopen2', 'feedangleclose2', 'feeddistfull', 'feeddistempty', 'feedmanual', 'feeddistance', 'feederstatus', 'feedersystemstatus', 'convrun', 'convpause', 'convspeed', 'ph', 'conveyorstatus', 'lampautostatus', 'phvalue'];
                  for (const key in latest) {
                  if (ignoreKeys.includes(key.toLowerCase())) continue;
                   if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {

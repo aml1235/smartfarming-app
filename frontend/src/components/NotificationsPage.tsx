@@ -1,4 +1,4 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { AppNotification } from '../types'
 import { IcCheck, IcBell } from './Icons'
 
@@ -17,6 +17,13 @@ const FILTER_OPTIONS: { value: FilterType; label: string }[] = [
   { value: 'success', label: '🟢 Sukses' },
   { value: 'info', label: '🔵 Info' },
 ]
+
+const NOTIF_ICONS: Record<string, string> = {
+  alert: '🚨',
+  warning: '⚠️',
+  success: '✅',
+  info: 'ℹ️',
+}
 
 export function NotificationsPage({ notifications, onMarkRead, onMarkAllRead }: NotificationsPageProps) {
   const [filter, setFilter] = useState<FilterType>('all')
@@ -66,20 +73,32 @@ export function NotificationsPage({ notifications, onMarkRead, onMarkAllRead }: 
               key={notif.id}
               className={`notif-item ${!notif.read ? 'unread' : ''}`}
               onClick={() => !notif.read && onMarkRead(notif.id)}
+              style={{ cursor: !notif.read ? 'pointer' : 'default' }}
             >
-              <div className={`notif-dot ${notif.type}`} />
-              <div style={{ flex: 1 }}>
-                <div className="notif-message">{notif.message}</div>
+              <div style={{ fontSize: 20, flexShrink: 0, marginTop: 2 }}>
+                {NOTIF_ICONS[notif.type] || 'ℹ️'}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {(notif as any).title && (
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 2 }}>
+                    {(notif as any).title}
+                  </div>
+                )}
+                <div className="notif-message" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{notif.message}</div>
                 {notif.sectorId && (
                   <span style={{ fontSize: 11, color: '#9ca3af', marginTop: 4, display: 'inline-block' }}>
                     Sektor: {notif.sectorId}
                   </span>
                 )}
               </div>
-              <div className="notif-time">{notif.timestamp}</div>
-              {!notif.read && (
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#059669', flexShrink: 0 }} />
-              )}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                <div className="notif-time" style={{ fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap' }}>
+                  {notif.timestamp || (notif as any).time}
+                </div>
+                {!notif.read && (
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#059669' }} />
+                )}
+              </div>
             </div>
           ))
         )}
