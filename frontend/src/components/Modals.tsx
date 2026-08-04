@@ -56,7 +56,7 @@ export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd:
 }
 
 export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () => void }) {
-  const [kandangData, setKandangData] = useState({ temp: 0, humidity: 0, waterLevel: 0, ammonia: 0, feedLevel: 0 })
+  const [kandangData, setKandangData] = useState({ temp: 0, humidity: 0, waterLevel: 0, ammonia: 0, feedLevel: 0, feedDistance: 0 })
   const [tempData, setTempData] = useState<any[]>([])
   const [lastRefresh, setLastRefresh] = useState(new Date())
 
@@ -74,6 +74,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
   const [conveyorSchedule, setConveyorSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_conveyor_sch') || '{"on": "07:00", "off": "07:15"}'))
 
   const [autoMode, setAutoMode] = useState(() => localStorage.getItem('kandang_auto_mode') !== 'false')
+  const [feederStatus, setFeederStatus] = useState(false)
 
   // Save to local storage on change
   useEffect(() => {
@@ -127,7 +128,8 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
            humidity: latest.humidity || 0,
            waterLevel: latest.waterLevel || latest.water_level || 0,
            ammonia: latest.ammonia || latest.mq135 || 0,
-           feedLevel: latest.feedLevel || 0
+           feedLevel: latest.feedLevel || 0,
+           feedDistance: latest.feedDistance || latest.feeddistance || 0
         })
         if (latest.lampstatus !== undefined) setLightOn(String(latest.lampstatus) === '1');
         if (latest.conveyorstatus !== undefined) setConveyorOn(String(latest.conveyorstatus) === '1');
@@ -237,6 +239,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
             <StatCard label="Kelembapan" value={`${kandangData.humidity}%`} sub="Terpantau" icon={<IcDroplets size={16} />} color="#1565C0" bg="#e3f0ff" />
             <StatCard label="Amonia" value={`${kandangData.ammonia}`} sub="Kualitas Udara" icon={<span style={{ fontSize: 14 }}>💨</span>} color="#059669" bg="#d1fae5" />
             <StatCard label="Level Air Minum" value={`${kandangData.waterLevel}%`} sub="Kapasitas Tangki" icon={<span style={{ fontSize: 14 }}>💧</span>} color="#1565C0" bg="#e3f0ff" />
+            <StatCard label="Jarak Pakan" value={`${kandangData.feedDistance}`} sub="Sensor Ultrasonik" icon={<span style={{ fontSize: 14 }}>📏</span>} color="#6B7280" bg="#f3f4f6" />
             <StatCard label="Sisa Pakan" value={`${kandangData.feedLevel}%`} sub="Kapasitas Wadah" icon={<span style={{ fontSize: 14 }}>🌾</span>} color="#F59E0B" bg="#fef3c7" />
           </div>
 
@@ -327,14 +330,10 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
                       <span style={{ fontSize: 18 }}>🌾</span>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Unit Pakan Otomatis</div>
+                        <div style={{ fontSize: 11, color: feederStatus ? '#2E7D32' : '#9CA3AF' }}>{feederStatus ? 'Status: Menyala' : 'Status: Mati'}</div>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => toggleKandangControl('feeder', false, () => {})} 
-                      style={{ padding: '6px 12px', borderRadius: 6, background: '#10b981', color: 'white', fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer' }}
-                    >
-                      Beri Pakan
-                    </button>
+                    <Toggle isOn={feederStatus} onChange={() => toggleKandangControl('feeder', feederStatus, setFeederStatus)} />
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
                     <div style={{ display: 'flex', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
