@@ -91,7 +91,24 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
       }
 
       if (data && data.length > 0) {
+        const reversedData = [...data].reverse();
         latest = { ...latest, ...data[data.length - 1] };
+        if (!latest.temperature || Number(latest.temperature) === 0) {
+          const valid = reversedData.find(d => d.temperature && Number(d.temperature) > 0);
+          if (valid) latest.temperature = valid.temperature;
+        }
+        if (!latest.humidity || Number(latest.humidity) === 0) {
+          const valid = reversedData.find(d => d.humidity && Number(d.humidity) > 0);
+          if (valid) latest.humidity = valid.humidity;
+        }
+        if (!latest.ammonia || Number(latest.ammonia) === 0) {
+          const valid = reversedData.find(d => (d.ammonia && Number(d.ammonia) > 0) || (d.mq135 && Number(d.mq135) > 0));
+          if (valid) latest.ammonia = valid.ammonia || valid.mq135;
+        }
+        if (!latest.waterLevel || Number(latest.waterLevel) === 0) {
+          const valid = reversedData.find(d => (d.waterLevel && Number(d.waterLevel) > 0) || (d.water_level && Number(d.water_level) > 0));
+          if (valid) latest.waterLevel = valid.waterLevel || valid.water_level;
+        }
       }
 
       if (Object.keys(latest).length > 0) {
