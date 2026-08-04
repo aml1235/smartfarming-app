@@ -109,6 +109,10 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
           const valid = reversedData.find(d => (d.waterLevel && Number(d.waterLevel) > 0) || (d.water_level && Number(d.water_level) > 0));
           if (valid) latest.waterLevel = valid.waterLevel || valid.water_level;
         }
+        if (!latest.feedLevel || Number(latest.feedLevel) === 0) {
+          const valid = reversedData.find(d => d.feedLevel && Number(d.feedLevel) > 0);
+          if (valid) latest.feedLevel = valid.feedLevel;
+        }
       }
 
       if (Object.keys(latest).length > 0) {
@@ -116,7 +120,8 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
            temp: latest.temperature || 0,
            humidity: latest.humidity || 0,
            waterLevel: latest.waterLevel || latest.water_level || 0,
-           ammonia: latest.ammonia || latest.mq135 || 0
+           ammonia: latest.ammonia || latest.mq135 || 0,
+           feedLevel: latest.feedLevel || 0
         })
         if (latest.lampstatus !== undefined) setLightOn(String(latest.lampstatus) === '1');
         if (latest.conveyorstatus !== undefined) setConveyorOn(String(latest.conveyorstatus) === '1');
@@ -191,6 +196,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
             <StatCard label="Kelembapan" value={`${kandangData.humidity}%`} sub="Terpantau" icon={<IcDroplets size={16} />} color="#1565C0" bg="#e3f0ff" />
             <StatCard label="Amonia" value={`${kandangData.ammonia}`} sub="Kualitas Udara" icon={<span style={{ fontSize: 14 }}>💨</span>} color="#059669" bg="#d1fae5" />
             <StatCard label="Level Air Minum" value={`${kandangData.waterLevel}%`} sub="Kapasitas Tangki" icon={<span style={{ fontSize: 14 }}>💧</span>} color="#1565C0" bg="#e3f0ff" />
+            <StatCard label="Sisa Pakan" value={`${kandangData.feedLevel}%`} sub="Kapasitas Wadah" icon={<span style={{ fontSize: 14 }}>🌾</span>} color="#F59E0B" bg="#fef3c7" />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>

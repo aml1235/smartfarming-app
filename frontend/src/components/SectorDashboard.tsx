@@ -80,7 +80,9 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
              const chartData = data.map((d: any) => ({
                ...d,
                temperature: (d.temperature && Number(d.temperature) > 0) ? d.temperature : null,
-               humidity: (d.humidity && Number(d.humidity) > 0) ? d.humidity : null
+               humidity: (d.humidity && Number(d.humidity) > 0) ? d.humidity : null,
+               feedLevel: (d.feedLevel && Number(d.feedLevel) > 0) ? d.feedLevel : null,
+               waterLevel: (d.waterLevel && Number(d.waterLevel) > 0) ? d.waterLevel : null,
              }))
              setTempData(chartData)
              
@@ -106,6 +108,14 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                if (!latest.ammonia || Number(latest.ammonia) === 0) {
                  const valid = reversedData.find(d => (d.ammonia && Number(d.ammonia) > 0) || (d.mq135 && Number(d.mq135) > 0));
                  if (valid) latest.ammonia = valid.ammonia || valid.mq135;
+               }
+               if (!latest.waterLevel || Number(latest.waterLevel) === 0) {
+                 const valid = reversedData.find(d => (d.waterLevel && Number(d.waterLevel) > 0) || (d.water_level && Number(d.water_level) > 0));
+                 if (valid) latest.waterLevel = valid.waterLevel || valid.water_level;
+               }
+               if (!latest.feedLevel || Number(latest.feedLevel) === 0) {
+                 const valid = reversedData.find(d => d.feedLevel && Number(d.feedLevel) > 0);
+                 if (valid) latest.feedLevel = valid.feedLevel;
                }
              }
 
