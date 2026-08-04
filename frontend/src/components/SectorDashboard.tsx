@@ -497,8 +497,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                       </div>
                       <button 
                         onClick={() => toggleKandangControl('feeder', false, () => {})} 
-                        disabled={!feederOnline}
-                        style={{ padding: '6px 12px', borderRadius: 6, background: feederOnline ? '#38bdf8' : '#334155', color: '#0b1120', fontSize: 12, fontWeight: 700, border: 'none', cursor: feederOnline ? 'pointer' : 'not-allowed' }}
+                        style={{ padding: '6px 12px', borderRadius: 6, background: '#38bdf8', color: '#0b1120', fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer' }}
                       >
                         Beri Pakan
                       </button>

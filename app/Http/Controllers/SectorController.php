@@ -368,7 +368,7 @@ class SectorController extends Controller
                 'feedduration' => 'feedDuration',
             ];
             $dbKey = $metricMap[$target] ?? $target;
-            $sector = \App\Models\Sector::where('sector_id', $sector_id)->orWhere('id', $sector_id)->orWhere('name', 'ILIKE', '%kandang%')->first();
+            $sector = \App\Models\Sector::where('sector_id', $sector_id)->orWhere('name', 'ILIKE', '%kandang%')->first();
             if ($sector) {
                 $metrics = is_string($sector->metrics) ? json_decode($sector->metrics, true) : ($sector->metrics ?? []);
                 $metrics[$dbKey] = $value;
