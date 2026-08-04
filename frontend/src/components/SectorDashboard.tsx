@@ -510,42 +510,6 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                         <input type="time" value={feedTime2} disabled={!feedTime2En} onChange={e => handleConfigChange('feedtime2', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', opacity: feedTime2En ? 1 : 0.5 }} />
                       </div>
                     </div>
-
-                    <details style={{ background: 'var(--bg-surface)', borderRadius: 6, border: '1px solid var(--border-color)', padding: '8px 12px' }}>
-                      <summary style={{ fontSize: 11, color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer', outline: 'none' }}>⚙️ Pengaturan Perangkat Keras Pakan</summary>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
-                        <div style={{ display: 'flex', gap: 10 }}>
-                           <div style={{ flex: 1 }}>
-                             <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>SUDUT SERVO 1 BUKA</div>
-                             <input type="number" value={feedAngleOpen} onChange={e => handleConfigChange('feedangleopen', e.target.value)} style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 11 }} />
-                           </div>
-                           <div style={{ flex: 1 }}>
-                             <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>TUTUP</div>
-                             <input type="number" value={feedAngleClose} onChange={e => handleConfigChange('feedangleclose', e.target.value)} style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 11 }} />
-                           </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 10 }}>
-                           <div style={{ flex: 1 }}>
-                             <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>SUDUT SERVO 2 BUKA</div>
-                             <input type="number" value={feedAngleOpen2} onChange={e => handleConfigChange('feedangleopen2', e.target.value)} style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 11 }} />
-                           </div>
-                           <div style={{ flex: 1 }}>
-                             <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>TUTUP</div>
-                             <input type="number" value={feedAngleClose2} onChange={e => handleConfigChange('feedangleclose2', e.target.value)} style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 11 }} />
-                           </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 10 }}>
-                           <div style={{ flex: 1 }}>
-                             <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>JARAK PENUH (cm)</div>
-                             <input type="number" value={feedDistFull} onChange={e => handleConfigChange('feeddistfull', e.target.value)} style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 11 }} />
-                           </div>
-                           <div style={{ flex: 1 }}>
-                             <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>JARAK KOSONG (cm)</div>
-                             <input type="number" value={feedDistEmpty} onChange={e => handleConfigChange('feeddistempty', e.target.value)} style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 11 }} />
-                           </div>
-                        </div>
-                      </div>
-                    </details>
                   </div>
               </>
             ) : controls.length > 0 ? controls.map((ctrl) => (
