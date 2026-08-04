@@ -122,6 +122,21 @@ class MqttListen extends Command
                 'conveyor2on' => 'cv2On',
                 'conveyor2off' => 'cv2Off',
                 'conveyor2en' => 'cv2En',
+                'feeddistance' => 'feedDistance',
+                'feedlevel' => 'feedLevel',
+                'feeder' => 'feederStatus',
+                'lastfeed' => 'lastFeed',
+                'feedersystem' => 'feederSystemStatus',
+                'feedtime1' => 'feedTime1',
+                'feedtime2' => 'feedTime2',
+                'feedtime2en' => 'feedTime2En',
+                'feedduration' => 'feedDuration',
+                'feedangleopen' => 'feedAngleOpen',
+                'feedangleclose' => 'feedAngleClose',
+                'feedangleopen2' => 'feedAngleOpen2',
+                'feedangleclose2' => 'feedAngleClose2',
+                'feeddistfull' => 'feedDistFull',
+                'feeddistempty' => 'feedDistEmpty',
             ];
 
             $type = $metricMap[$metricType] ?? $metricType;
@@ -133,7 +148,7 @@ class MqttListen extends Command
             if (strtoupper((string)$message) === 'FALSE') $logValue = 0;
 
             // Simpan ke log jika datanya berupa angka (sensor)
-            if (is_numeric($logValue) && !in_array($type, ['lastSync', 'systemStatus', 'lampStatus', 'conveyorStatus', 'pumpStatus', 'lampAutoMode', 'mq135volt', 'watervoltage', 'wateradc', 'lampOn', 'lampOff', 'cv1On', 'cv1Off', 'cv2On', 'cv2Off', 'cv2En'])) {
+            if (is_numeric($logValue) && !in_array($type, ['lastSync', 'systemStatus', 'lampStatus', 'conveyorStatus', 'pumpStatus', 'lampAutoMode', 'mq135volt', 'watervoltage', 'wateradc', 'lampOn', 'lampOff', 'cv1On', 'cv1Off', 'cv2On', 'cv2Off', 'cv2En', 'feederStatus', 'lastFeed', 'feederSystemStatus', 'feedTime1', 'feedTime2', 'feedTime2En', 'feedDuration', 'feedAngleOpen', 'feedAngleClose', 'feedAngleOpen2', 'feedAngleClose2', 'feedDistFull', 'feedDistEmpty'])) {
                 SensorLog::create([
                     'sector_id' => $sector->sector_id,
                     'type' => $type,
@@ -232,6 +247,10 @@ class MqttListen extends Command
             $title = 'Amonia Tinggi';
             $message = "Kadar amonia di sektor {$sectorId} terlalu tinggi ({$value}). Kualitas udara memburuk.";
             $notifType = 'alert';
+        } elseif ($type === 'feedLevel' && $value > 0 && $value < 20) {
+            $title = 'Pakan Hampir Habis';
+            $message = "Sisa pakan di sektor {$sectorId} tersisa {$value}%. Segera isi ulang wadah pakan.";
+            $notifType = 'warning';
         }
 
         if ($title) {

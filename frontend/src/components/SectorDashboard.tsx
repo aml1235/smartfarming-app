@@ -17,6 +17,8 @@ const getMetricUI = (key: string) => {
   if (k.includes('kelembapan') || k.includes('humid')) return { label: 'Kelembapan', icon: '💧', color: '#1565C0', isProgress: true }
   if (k.includes('cahaya') || k.includes('light')) return { label: 'Intensitas Cahaya', icon: '☀️', color: '#F59E0B', isProgress: false }
   if (k.includes('air') || k.includes('water')) return { label: 'Level Air', icon: '🌊', color: '#1565C0', isProgress: true }
+  if (k.includes('pakan') || k.includes('feedlevel')) return { label: 'Sisa Pakan', icon: '🌾', color: '#F59E0B', isProgress: true }
+  if (k.includes('jarak') || k.includes('feeddist')) return { label: 'Jarak Pakan', icon: '📏', color: '#6B7280', isProgress: false }
   if (k.includes('ph')) return { label: 'pH', icon: '🧪', color: '#059669', isProgress: false }
   if (k.includes('populasi')) return { label: 'Populasi', icon: '🐓', color: '#795548', isProgress: false }
   return { label: key, icon: '📊', color: '#6B7280', isProgress: false }
@@ -44,6 +46,24 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
   const [kandangConveyor2Schedule, setKandangConveyor2Schedule] = useState({ on: "18:00", off: "18:05", en: true })
   const [kandangAutoMode, setKandangAutoMode] = useState(true)
   const [kandangPompaOn, setKandangPompaOn] = useState(false)
+
+  // States khusus Unit Pakan (Feeder)
+  const [feederStatus, setFeederStatus] = useState(false)
+  const [feederOnline, setFeederOnline] = useState(false)
+  const [feederLastFeed, setFeederLastFeed] = useState('--:--')
+  
+  const [feedTime1, setFeedTime1] = useState('07:00')
+  const [feedTime2, setFeedTime2] = useState('17:00')
+  const [feedTime2En, setFeedTime2En] = useState(true)
+  const [feedDuration, setFeedDuration] = useState('5')
+  
+  const [feedAngleOpen, setFeedAngleOpen] = useState('90')
+  const [feedAngleClose, setFeedAngleClose] = useState('0')
+  const [feedAngleOpen2, setFeedAngleOpen2] = useState('90')
+  const [feedAngleClose2, setFeedAngleClose2] = useState('0')
+  
+  const [feedDistFull, setFeedDistFull] = useState('5')
+  const [feedDistEmpty, setFeedDistEmpty] = useState('40')
 
   // Real-time data from local API fallback
   useEffect(() => {
@@ -110,10 +130,27 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                      off: latest.cv2Off || prev.off,
                      en: latest.cv2En !== undefined ? (String(latest.cv2En) === '1') : prev.en
                    }))
+                   // Update Feeder States
+                   if (latest.feederStatus !== undefined) setFeederStatus(String(latest.feederStatus) === '1');
+                   if (latest.feederSystemStatus !== undefined) setFeederOnline(String(latest.feederSystemStatus) === 'online');
+                   if (latest.lastFeed !== undefined) setFeederLastFeed(latest.lastFeed);
+                   
+                   if (latest.feedTime1 !== undefined) setFeedTime1(latest.feedTime1);
+                   if (latest.feedTime2 !== undefined) setFeedTime2(latest.feedTime2);
+                   if (latest.feedTime2En !== undefined) setFeedTime2En(String(latest.feedTime2En) === '1');
+                   if (latest.feedDuration !== undefined) setFeedDuration(latest.feedDuration);
+                   
+                   if (latest.feedAngleOpen !== undefined) setFeedAngleOpen(latest.feedAngleOpen);
+                   if (latest.feedAngleClose !== undefined) setFeedAngleClose(latest.feedAngleClose);
+                   if (latest.feedAngleOpen2 !== undefined) setFeedAngleOpen2(latest.feedAngleOpen2);
+                   if (latest.feedAngleClose2 !== undefined) setFeedAngleClose2(latest.feedAngleClose2);
+                   
+                   if (latest.feedDistFull !== undefined) setFeedDistFull(latest.feedDistFull);
+                   if (latest.feedDistEmpty !== undefined) setFeedDistEmpty(latest.feedDistEmpty);
                  }
                  const newMetrics: any[] = []
                  const newControls: any[] = []
-                 const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'lampstatus', 'conveyorstatus', 'lampautomode', 'pompastatus', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust', 'lampon', 'lampoff', 'cv1on', 'cv1off', 'cv2on', 'cv2off', 'cv2en', 'conveyoron', 'conveyoroff', 'conveyor2on', 'conveyor2off', 'conveyor2en', 'feedersystem', 'lastfeed', 'feeder', 'feedtime1', 'feedtime2', 'feedtime2en', 'feedduration', 'feedangleopen', 'feedangleclose', 'feedmanual'];
+                 const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'lampstatus', 'conveyorstatus', 'lampautomode', 'pompastatus', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust', 'lampon', 'lampoff', 'cv1on', 'cv1off', 'cv2on', 'cv2off', 'cv2en', 'conveyoron', 'conveyoroff', 'conveyor2on', 'conveyor2off', 'conveyor2en', 'feedersystem', 'lastfeed', 'feeder', 'feedtime1', 'feedtime2', 'feedtime2en', 'feedduration', 'feedangleopen', 'feedangleclose', 'feedangleopen2', 'feedangleclose2', 'feeddistfull', 'feeddistempty', 'feedmanual', 'feeddistance', 'feederstatus', 'feedersystemstatus'];
                  for (const key in latest) {
                  if (ignoreKeys.includes(key.toLowerCase())) continue;
                   if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {
@@ -419,6 +456,86 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                         <input type="time" value={kandangConveyor2Schedule.off} disabled={!kandangConveyor2Schedule.en} onChange={e => handleConfigChange('conveyor2off', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', opacity: kandangConveyor2Schedule.en ? 1 : 0.5 }} />
                       </div>
                     </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', padding: '12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12, border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>🌾</span>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Unit Pakan Otomatis</div>
+                          <div style={{ fontSize: 11, color: feederOnline ? '#2E7D32' : '#9CA3AF' }}>
+                             {feederOnline ? (feederStatus ? 'Status: Buka (Berjalan)' : `Online (Terakhir: ${feederLastFeed})`) : 'Status: Offline'}
+                          </div>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleConfigChange('feeder', '1')} 
+                        disabled={!feederOnline}
+                        style={{ padding: '6px 12px', borderRadius: 6, background: feederOnline ? '#38bdf8' : '#334155', color: '#0b1120', fontSize: 12, fontWeight: 700, border: 'none', cursor: feederOnline ? 'pointer' : 'not-allowed' }}
+                      >
+                        Beri Pakan
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>PEMBERIAN 1: JAM</div>
+                        <input type="time" value={feedTime1} onChange={e => handleConfigChange('feedtime1', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)' }} />
+                      </div>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>LAMA BUKA (DETIK)</div>
+                        <input type="number" min="1" max="120" value={feedDuration} onChange={e => handleConfigChange('feedduration', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)' }} />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
+                          <span>PEMBERIAN 2: JAM</span>
+                          <span style={{ cursor: 'pointer', color: feedTime2En ? '#059669' : '#9CA3AF' }} onClick={() => handleConfigChange('feedtime2en', feedTime2En ? '0' : '1')}>
+                            {feedTime2En ? '(AKTIF)' : '(NONAKTIF)'}
+                          </span>
+                        </div>
+                        <input type="time" value={feedTime2} disabled={!feedTime2En} onChange={e => handleConfigChange('feedtime2', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', opacity: feedTime2En ? 1 : 0.5 }} />
+                      </div>
+                    </div>
+
+                    <details style={{ background: 'var(--bg-surface)', borderRadius: 6, border: '1px solid var(--border-color)', padding: '8px 12px' }}>
+                      <summary style={{ fontSize: 11, color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer', outline: 'none' }}>⚙️ Pengaturan Perangkat Keras Pakan</summary>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                           <div style={{ flex: 1 }}>
+                             <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>SUDUT SERVO 1 BUKA</div>
+                             <input type="number" value={feedAngleOpen} onChange={e => handleConfigChange('feedangleopen', e.target.value)} style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 11 }} />
+                           </div>
+                           <div style={{ flex: 1 }}>
+                             <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>TUTUP</div>
+                             <input type="number" value={feedAngleClose} onChange={e => handleConfigChange('feedangleclose', e.target.value)} style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 11 }} />
+                           </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                           <div style={{ flex: 1 }}>
+                             <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>SUDUT SERVO 2 BUKA</div>
+                             <input type="number" value={feedAngleOpen2} onChange={e => handleConfigChange('feedangleopen2', e.target.value)} style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 11 }} />
+                           </div>
+                           <div style={{ flex: 1 }}>
+                             <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>TUTUP</div>
+                             <input type="number" value={feedAngleClose2} onChange={e => handleConfigChange('feedangleclose2', e.target.value)} style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 11 }} />
+                           </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                           <div style={{ flex: 1 }}>
+                             <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>JARAK PENUH (cm)</div>
+                             <input type="number" value={feedDistFull} onChange={e => handleConfigChange('feeddistfull', e.target.value)} style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 11 }} />
+                           </div>
+                           <div style={{ flex: 1 }}>
+                             <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 2 }}>JARAK KOSONG (cm)</div>
+                             <input type="number" value={feedDistEmpty} onChange={e => handleConfigChange('feeddistempty', e.target.value)} style={{ width: '100%', padding: '4px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 11 }} />
+                           </div>
+                        </div>
+                      </div>
+                    </details>
                   </div>
               </>
             ) : controls.length > 0 ? controls.map((ctrl) => (
