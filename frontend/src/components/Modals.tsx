@@ -109,7 +109,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
       if (data && data.length > 0) {
         const chartData = data.map((d: any) => ({
           time: d.time,
-          suhu: d.temperature // don't default to 0
+          suhu: (d.temperature && Number(d.temperature) > 0) ? d.temperature : null
         }))
         if (chartData.length > 0) setTempData(chartData)
       }

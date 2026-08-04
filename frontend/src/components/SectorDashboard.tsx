@@ -57,7 +57,12 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
           const res = await fetch(`${API_URL}/api/sectors/${sectorId}/logs`)
           if (res.ok) {
              const data = await res.json()
-             setTempData(data)
+             const chartData = data.map((d: any) => ({
+               ...d,
+               temperature: (d.temperature && Number(d.temperature) > 0) ? d.temperature : null,
+               humidity: (d.humidity && Number(d.humidity) > 0) ? d.humidity : null
+             }))
+             setTempData(chartData)
              
              let latest: any = {};
              if (typeof sector.metrics === 'string') {
