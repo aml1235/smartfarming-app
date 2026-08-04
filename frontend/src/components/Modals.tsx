@@ -133,13 +133,13 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
         if (latest.conveyorstatus !== undefined) setConveyorOn(String(latest.conveyorstatus) === '1');
         if (latest.lampautomode !== undefined) setAutoMode(String(latest.lampautomode) === '1');
 
-        if (latest.lampOn !== undefined) setLightSchedule(prev => ({ ...prev, on: latest.lampOn }));
-        if (latest.lampOff !== undefined) setLightSchedule(prev => ({ ...prev, off: latest.lampOff }));
-        if (latest.cv1On !== undefined) setConveyorSchedule(prev => ({ ...prev, on: latest.cv1On }));
-        if (latest.cv1Off !== undefined) setConveyorSchedule(prev => ({ ...prev, off: latest.cv1Off }));
-        if (latest.cv2On !== undefined) setKandangConveyor2Schedule(prev => ({ ...prev, on: latest.cv2On }));
-        if (latest.cv2Off !== undefined) setKandangConveyor2Schedule(prev => ({ ...prev, off: latest.cv2Off }));
-        if (latest.cv2En !== undefined) setKandangConveyor2Schedule(prev => ({ ...prev, en: String(latest.cv2En) === '1' }));
+        if (latest.lampOn !== undefined) setLightSchedule((prev: any) => ({ ...prev, on: latest.lampOn }));
+        if (latest.lampOff !== undefined) setLightSchedule((prev: any) => ({ ...prev, off: latest.lampOff }));
+        if (latest.cv1On !== undefined) setConveyorSchedule((prev: any) => ({ ...prev, on: latest.cv1On }));
+        if (latest.cv1Off !== undefined) setConveyorSchedule((prev: any) => ({ ...prev, off: latest.cv1Off }));
+        if (latest.cv2On !== undefined) setKandangConveyor2Schedule((prev: any) => ({ ...prev, on: latest.cv2On }));
+        if (latest.cv2Off !== undefined) setKandangConveyor2Schedule((prev: any) => ({ ...prev, off: latest.cv2Off }));
+        if (latest.cv2En !== undefined) setKandangConveyor2Schedule((prev: any) => ({ ...prev, en: String(latest.cv2En) === '1' }));
         if (latest.feedTime1 !== undefined) setFeedTime1(latest.feedTime1);
         if (latest.feedTime2 !== undefined) setFeedTime2(latest.feedTime2);
         if (latest.feedTime2En !== undefined) setFeedTime2En(String(latest.feedTime2En) === '1');
@@ -183,13 +183,13 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
     if (target === 'feedtime2') setFeedTime2(value);
     if (target === 'feedtime2en') setFeedTime2En(value === '1');
     if (target === 'feedduration') setFeedDuration(value);
-    if (target === 'conveyoron') setConveyorSchedule(prev => ({ ...prev, on: value }));
-    if (target === 'conveyoroff') setConveyorSchedule(prev => ({ ...prev, off: value }));
-    if (target === 'conveyor2on') setKandangConveyor2Schedule(prev => ({ ...prev, on: value }));
-    if (target === 'conveyor2off') setKandangConveyor2Schedule(prev => ({ ...prev, off: value }));
-    if (target === 'conveyor2en') setKandangConveyor2Schedule(prev => ({ ...prev, en: value === '1' }));
-    if (target === 'lampon') setLightSchedule(prev => ({ ...prev, on: value }));
-    if (target === 'lampoff') setLightSchedule(prev => ({ ...prev, off: value }));
+    if (target === 'conveyoron') setConveyorSchedule((prev: any) => ({ ...prev, on: value }));
+    if (target === 'conveyoroff') setConveyorSchedule((prev: any) => ({ ...prev, off: value }));
+    if (target === 'conveyor2on') setKandangConveyor2Schedule((prev: any) => ({ ...prev, on: value }));
+    if (target === 'conveyor2off') setKandangConveyor2Schedule((prev: any) => ({ ...prev, off: value }));
+    if (target === 'conveyor2en') setKandangConveyor2Schedule((prev: any) => ({ ...prev, en: value === '1' }));
+    if (target === 'lampon') setLightSchedule((prev: any) => ({ ...prev, on: value }));
+    if (target === 'lampoff') setLightSchedule((prev: any) => ({ ...prev, off: value }));
     try {
       const sectorId = sector.sector_id || sector.id;
       await fetch(`${API_URL}/api/sector/${sectorId}/config`, {
