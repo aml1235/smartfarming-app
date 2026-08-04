@@ -67,7 +67,21 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
              }
 
              if (data && data.length > 0) {
+               const reversedData = [...data].reverse();
                latest = { ...latest, ...data[data.length - 1] };
+               
+               if (!latest.temperature || Number(latest.temperature) === 0) {
+                 const valid = reversedData.find(d => d.temperature && Number(d.temperature) > 0);
+                 if (valid) latest.temperature = valid.temperature;
+               }
+               if (!latest.humidity || Number(latest.humidity) === 0) {
+                 const valid = reversedData.find(d => d.humidity && Number(d.humidity) > 0);
+                 if (valid) latest.humidity = valid.humidity;
+               }
+               if (!latest.ammonia || Number(latest.ammonia) === 0) {
+                 const valid = reversedData.find(d => (d.ammonia && Number(d.ammonia) > 0) || (d.mq135 && Number(d.mq135) > 0));
+                 if (valid) latest.ammonia = valid.ammonia || valid.mq135;
+               }
              }
 
                if (Object.keys(latest).length > 0) {
@@ -94,7 +108,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                  }
                  const newMetrics: any[] = []
                  const newControls: any[] = []
-                 const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'water_level', 'lampstatus', 'conveyorstatus', 'lampautomode', 'pompastatus', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust', 'lampon', 'lampoff', 'cv1on', 'cv1off', 'cv2on', 'cv2off', 'cv2en'];
+                 const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'lampstatus', 'conveyorstatus', 'lampautomode', 'pompastatus', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust', 'lampon', 'lampoff', 'cv1on', 'cv1off', 'cv2on', 'cv2off', 'cv2en', 'conveyoron', 'conveyoroff', 'conveyor2on', 'conveyor2off', 'conveyor2en', 'feedersystem', 'lastfeed', 'feeder', 'feedtime1', 'feedtime2', 'feedtime2en', 'feedduration', 'feedangleopen', 'feedangleclose', 'feedmanual'];
                  for (const key in latest) {
                  if (ignoreKeys.includes(key.toLowerCase())) continue;
                   if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {

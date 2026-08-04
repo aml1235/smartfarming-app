@@ -35,14 +35,20 @@ export function OverviewMetrics({ id }: { id: string | number }) {
           const res = await fetch(`${API_URL}/api/sectors/${id}/logs`)
           const data = await res.json()
           if (data && data.length > 0) {
-            latest = { ...latest, ...data[data.length - 1] }
-          }
-          
-          if (Object.keys(latest).length > 0) {
+            const reversedData = [...data].reverse();
+            const temp = reversedData.find((d: any) => d.temperature && Number(d.temperature) > 0)?.temperature || latest.temperature || 0;
+            const hum = reversedData.find((d: any) => d.humidity && Number(d.humidity) > 0)?.humidity || latest.humidity || 0;
+            const validAmonia = reversedData.find((d: any) => (d.ammonia && Number(d.ammonia) > 0) || (d.mq135 && Number(d.mq135) > 0));
+            const ammonia = validAmonia?.ammonia || validAmonia?.mq135 || latest.ammonia || latest.mq135 || 0;
+            const validWater = reversedData.find((d: any) => d.waterLevel || d.water_level);
+            const waterLevel = validWater?.waterLevel || validWater?.water_level || latest.waterLevel || latest.water_level || 0;
+            const validLight = reversedData.find((d: any) => d.lightLevel || d.light_level);
+            const lightLevel = validLight?.lightLevel || validLight?.light_level || latest.lightLevel || latest.light_level || 0;
+
             if (effectiveId === 'hidroponik') {
-              setHydroData({ waterLevel: latest.waterLevel || latest.water_level || 0, temp: latest.temperature || 0, humidity: latest.humidity || 0, light: latest.lightLevel || latest.light_level || 0 })
+              setHydroData({ waterLevel, temp, humidity: hum, light: lightLevel })
             } else if (effectiveId === 'kandang') {
-              setKandangData({ temp: latest.temperature || 0, humidity: latest.humidity || 0, waterLevel: latest.waterLevel || latest.water_level || 0, ammonia: latest.ammonia || latest.mq135 || 0 })
+              setKandangData({ temp, humidity: hum, waterLevel, ammonia })
             }
           }
         } catch (err) {
