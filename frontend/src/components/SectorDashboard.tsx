@@ -79,10 +79,10 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
              const data = await res.json()
              const chartData = data.map((d: any) => ({
                ...d,
-               temperature: (d.temperature && Number(d.temperature) > 0) ? d.temperature : null,
-               humidity: (d.humidity && Number(d.humidity) > 0) ? d.humidity : null,
-               feedLevel: (d.feedLevel && Number(d.feedLevel) > 0) ? d.feedLevel : null,
-               waterLevel: (d.waterLevel && Number(d.waterLevel) > 0) ? d.waterLevel : null,
+               temperature: (d.temperature != null && Number(d.temperature) > 0) ? d.temperature : null,
+               humidity: (d.humidity != null && Number(d.humidity) > 0) ? d.humidity : null,
+               feedLevel: (d.feedLevel != null && Number(d.feedLevel) > 0) ? d.feedLevel : null,
+               waterLevel: (d.waterLevel != null && Number(d.waterLevel) > 0) ? d.waterLevel : null,
              }))
              setTempData(chartData)
              

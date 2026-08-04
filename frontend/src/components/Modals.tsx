@@ -60,6 +60,12 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
   const [tempData, setTempData] = useState<any[]>([])
   const [lastRefresh, setLastRefresh] = useState(new Date())
 
+  const [feedTime1, setFeedTime1] = useState('07:00')
+  const [feedTime2, setFeedTime2] = useState('17:00')
+  const [feedTime2En, setFeedTime2En] = useState(true)
+  const [feedDuration, setFeedDuration] = useState('5')
+  const [kandangConveyor2Schedule, setKandangConveyor2Schedule] = useState({ on: "18:00", off: "18:05", en: true })
+
   // Controls (localStorage initial state)
   const [lightOn, setLightOn] = useState(() => localStorage.getItem('kandang_light_on') === 'true')
   const [lightSchedule, setLightSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_light_sch') || '{"on": "18:00", "off": "06:00"}'))
@@ -126,12 +132,24 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
         if (latest.lampstatus !== undefined) setLightOn(String(latest.lampstatus) === '1');
         if (latest.conveyorstatus !== undefined) setConveyorOn(String(latest.conveyorstatus) === '1');
         if (latest.lampautomode !== undefined) setAutoMode(String(latest.lampautomode) === '1');
+
+        if (latest.lampOn !== undefined) setLightSchedule(prev => ({ ...prev, on: latest.lampOn }));
+        if (latest.lampOff !== undefined) setLightSchedule(prev => ({ ...prev, off: latest.lampOff }));
+        if (latest.cv1On !== undefined) setConveyorSchedule(prev => ({ ...prev, on: latest.cv1On }));
+        if (latest.cv1Off !== undefined) setConveyorSchedule(prev => ({ ...prev, off: latest.cv1Off }));
+        if (latest.cv2On !== undefined) setKandangConveyor2Schedule(prev => ({ ...prev, on: latest.cv2On }));
+        if (latest.cv2Off !== undefined) setKandangConveyor2Schedule(prev => ({ ...prev, off: latest.cv2Off }));
+        if (latest.cv2En !== undefined) setKandangConveyor2Schedule(prev => ({ ...prev, en: String(latest.cv2En) === '1' }));
+        if (latest.feedTime1 !== undefined) setFeedTime1(latest.feedTime1);
+        if (latest.feedTime2 !== undefined) setFeedTime2(latest.feedTime2);
+        if (latest.feedTime2En !== undefined) setFeedTime2En(String(latest.feedTime2En) === '1');
+        if (latest.feedDuration !== undefined) setFeedDuration(latest.feedDuration);
       }
       
       if (data && data.length > 0) {
         const chartData = data.map((d: any) => ({
           time: d.time,
-          suhu: (d.temperature && Number(d.temperature) > 0) ? d.temperature : null
+          suhu: (d.temperature != null && Number(d.temperature) > 0) ? d.temperature : null
         }))
         if (chartData.length > 0) setTempData(chartData)
       }
@@ -158,6 +176,29 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
         console.error('Kandang control failed', e);
         setLocalState(currentState); // Revert on fail
     }
+  }
+
+  const handleConfigChange = async (target: string, value: string) => {
+    if (target === 'feedtime1') setFeedTime1(value);
+    if (target === 'feedtime2') setFeedTime2(value);
+    if (target === 'feedtime2en') setFeedTime2En(value === '1');
+    if (target === 'feedduration') setFeedDuration(value);
+    if (target === 'conveyoron') setConveyorSchedule(prev => ({ ...prev, on: value }));
+    if (target === 'conveyoroff') setConveyorSchedule(prev => ({ ...prev, off: value }));
+    if (target === 'conveyor2on') setKandangConveyor2Schedule(prev => ({ ...prev, on: value }));
+    if (target === 'conveyor2off') setKandangConveyor2Schedule(prev => ({ ...prev, off: value }));
+    if (target === 'conveyor2en') setKandangConveyor2Schedule(prev => ({ ...prev, en: value === '1' }));
+    if (target === 'lampon') setLightSchedule(prev => ({ ...prev, on: value }));
+    if (target === 'lampoff') setLightSchedule(prev => ({ ...prev, off: value }));
+    try {
+      const sectorId = sector.sector_id || sector.id;
+      await fetch(`${API_URL}/api/sector/${sectorId}/config`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+         body: JSON.stringify({ target, value })
+      });
+      setLastRefresh(new Date());
+    } catch (e) {}
   }
 
   useEffect(() => {
@@ -235,9 +276,92 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
                       </div>
                       <Toggle isOn={ctrl.val} onChange={ctrl.set} disabled={ctrl.disabled} />
                     </div>
+                    {ctrl.label === 'Otomatisasi Waktu (18:00 - 06:00)' && autoMode && (
+                      <div style={{ display: 'flex', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)', marginTop: 8 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>WAKTU ON</div>
+                          <input type="time" value={lightSchedule.on} onChange={e => handleConfigChange('lampon', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)' }} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>WAKTU OFF</div>
+                          <input type="time" value={lightSchedule.off} onChange={e => handleConfigChange('lampoff', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)' }} />
+                        </div>
+                      </div>
+                    )}
+                    {ctrl.label === 'Conveyor Kotoran' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+                        <div style={{ display: 'flex', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 1: ON</div>
+                            <input type="time" value={conveyorSchedule.on} onChange={e => handleConfigChange('conveyoron', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)' }} />
+                          </div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 1: OFF</div>
+                            <input type="time" value={conveyorSchedule.off} onChange={e => handleConfigChange('conveyoroff', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)' }} />
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
+                              <span>JADWAL 2: ON</span>
+                              <span style={{ cursor: 'pointer', color: kandangConveyor2Schedule.en ? '#059669' : '#9CA3AF' }} onClick={() => handleConfigChange('conveyor2en', kandangConveyor2Schedule.en ? '0' : '1')}>
+                                {kandangConveyor2Schedule.en ? '(AKTIF)' : '(NONAKTIF)'}
+                              </span>
+                            </div>
+                            <input type="time" value={kandangConveyor2Schedule.on} disabled={!kandangConveyor2Schedule.en} onChange={e => handleConfigChange('conveyor2on', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', opacity: kandangConveyor2Schedule.en ? 1 : 0.5 }} />
+                          </div>
+                          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 2: OFF</div>
+                            <input type="time" value={kandangConveyor2Schedule.off} disabled={!kandangConveyor2Schedule.en} onChange={e => handleConfigChange('conveyor2off', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', opacity: kandangConveyor2Schedule.en ? 1 : 0.5 }} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
+                
+                {/* Feeder Control */}
+                <div style={{ display: 'flex', flexDirection: 'column', padding: '12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12, border: '1px solid var(--border-color)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 18 }}>🌾</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Unit Pakan Otomatis</div>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => toggleKandangControl('feeder', false, () => {})} 
+                      style={{ padding: '6px 12px', borderRadius: 6, background: '#38bdf8', color: '#0b1120', fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer' }}
+                    >
+                      Beri Pakan
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
+                    <div style={{ display: 'flex', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>PEMBERIAN 1: JAM</div>
+                        <input type="time" value={feedTime1} onChange={e => handleConfigChange('feedtime1', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)' }} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>LAMA BUKA (DETIK)</div>
+                        <input type="number" min="1" max="60" value={feedDuration} onChange={e => handleConfigChange('feedduration', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)' }} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, background: 'var(--bg-surface)', padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
+                          <span>PEMBERIAN 2: JAM</span>
+                          <span style={{ cursor: 'pointer', color: feedTime2En ? '#059669' : '#9CA3AF' }} onClick={() => handleConfigChange('feedtime2en', feedTime2En ? '0' : '1')}>
+                            {feedTime2En ? '(AKTIF)' : '(NONAKTIF)'}
+                          </span>
+                        </div>
+                        <input type="time" value={feedTime2} disabled={!feedTime2En} onChange={e => handleConfigChange('feedtime2', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', opacity: feedTime2En ? 1 : 0.5 }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+
             </div>
 
             <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column' }}>
