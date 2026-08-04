@@ -56,7 +56,7 @@ export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd:
 }
 
 export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () => void }) {
-  const [kandangData, setKandangData] = useState({ temp: 0, humidity: 0, waterLevel: 0, ammonia: 0 })
+  const [kandangData, setKandangData] = useState({ temp: 0, humidity: 0, waterLevel: 0, ammonia: 0, feedLevel: 0 })
   const [tempData, setTempData] = useState<any[]>([])
   const [lastRefresh, setLastRefresh] = useState(new Date())
 
