@@ -331,7 +331,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
                     </div>
                     <button 
                       onClick={() => toggleKandangControl('feeder', false, () => {})} 
-                      style={{ padding: '6px 12px', borderRadius: 6, background: '#38bdf8', color: '#0b1120', fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer' }}
+                      style={{ padding: '6px 12px', borderRadius: 6, background: '#10b981', color: 'white', fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer' }}
                     >
                       Beri Pakan
                     </button>
@@ -364,7 +364,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
 
             </div>
 
-            <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column' }}>
+            <div className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', alignSelf: 'start' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Grafik Suhu Harian</div>
@@ -372,7 +372,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
                 </div>
                 <div className="badge badge-amber"><IcActivity size={11} /> Batas atas: 35°C</div>
               </div>
-              <div style={{ flex: 1, minHeight: 220 }}>
+              <div style={{ height: 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={tempData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
                     <defs>
