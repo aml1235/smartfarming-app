@@ -297,6 +297,11 @@ class SectorController extends Controller
                 $topic = "smartcoop/control/{$mqttTarget}";
                 $payload = ($command === 'ON') ? "1" : "0";
                 $mqtt->publish($topic, $payload, 1);
+
+                // Fitur Sinkronisasi: Jika conveyor dinyalakan/dimatikan, pakan (feeder) juga ikut menyala/mati
+                if ($target === 'conveyor') {
+                    $mqtt->publish("smartcoop/control/feeder", $payload, 1);
+                }
             } else {
                 // Hydroponic or default
                 $topic = "smartfarming/hydroponic/cmd/{$sector_id}";
