@@ -1,5 +1,5 @@
 import React from 'react';
-import { IcLeaf, IcDownload, IcStar } from './Icons';
+import { IcLeaf, IcDownload, IcStar, IcShield } from './Icons';
 
 interface ApkDownloadPageProps {
   onBack: () => void;

@@ -87,8 +87,8 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                    if (latest.pumpStatus !== undefined) setKandangPompaOn(String(latest.pumpStatus) === '1');
                    if (latest.lampAutoMode !== undefined) setKandangAutoMode(String(latest.lampAutoMode) === '1');
                  }
-                 const newMetrics = []
-                 const newControls = []
+                 const newMetrics: any[] = []
+                 const newControls: any[] = []
                  const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'water_level', 'lampstatus', 'conveyorstatus', 'lampautomode', 'pompastatus', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust'];
                  for (const key in latest) {
                  if (ignoreKeys.includes(key.toLowerCase())) continue;
