@@ -68,7 +68,6 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
   const [conveyorSchedule, setConveyorSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_conveyor_sch') || '{"on": "07:00", "off": "07:15"}'))
 
   const [autoMode, setAutoMode] = useState(() => localStorage.getItem('kandang_auto_mode') !== 'false')
-  const [pompaOn, setPompaOn] = useState(() => localStorage.getItem('kandang_pompa_on') === 'true')
 
   // Save to local storage on change
   useEffect(() => {
@@ -77,8 +76,7 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
     localStorage.setItem('kandang_conveyor_on', conveyorOn.toString())
     localStorage.setItem('kandang_conveyor_sch', JSON.stringify(conveyorSchedule))
     localStorage.setItem('kandang_auto_mode', autoMode.toString())
-    localStorage.setItem('kandang_pompa_on', pompaOn.toString())
-  }, [lightOn, lightSchedule, conveyorOn, conveyorSchedule, autoMode, pompaOn])
+  }, [lightOn, lightSchedule, conveyorOn, conveyorSchedule, autoMode])
 
   const fetchLatest = async () => {
     try {
@@ -105,7 +103,6 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
         })
         if (latest.lampstatus !== undefined) setLightOn(String(latest.lampstatus) === '1');
         if (latest.conveyorstatus !== undefined) setConveyorOn(String(latest.conveyorstatus) === '1');
-        if (latest.pompastatus !== undefined) setPompaOn(String(latest.pompastatus) === '1');
         if (latest.lampautomode !== undefined) setAutoMode(String(latest.lampautomode) === '1');
       }
       
@@ -202,12 +199,6 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
                     icon: '⚙️', 
                     val: conveyorOn, 
                     set: () => toggleKandangControl('conveyor', conveyorOn, setConveyorOn), 
-                  },
-                  { 
-                    label: 'Pompa Air Minum', 
-                    icon: '🌊', 
-                    val: pompaOn, 
-                    set: () => toggleKandangControl('pompa', pompaOn, setPompaOn), 
                   },
                 ].map(ctrl => (
                   <div key={ctrl.label} style={{ display: 'flex', flexDirection: 'column', padding: '12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12, border: '1px solid var(--border-color)' }}>
