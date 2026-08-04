@@ -15,6 +15,7 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middle
 // Public/Simulated Sector Route for Frontend
 Route::get('/sectors', [SectorController::class, 'index']);
 Route::post('/sector/{sector_id}/control', [SectorController::class, 'control']);
+Route::post('/sector/{sector_id}/config', [SectorController::class, 'configTimer']);
 Route::get('/activities', function () {
     return response()->json(\App\Models\Activity::orderBy('created_at', 'desc')->get());
 });

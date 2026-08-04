@@ -115,6 +115,13 @@ class MqttListen extends Command
                 'lampauto' => 'lampAutoMode',
                 'time' => 'lastSync',
                 'system' => 'systemStatus',
+                'lampon' => 'lampOn',
+                'lampoff' => 'lampOff',
+                'conveyoron' => 'cv1On',
+                'conveyoroff' => 'cv1Off',
+                'conveyor2on' => 'cv2On',
+                'conveyor2off' => 'cv2Off',
+                'conveyor2en' => 'cv2En',
             ];
 
             $type = $metricMap[$metricType] ?? $metricType;
@@ -126,7 +133,7 @@ class MqttListen extends Command
             if (strtoupper((string)$message) === 'FALSE') $logValue = 0;
 
             // Simpan ke log jika datanya berupa angka (sensor)
-            if (is_numeric($logValue) && !in_array($type, ['lastSync', 'systemStatus', 'lampStatus', 'conveyorStatus', 'pumpStatus', 'lampAutoMode', 'mq135volt', 'watervoltage', 'wateradc'])) {
+            if (is_numeric($logValue) && !in_array($type, ['lastSync', 'systemStatus', 'lampStatus', 'conveyorStatus', 'pumpStatus', 'lampAutoMode', 'mq135volt', 'watervoltage', 'wateradc', 'lampOn', 'lampOff', 'cv1On', 'cv1Off', 'cv2On', 'cv2Off', 'cv2En'])) {
                 SensorLog::create([
                     'sector_id' => $sector->sector_id,
                     'type' => $type,

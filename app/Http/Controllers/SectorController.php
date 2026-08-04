@@ -311,6 +311,60 @@ class SectorController extends Controller
         ]);
     }
 
+    public function configTimer(Request $request, $sector_id)
+    {
+        $validated = $request->validate([
+            'target' => 'required|string', // e.g. lampon, lampoff
+            'value' => 'required|string'   // e.g. 18:00
+        ]);
+
+        $target = $validated['target'];
+        $value = $validated['value'];
+
+        \App\Models\Activity::create([
+            'user_name' => auth()->check() ? auth()->user()->name : 'System/Admin',
+            'action' => "Mengubah Jadwal $target menjadi $value",
+            'target' => "Sektor $sector_id"
+        ]);
+
+        try {
+            $isKandang = ($sector_id === 'SEC-011' || $sector_id === 'kandang');
+            if (!$isKandang) {
+                return response()->json(['message' => 'Konfigurasi jadwal hanya untuk Kandang Ayam'], 400);
+            }
+
+            $prefix = 'MQTT_COOP_';
+            $server   = env($prefix . 'HOST', env('MQTT_HOST', 'broker.hivemq.com'));
+            $port     = env($prefix . 'PORT', env('MQTT_PORT', 1883));
+            $clientId = env($prefix . 'CLIENT_ID', env('MQTT_CLIENT_ID', 'laravel_pub_' . uniqid())) . '_' . uniqid();
+            $username = env($prefix . 'USERNAME', env('MQTT_USERNAME'));
+            $password = env($prefix . 'PASSWORD', env('MQTT_PASSWORD'));
+
+            $connectionSettings = (new \PhpMqtt\Client\ConnectionSettings)
+                ->setUsername($username)
+                ->setPassword($password)
+                ->setUseTls(env($prefix . 'TLS', env('MQTT_TLS', false)));
+
+            $mqtt = new \PhpMqtt\Client\MqttClient($server, $port, $clientId);
+            $mqtt->connect($connectionSettings, true);
+            
+            $topic = "smartcoop/config/{$target}";
+            $mqtt->publish($topic, $value, 1);
+            
+            $mqtt->disconnect();
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('MQTT Publish Error (Config): ' . $e->getMessage());
+            return response()->json([
+                'message' => "Gagal mengirim konfigurasi ke sektor $sector_id via MQTT",
+                'error' => $e->getMessage()
+            ], 500);
+        }
+
+        return response()->json([
+            'message' => "Konfigurasi jadwal berhasil dikirim via MQTT"
+        ]);
+    }
+
     public function getPumpCommand($id)
     {
         $command = \Illuminate\Support\Facades\Cache::get("pump_command_{$id}");

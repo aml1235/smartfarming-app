@@ -37,23 +37,13 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
   
   // States khusus Kandang Ayam
   const isKandang = sector.id.toString().toLowerCase().includes('kandang') || sector.id === 'SEC-011' || sector.name.toLowerCase().includes('kandang')
-  const [kandangLightOn, setKandangLightOn] = useState(() => localStorage.getItem('kandang_light_on') === 'true')
-  const [kandangLightSchedule, setKandangLightSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_light_sch') || '{"on": "18:00", "off": "06:00"}'))
-  const [kandangConveyorOn, setKandangConveyorOn] = useState(() => localStorage.getItem('kandang_conveyor_on') === 'true')
-  const [kandangConveyorSchedule, setKandangConveyorSchedule] = useState(() => JSON.parse(localStorage.getItem('kandang_conveyor_sch') || '{"on": "07:00", "off": "07:15"}'))
-  const [kandangAutoMode, setKandangAutoMode] = useState(() => localStorage.getItem('kandang_auto_mode') !== 'false')
-  const [kandangPompaOn, setKandangPompaOn] = useState(() => localStorage.getItem('kandang_pompa_on') === 'true')
-
-  useEffect(() => {
-    if (isKandang) {
-      localStorage.setItem('kandang_light_on', kandangLightOn.toString())
-      localStorage.setItem('kandang_light_sch', JSON.stringify(kandangLightSchedule))
-      localStorage.setItem('kandang_conveyor_on', kandangConveyorOn.toString())
-      localStorage.setItem('kandang_conveyor_sch', JSON.stringify(kandangConveyorSchedule))
-      localStorage.setItem('kandang_auto_mode', kandangAutoMode.toString())
-      localStorage.setItem('kandang_pompa_on', kandangPompaOn.toString())
-    }
-  }, [kandangLightOn, kandangLightSchedule, kandangConveyorOn, kandangConveyorSchedule, kandangAutoMode, kandangPompaOn, isKandang])
+  const [kandangLightOn, setKandangLightOn] = useState(false)
+  const [kandangLightSchedule, setKandangLightSchedule] = useState({ on: "18:00", off: "06:00" })
+  const [kandangConveyorOn, setKandangConveyorOn] = useState(false)
+  const [kandangConveyorSchedule, setKandangConveyorSchedule] = useState({ on: "06:00", off: "06:05" })
+  const [kandangConveyor2Schedule, setKandangConveyor2Schedule] = useState({ on: "18:00", off: "18:05", en: true })
+  const [kandangAutoMode, setKandangAutoMode] = useState(true)
+  const [kandangPompaOn, setKandangPompaOn] = useState(false)
 
   // Real-time data from local API fallback
   useEffect(() => {
@@ -86,10 +76,25 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
                    if (latest.conveyorStatus !== undefined) setKandangConveyorOn(String(latest.conveyorStatus) === '1');
                    if (latest.pumpStatus !== undefined) setKandangPompaOn(String(latest.pumpStatus) === '1');
                    if (latest.lampAutoMode !== undefined) setKandangAutoMode(String(latest.lampAutoMode) === '1');
+                   
+                   // Update Schedule States from ESP32
+                   setKandangLightSchedule(prev => ({
+                     on: latest.lampOn || prev.on,
+                     off: latest.lampOff || prev.off
+                   }))
+                   setKandangConveyorSchedule(prev => ({
+                     on: latest.cv1On || prev.on,
+                     off: latest.cv1Off || prev.off
+                   }))
+                   setKandangConveyor2Schedule(prev => ({
+                     on: latest.cv2On || prev.on,
+                     off: latest.cv2Off || prev.off,
+                     en: latest.cv2En !== undefined ? (String(latest.cv2En) === '1') : prev.en
+                   }))
                  }
                  const newMetrics: any[] = []
                  const newControls: any[] = []
-                 const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'water_level', 'lampstatus', 'conveyorstatus', 'lampautomode', 'pompastatus', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust'];
+                 const ignoreKeys = ['time', 'mq135volt', 'wateradc', 'watervoltage', 'water_level', 'lampstatus', 'conveyorstatus', 'lampautomode', 'pompastatus', 'lastsync', 'systemstatus', 'id', 'created_at', 'updated_at', 'sector_id', 'motor', 'exhaust', 'lampon', 'lampoff', 'cv1on', 'cv1off', 'cv2on', 'cv2off', 'cv2en'];
                  for (const key in latest) {
                  if (ignoreKeys.includes(key.toLowerCase())) continue;
                   if (key.toLowerCase().includes('pump') || key.toLowerCase().includes('relay')) {
@@ -163,6 +168,21 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
       setAiResult({ status: 'Error', kesimpulan: 'Gagal terhubung ke server.', rekomendasi: 'Periksa koneksi Anda.' })
     } finally {
       setAiLoading(false)
+    }
+  }
+
+  const handleConfigChange = async (target: string, value: string) => {
+    try {
+      const sectorId = sector.sector_id || sector.id;
+      await fetch(`${API_URL}/api/sector/${sectorId}/config`, {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+         body: JSON.stringify({ target, value })
+      });
+      // Force refresh data
+      setLastRefresh(new Date());
+    } catch (e) {
+      console.error('Config failed', e);
     }
   }
 
@@ -303,40 +323,85 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>Panel Kontrol & Otomatisasi</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {isKandang ? (
-              [
-                  { 
-                    label: 'Otomatisasi Waktu (18:00 - 06:00)', 
-                    icon: '🤖', 
-                    val: kandangAutoMode, 
-                    set: () => toggleKandangControl('lampauto', kandangAutoMode, setKandangAutoMode)
-                  },
-                  { 
-                    label: 'Lampu Penerangan', 
-                    icon: '💡', 
-                    val: kandangLightOn, 
-                    set: () => toggleKandangControl('lamp', kandangLightOn, setKandangLightOn),
-                    disabled: kandangAutoMode
-                  },
-                  { 
-                    label: 'Conveyor Kotoran', 
-                    icon: '⚙️', 
-                    val: kandangConveyorOn, 
-                    set: () => toggleKandangControl('conveyor', kandangConveyorOn, setKandangConveyorOn)
-                  },
-                ].map(ctrl => (
-                  <div key={ctrl.label} style={{ display: 'flex', flexDirection: 'column', padding: '12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12, border: '1px solid var(--border-color)' }}>
+              <>
+                  <div style={{ display: 'flex', flexDirection: 'column', padding: '12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12, border: '1px solid var(--border-color)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 18 }}>{ctrl.icon}</span>
+                        <span style={{ fontSize: 18 }}>🤖</span>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{ctrl.label}</div>
-                          <div style={{ fontSize: 11, color: ctrl.val ? '#2E7D32' : '#9CA3AF' }}>{ctrl.val ? 'Status: Menyala' : 'Status: Mati'}</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Otomatisasi Waktu (Lampu)</div>
+                          <div style={{ fontSize: 11, color: kandangAutoMode ? '#2E7D32' : '#9CA3AF' }}>{kandangAutoMode ? 'Jadwal Aktif' : 'Manual'}</div>
                         </div>
                       </div>
-                      <Toggle isOn={ctrl.val} onChange={ctrl.set as any} disabled={ctrl.disabled} />
+                      <Toggle isOn={kandangAutoMode} onChange={() => toggleKandangControl('lampauto', kandangAutoMode, setKandangAutoMode)} />
                     </div>
                   </div>
-                ))
+
+                  <div style={{ display: 'flex', flexDirection: 'column', padding: '12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12, border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>💡</span>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Lampu Penerangan</div>
+                          <div style={{ fontSize: 11, color: kandangLightOn ? '#2E7D32' : '#9CA3AF' }}>{kandangLightOn ? 'Status: Menyala' : 'Status: Mati'}</div>
+                        </div>
+                      </div>
+                      <Toggle isOn={kandangLightOn} onChange={() => toggleKandangControl('lamp', kandangLightOn, setKandangLightOn)} disabled={kandangAutoMode} />
+                    </div>
+                    {kandangAutoMode && (
+                      <div style={{ display: 'flex', gap: 10, background: '#f9fafb', padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>WAKTU MENYALA</div>
+                          <input type="time" value={kandangLightSchedule.on} onChange={e => handleConfigChange('lampon', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #d1d5db' }} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>WAKTU MATI</div>
+                          <input type="time" value={kandangLightSchedule.off} onChange={e => handleConfigChange('lampoff', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #d1d5db' }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', padding: '12px', background: 'var(--bg-base)', borderRadius: 8, gap: 12, border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>⚙️</span>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Conveyor Kotoran</div>
+                          <div style={{ fontSize: 11, color: kandangConveyorOn ? '#2E7D32' : '#9CA3AF' }}>{kandangConveyorOn ? 'Status: Menyala' : 'Status: Mati'}</div>
+                        </div>
+                      </div>
+                      <Toggle isOn={kandangConveyorOn} onChange={() => toggleKandangControl('conveyor', kandangConveyorOn, setKandangConveyorOn)} />
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: 10, background: '#f9fafb', padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 1: ON</div>
+                        <input type="time" value={kandangConveyorSchedule.on} onChange={e => handleConfigChange('conveyoron', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #d1d5db' }} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 1: OFF</div>
+                        <input type="time" value={kandangConveyorSchedule.off} onChange={e => handleConfigChange('conveyoroff', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #d1d5db' }} />
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: 10, background: '#f9fafb', padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e7eb' }}>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
+                          <span>JADWAL 2: ON</span>
+                          <span style={{ cursor: 'pointer', color: kandangConveyor2Schedule.en ? '#059669' : '#9CA3AF' }} onClick={() => handleConfigChange('conveyor2en', kandangConveyor2Schedule.en ? '0' : '1')}>
+                            {kandangConveyor2Schedule.en ? '(AKTIF)' : '(NONAKTIF)'}
+                          </span>
+                        </div>
+                        <input type="time" value={kandangConveyor2Schedule.on} disabled={!kandangConveyor2Schedule.en} onChange={e => handleConfigChange('conveyor2on', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #d1d5db', opacity: kandangConveyor2Schedule.en ? 1 : 0.5 }} />
+                      </div>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 2: OFF</div>
+                        <input type="time" value={kandangConveyor2Schedule.off} disabled={!kandangConveyor2Schedule.en} onChange={e => handleConfigChange('conveyor2off', e.target.value)} style={{ width: '100%', padding: '4px 8px', borderRadius: 4, border: '1px solid #d1d5db', opacity: kandangConveyor2Schedule.en ? 1 : 0.5 }} />
+                      </div>
+                    </div>
+                  </div>
+              </>
             ) : controls.length > 0 ? controls.map((ctrl) => (
               <div key={ctrl.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--bg-base)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
