@@ -238,6 +238,22 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
   }
 
   const handleConfigChange = async (target: string, value: string) => {
+    // Optimistic UI updates
+    if (target === 'feedtime1') setFeedTime1(value);
+    if (target === 'feedtime2') setFeedTime2(value);
+    if (target === 'feedtime2en') setFeedTime2En(value === '1');
+    if (target === 'feedduration') setFeedDuration(value);
+    
+    if (target === 'conveyoron') setKandangConveyorSchedule(prev => ({ ...prev, on: value }));
+    if (target === 'conveyoroff') setKandangConveyorSchedule(prev => ({ ...prev, off: value }));
+    
+    if (target === 'conveyor2on') setKandangConveyor2Schedule(prev => ({ ...prev, on: value }));
+    if (target === 'conveyor2off') setKandangConveyor2Schedule(prev => ({ ...prev, off: value }));
+    if (target === 'conveyor2en') setKandangConveyor2Schedule(prev => ({ ...prev, en: value === '1' }));
+    
+    if (target === 'lampon') setKandangLightSchedule(prev => ({ ...prev, on: value }));
+    if (target === 'lampoff') setKandangLightSchedule(prev => ({ ...prev, off: value }));
+
     try {
       const sectorId = sector.sector_id || sector.id;
       await fetch(`${API_URL}/api/sector/${sectorId}/config`, {
