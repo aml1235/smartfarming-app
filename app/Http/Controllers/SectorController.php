@@ -331,9 +331,18 @@ class SectorController extends Controller
 
                 } else {
                     // Kontrol biasa: lamp, conveyor, pompa, lampauto
+                    // V4 format
                     $topic   = "smartcoop/control/{$target}";
                     $payload = (strtoupper($command) === 'ON' || $command === '1') ? '1' : '0';
                     $mqtt->publish($topic, $payload, 1);
+                    
+                    // V3 fallback (JSON on unified topic)
+                    $v3Topic = "smartfarming/poultry/cmd/{$sector_id}";
+                    $v3Target = $target;
+                    if ($target === 'conveyor') $v3Target = 'motor';
+                    if ($target === 'lampauto') $v3Target = 'lampAutoMode';
+                    $v3Payload = json_encode([$v3Target => strtoupper($command) === 'ON' ? 'ON' : 'OFF']);
+                    $mqtt->publish($v3Topic, $v3Payload, 0);
                 }
             } else {
                 // Sektor lain (hidroponik, dll) — format JSON

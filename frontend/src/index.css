@@ -1394,3 +1394,47 @@ body.dark .badge-amber { background: rgba(217, 119, 6, 0.2); color: #fbbf24; }
 body.dark .badge-red { background: rgba(220, 38, 38, 0.2); color: #f87171; }
 body.dark .badge-blue { background: rgba(37, 99, 235, 0.2); color: #60a5fa; }
 body.dark .badge-gray { background: rgba(156, 163, 175, 0.2); color: #9ca3af; }
+
+.kandang-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.kandang-content-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.kandang-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 1024px) {
+  .kandang-metrics-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .kandang-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .kandang-content-grid {
+    grid-template-columns: 1fr;
+  }
+  .sector-dash-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .kandang-header-actions {
+    margin-left: 0 !important;
+    width: 100%;
+    justify-content: space-between;
+  }
+}
