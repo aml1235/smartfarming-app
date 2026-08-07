@@ -104,38 +104,49 @@ class MqttListen extends Command
             $metricType = end($topicParts); // e.g. temp, humidity, waterlevel, dll
 
             // Map MQTT topic ke tipe metrics di DB
+            // v4: topik sudah individual (bukan JSON), mapping diperluas
             $metricMap = [
-                'temp' => 'temperature',
-                'humidity' => 'humidity',
-                'mq135' => 'ammonia',
-                'waterlevel' => 'waterLevel',
-                'lamp' => 'lampStatus',
-                'conveyor' => 'conveyorStatus',
-                'pompa' => 'pumpStatus',
-                'lampauto' => 'lampAutoMode',
-                'time' => 'lastSync',
-                'system' => 'systemStatus',
-                'lampon' => 'lampOn',
-                'lampoff' => 'lampOff',
-                'conveyoron' => 'cv1On',
-                'conveyoroff' => 'cv1Off',
-                'conveyor2on' => 'cv2On',
-                'conveyor2off' => 'cv2Off',
-                'conveyor2en' => 'cv2En',
-                'feeddistance' => 'feedDistance',
-                'feedlevel' => 'feedLevel',
-                'feeder' => 'feederStatus',
-                'lastfeed' => 'lastFeed',
-                'feedersystem' => 'feederSystemStatus',
-                'feedtime1' => 'feedTime1',
-                'feedtime2' => 'feedTime2',
-                'feedtime2en' => 'feedTime2En',
-                'feedduration' => 'feedDuration',
-                'feedangleopen' => 'feedAngleOpen',
+                // --- Sensor data ---
+                'temp'          => 'temperature',
+                'humidity'      => 'humidity',
+                'mq135'         => 'ammonia',
+                'mq135volt'     => 'mq135Voltage',
+                'wateradc'      => 'waterAdc',
+                'watervoltage'  => 'waterVoltage',
+                'waterlevel'    => 'waterLevel',
+                // --- Status aktuator ---
+                'lamp'          => 'lampStatus',
+                'conveyor'      => 'conveyorStatus',
+                'conveyorphase' => 'conveyorPhase',   // BARU v4: fase konveyor (Maju/Diam/dll)
+                'pompa'         => 'pumpStatus',
+                'lampauto'      => 'lampAutoMode',
+                'pompaauto'     => 'pompaAutoMode',   // BARU v4: mode auto pompa
+                'time'          => 'lastSync',
+                'system'        => 'systemStatus',
+                // --- Jadwal (retained, dari ESP32 ke dashboard) ---
+                'lampon'        => 'lampOn',
+                'lampoff'       => 'lampOff',
+                'conveyoron'    => 'cv1On',
+                'conveyor2on'   => 'cv2On',
+                'conveyor2en'   => 'cv2En',
+                'convrun'       => 'convRun',          // BARU v4: durasi maju/mundur (detik)
+                'convpause'     => 'convPause',        // BARU v4: jeda antar arah (detik)
+                'convspeed'     => 'convSpeed',        // BARU v4: kecepatan motor (%)
+                // --- Unit pakan (feeder) ---
+                'feeddistance'  => 'feedDistance',
+                'feedlevel'     => 'feedLevel',
+                'feeder'        => 'feederStatus',
+                'lastfeed'      => 'lastFeed',
+                'feedersystem'  => 'feederSystemStatus',
+                'feedtime1'     => 'feedTime1',
+                'feedtime2'     => 'feedTime2',
+                'feedtime2en'   => 'feedTime2En',
+                'feedduration'  => 'feedDuration',
+                'feedangleopen'  => 'feedAngleOpen',
                 'feedangleclose' => 'feedAngleClose',
-                'feedangleopen2' => 'feedAngleOpen2',
+                'feedangleopen2'  => 'feedAngleOpen2',
                 'feedangleclose2' => 'feedAngleClose2',
-                'feeddistfull' => 'feedDistFull',
+                'feeddistfull'  => 'feedDistFull',
                 'feeddistempty' => 'feedDistEmpty',
             ];
 
@@ -147,14 +158,35 @@ class MqttListen extends Command
             if (strtoupper((string)$message) === 'TRUE') $logValue = 1;
             if (strtoupper((string)$message) === 'FALSE') $logValue = 0;
 
-            // Simpan ke log jika datanya berupa angka (sensor)
-            if (is_numeric($logValue) && !in_array($type, ['lastSync', 'systemStatus', 'lampStatus', 'conveyorStatus', 'pumpStatus', 'lampAutoMode', 'mq135volt', 'watervoltage', 'wateradc', 'lampOn', 'lampOff', 'cv1On', 'cv1Off', 'cv2On', 'cv2Off', 'cv2En', 'feederStatus', 'lastFeed', 'feederSystemStatus', 'feedTime1', 'feedTime2', 'feedTime2En', 'feedDuration', 'feedAngleOpen', 'feedAngleClose', 'feedAngleOpen2', 'feedAngleClose2', 'feedDistFull', 'feedDistEmpty', 'convrun', 'convpause', 'convspeed'])) {
+            // Tipe yang HANYA disimpan ke metrics (tidak ke sensor_logs historis)
+            // karena nilainya adalah status/string/konfigurasi, bukan angka sensor.
+            $nonLogTypes = [
+                // Status on/off
+                'lastSync', 'systemStatus',
+                'lampStatus', 'conveyorStatus', 'conveyorPhase', 'pumpStatus',
+                'lampAutoMode', 'pompaAutoMode',
+                // Tegangan/ADC mentah (tidak perlu di chart)
+                'mq135Voltage', 'waterVoltage', 'waterAdc',
+                // Jadwal lampu
+                'lampOn', 'lampOff',
+                // Jadwal & parameter konveyor
+                'cv1On', 'cv2On', 'cv2En',
+                'convRun', 'convPause', 'convSpeed',
+                // Feeder
+                'feederStatus', 'lastFeed', 'feederSystemStatus',
+                'feedTime1', 'feedTime2', 'feedTime2En', 'feedDuration',
+                'feedAngleOpen', 'feedAngleClose', 'feedAngleOpen2', 'feedAngleClose2',
+                'feedDistFull', 'feedDistEmpty',
+            ];
+
+            // Simpan ke sensor_logs jika berupa angka sensor yang relevan
+            if (is_numeric($logValue) && !in_array($type, $nonLogTypes)) {
                 SensorLog::create([
                     'sector_id' => $sector->sector_id,
-                    'type' => $type,
-                    'value' => (float) $logValue
+                    'type'      => $type,
+                    'value'     => (float) $logValue
                 ]);
-                
+
                 $this->checkAlerts($sector->sector_id, $type, (float) $logValue);
             }
 

@@ -27,11 +27,25 @@ class SectorController extends Controller
         $logs = SensorLog::where('sector_id', $id)
             ->where('created_at', '>=', $startTime)
             ->whereNotIn('type', [
-                'lastSync', 'systemStatus', 'lampStatus', 'conveyorStatus', 'pumpStatus', 'lampAutoMode', 
-                'mq135volt', 'watervoltage', 'wateradc', 'lampOn', 'lampOff', 'cv1On', 'cv1Off', 'cv2On', 'cv2Off', 
-                'cv2En', 'feederStatus', 'lastFeed', 'feederSystemStatus', 'feedTime1', 'feedTime2', 'feedTime2En', 
-                'feedDuration', 'feedAngleOpen', 'feedAngleClose', 'feedAngleOpen2', 'feedAngleClose2', 'feedDistFull', 
-                'feedDistEmpty', 'convrun', 'convpause', 'convspeed', 'ph', 'phvalue', 'conveyorstatus', 'lampautostatus'
+                // Status aktuator (bukan angka sensor)
+                'lastSync', 'systemStatus',
+                'lampStatus', 'conveyorStatus', 'conveyorPhase', 'pumpStatus',
+                'lampAutoMode', 'pompaAutoMode',
+                // Tegangan/ADC mentah
+                'mq135Voltage', 'waterVoltage', 'waterAdc',
+                // Jadwal lampu
+                'lampOn', 'lampOff',
+                // Jadwal & parameter konveyor
+                'cv1On', 'cv1Off', 'cv2On', 'cv2Off', 'cv2En',
+                'convRun', 'convPause', 'convSpeed',
+                'convrun', 'convpause', 'convspeed',
+                // Feeder
+                'feederStatus', 'lastFeed', 'feederSystemStatus',
+                'feedTime1', 'feedTime2', 'feedTime2En',
+                'feedDuration', 'feedAngleOpen', 'feedAngleClose',
+                'feedAngleOpen2', 'feedAngleClose2', 'feedDistFull', 'feedDistEmpty',
+                // Alias lama
+                'mq135volt', 'watervoltage', 'wateradc', 'conveyorstatus', 'lampautostatus', 'ph', 'phvalue'
             ])
             ->orderBy('created_at', 'asc')
             ->get();
@@ -258,24 +272,24 @@ class SectorController extends Controller
     public function control(Request $request, $sector_id)
     {
         $validated = $request->validate([
-            'command' => 'required|in:ON,OFF',
-            'target' => 'nullable|string'
+            'command' => 'required|string',
+            'target'  => 'nullable|string'
         ]);
 
         $command = $validated['command'];
-        $target = $validated['target'] ?? 'pump';
+        $target  = $validated['target'] ?? 'pump';
         
-        // Catat aktivitas (Opsional, agar muncul di activity log)
+        // Catat aktivitas
         \App\Models\Activity::create([
             'user_name' => auth()->check() ? auth()->user()->name : 'System/Admin',
-            'action' => "Mematikan/Menghidupkan Pompa ($command)",
-            'target' => "Sektor $sector_id"
+            'action'    => "Mengubah Kontrol ($command)",
+            'target'    => "Sektor $sector_id / $target"
         ]);
 
         // Publish to MQTT
         try {
             $isKandang = ($sector_id === 'SEC-011' || $sector_id === 'kandang');
-            $prefix = $isKandang ? 'MQTT_COOP_' : 'MQTT_';
+            $prefix    = $isKandang ? 'MQTT_COOP_' : 'MQTT_';
 
             $server   = env($prefix . 'HOST', env('MQTT_HOST', 'broker.hivemq.com'));
             $port     = env($prefix . 'PORT', env('MQTT_PORT', 1883));
@@ -291,20 +305,39 @@ class SectorController extends Controller
             $mqtt = new \PhpMqtt\Client\MqttClient($server, $port, $clientId);
             $mqtt->connect($connectionSettings, true);
             
-            if ($sector_id === 'SEC-011' || $sector_id === 'kandang') {
-                // Kandang Ayam (smartcoop)
-                $mqttTarget = $target; // e.g. lamp, conveyor, lampauto
-                $topic = "smartcoop/control/{$mqttTarget}";
-                $payload = ($command === 'ON') ? "1" : "0";
-                $mqtt->publish($topic, $payload, 1);
+            if ($isKandang) {
+                // Kandang Ayam (smartcoop) — semua kontrol pakai format "1"/"0" atau string khusus
 
-                // Fitur Sinkronisasi: Jika conveyor dinyalakan/dimatikan, pakan (feeder) juga ikut menyala/mati
-                if ($target === 'conveyor') {
-                    $mqtt->publish("smartcoop/control/feeder", $payload, 1);
+                if ($target === 'convjog') {
+                    // Jog manual motor konveyor: command = "fwd", "rev", atau "stop"
+                    $mqtt->publish('smartcoop/control/convjog', $command, 1);
+
+                } elseif ($target === 'pompaauto') {
+                    // Toggle mode auto/manual pompa
+                    $payload = (strtoupper($command) === 'ON' || $command === '1') ? '1' : '0';
+                    $mqtt->publish('smartcoop/control/pompaauto', $payload, 1);
+
+                    // Update optimistis di DB
+                    $sector = \App\Models\Sector::where('sector_id', $sector_id)
+                        ->orWhere('name', 'ILIKE', '%kandang%')->first();
+                    if ($sector) {
+                        $metrics = is_string($sector->metrics)
+                            ? json_decode($sector->metrics, true)
+                            : ($sector->metrics ?? []);
+                        $metrics['pompaAutoMode'] = $payload;
+                        $sector->metrics = $metrics;
+                        $sector->save();
+                    }
+
+                } else {
+                    // Kontrol biasa: lamp, conveyor, pompa, lampauto
+                    $topic   = "smartcoop/control/{$target}";
+                    $payload = (strtoupper($command) === 'ON' || $command === '1') ? '1' : '0';
+                    $mqtt->publish($topic, $payload, 1);
                 }
             } else {
-                // Hydroponic or default
-                $topic = "smartfarming/hydroponic/cmd/{$sector_id}";
+                // Sektor lain (hidroponik, dll) — format JSON
+                $topic   = "smartfarming/hydroponic/cmd/{$sector_id}";
                 $payload = json_encode(['status' => $command]);
                 $mqtt->publish($topic, $payload, 0);
             }
@@ -313,13 +346,13 @@ class SectorController extends Controller
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('MQTT Publish Error: ' . $e->getMessage());
             return response()->json([
-                'message' => "Gagal mengirim perintah ke pompa sektor $sector_id via MQTT",
-                'error' => $e->getMessage()
+                'message' => "Gagal mengirim perintah ke sektor $sector_id via MQTT",
+                'error'   => $e->getMessage()
             ], 500);
         }
 
         return response()->json([
-            'message' => "Perintah $command berhasil dikirim ke pompa sektor $sector_id via MQTT"
+            'message' => "Perintah $command berhasil dikirim ke $target sektor $sector_id via MQTT"
         ]);
     }
 
@@ -345,7 +378,7 @@ class SectorController extends Controller
                 return response()->json(['message' => 'Konfigurasi jadwal hanya untuk Kandang Ayam'], 400);
             }
 
-            $prefix = 'MQTT_COOP_';
+            $prefix   = 'MQTT_COOP_';
             $server   = env($prefix . 'HOST', env('MQTT_HOST', 'broker.hivemq.com'));
             $port     = env($prefix . 'PORT', env('MQTT_PORT', 1883));
             $clientId = env($prefix . 'CLIENT_ID', env('MQTT_CLIENT_ID', 'laravel_pub_' . uniqid())) . '_' . uniqid();
@@ -366,23 +399,30 @@ class SectorController extends Controller
             $mqtt->disconnect();
 
             // Optimistic update to DB so UI updates instantly
+            // Map config target -> key di JSON metrics
             $metricMap = [
-                'lampon' => 'lampOn',
-                'lampoff' => 'lampOff',
-                'conveyoron' => 'cv1On',
-                'conveyoroff' => 'cv1Off',
-                'conveyor2on' => 'cv2On',
-                'conveyor2off' => 'cv2Off',
-                'conveyor2en' => 'cv2En',
-                'feedtime1' => 'feedTime1',
-                'feedtime2' => 'feedTime2',
-                'feedtime2en' => 'feedTime2En',
-                'feedduration' => 'feedDuration',
+                'lampon'        => 'lampOn',
+                'lampoff'       => 'lampOff',
+                'conveyoron'    => 'cv1On',
+                'conveyor2on'   => 'cv2On',
+                'conveyor2en'   => 'cv2En',
+                // BARU v4: parameter siklus konveyor
+                'convrun'       => 'convRun',
+                'convpause'     => 'convPause',
+                'convspeed'     => 'convSpeed',
+                // Feeder
+                'feedtime1'     => 'feedTime1',
+                'feedtime2'     => 'feedTime2',
+                'feedtime2en'   => 'feedTime2En',
+                'feedduration'  => 'feedDuration',
             ];
-            $dbKey = $metricMap[$target] ?? $target;
-            $sector = \App\Models\Sector::where('sector_id', $sector_id)->orWhere('name', 'ILIKE', '%kandang%')->first();
+            $dbKey  = $metricMap[$target] ?? $target;
+            $sector = \App\Models\Sector::where('sector_id', $sector_id)
+                ->orWhere('name', 'ILIKE', '%kandang%')->first();
             if ($sector) {
-                $metrics = is_string($sector->metrics) ? json_decode($sector->metrics, true) : ($sector->metrics ?? []);
+                $metrics        = is_string($sector->metrics)
+                    ? json_decode($sector->metrics, true)
+                    : ($sector->metrics ?? []);
                 $metrics[$dbKey] = $value;
                 $sector->metrics = $metrics;
                 $sector->save();
