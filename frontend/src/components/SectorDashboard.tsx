@@ -12,13 +12,13 @@ interface SectorDashboardProps {
 
 const getMetricUI = (key: string) => {
   const k = key.toLowerCase()
-  if (k.includes('suhu') || k.includes('temp')) return { label: 'Suhu', icon: '\u{1F321}\uFE0F', color: '#E65100', isProgress: false }
-  if (k.includes('kelembapan') || k.includes('humid')) return { label: 'Kelembapan', icon: '\u{1F4A7}', color: '#1565C0', isProgress: true }
-  if (k.includes('cahaya') || k.includes('light')) return { label: 'Intensitas Cahaya', icon: '\u2600\uFE0F', color: '#F59E0B', isProgress: false }
-  if (k.includes('air') || k.includes('water')) return { label: 'Level Air', icon: '\u{1F30A}', color: '#1565C0', isProgress: true }
-  if (k.includes('pakan') || k.includes('feedlevel')) return { label: 'Sisa Pakan', icon: '\u{1F33E}', color: '#F59E0B', isProgress: true }
-  if (k.includes('jarak') || k.includes('feeddist')) return { label: 'Jarak Pakan', icon: '\u{1F4CF}', color: '#6B7280', isProgress: false }
-  return { label: key, icon: '\u{1F4CA}', color: '#6B7280', isProgress: false }
+  if (k.includes('suhu') || k.includes('temp')) return { label: 'Suhu', icon: '🌡️', color: '#E65100', isProgress: false }
+  if (k.includes('kelembapan') || k.includes('humid')) return { label: 'Kelembapan', icon: '💧', color: '#1565C0', isProgress: true }
+  if (k.includes('cahaya') || k.includes('light')) return { label: 'Intensitas Cahaya', icon: '☀️', color: '#F59E0B', isProgress: false }
+  if (k.includes('air') || k.includes('water')) return { label: 'Level Air', icon: '🌊', color: '#1565C0', isProgress: true }
+  if (k.includes('pakan') || k.includes('feedlevel')) return { label: 'Sisa Pakan', icon: '🌾', color: '#F59E0B', isProgress: true }
+  if (k.includes('jarak') || k.includes('feeddist')) return { label: 'Jarak Pakan', icon: '📏', color: '#6B7280', isProgress: false }
+  return { label: key, icon: '📊', color: '#6B7280', isProgress: false }
 }
 
 // ─── ROOT EXPORT ──────────────────────────────────────────────────────────────
@@ -138,13 +138,13 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   return (
     <div className="sector-dash fade-up">
       <div className="sector-dash-header">
-        <div className="sector-dash-icon" style={{ background: sector.colorLight || '#fff3e0' }}>{sector.icon || '\u{1F414}'}</div>
+        <div className="sector-dash-icon" style={{ background: sector.colorLight || '#fff3e0' }}>{sector.icon || '🐔'}</div>
         <div>
           <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{sector.name}</h2>
-          <p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{sector.unit} \u2014 Monitoring Real-time</p>
+          <p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{sector.unit} — Monitoring Real-time</p>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button className="btn" onClick={handleAiEvaluate} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer' }}>\u2728 Analisis AI</button>
+          <button className="btn" onClick={handleAiEvaluate} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer' }}>✨ Analisis AI</button>
           <button className="btn btn-ghost btn-sm" onClick={() => setLastRefresh(new Date())}><IcRefresh size={13} /> Perbarui</button>
           <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{lastRefresh.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
@@ -153,24 +153,24 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
       {/* 5 Metric Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12, marginBottom: 16 }}>
         <div style={{ ...card, textAlign: 'center' }}>
-          <div style={{ fontSize: 26, marginBottom: 4 }}>\u{1F321}\uFE0F</div>
+          <div style={{ fontSize: 26, marginBottom: 4 }}>🌡️</div>
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Suhu</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: suhuColor }}>{suhu}<span style={{ fontSize: 13 }}>\u00B0C</span></div>
+          <div style={{ fontSize: 26, fontWeight: 800, color: suhuColor }}>{suhu}<span style={{ fontSize: 13 }}>°C</span></div>
         </div>
         <div style={{ ...card, textAlign: 'center' }}>
-          <div style={{ fontSize: 26, marginBottom: 4 }}>\u{1F4A7}</div>
+          <div style={{ fontSize: 26, marginBottom: 4 }}>💧</div>
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Kelembapan</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: '#1565C0' }}>{lembap}<span style={{ fontSize: 13 }}>%</span></div>
         </div>
         <div style={{ ...card, textAlign: 'center' }}>
-          <div style={{ fontSize: 26, marginBottom: 4 }}>\u{1F32C}\uFE0F</div>
+          <div style={{ fontSize: 26, marginBottom: 4 }}>🌬️</div>
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Amonia</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: amoniaColor }}>{amonia}</div>
           <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>ADC raw</div>
         </div>
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-            <span style={{ fontSize: 22 }}>\u{1F30A}</span>
+            <span style={{ fontSize: 22 }}>🌊</span>
             <div><div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Level Air</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: levelAir < 20 ? '#dc2626' : '#1565C0' }}>{levelAir}<span style={{ fontSize: 12 }}>%</span></div></div>
           </div>
@@ -178,12 +178,12 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         </div>
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-            <span style={{ fontSize: 22 }}>\u{1F33E}</span>
+            <span style={{ fontSize: 22 }}>🌾</span>
             <div><div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Sisa Pakan</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: sisPakan < 20 ? '#dc2626' : '#F59E0B' }}>{sisPakan}<span style={{ fontSize: 12 }}>%</span></div></div>
           </div>
           <ProgressBar value={sisPakan} color={sisPakan < 20 ? '#dc2626' : '#F59E0B'} />
-          {jrkPakan !== '--' && <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>\u{1F4CF} Jarak: {jrkPakan} cm</div>}
+          {jrkPakan !== '--' && <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>📏 Jarak: {jrkPakan} cm</div>}
         </div>
       </div>
 
@@ -205,7 +205,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
                 <XAxis dataKey="time" tick={{ fontSize: 10, fill: 'var(--text-secondary)' }} axisLine={false} tickLine={false}/>
                 <YAxis tick={{ fontSize: 10, fill: 'var(--text-secondary)' }} axisLine={false} tickLine={false}/>
                 <Tooltip content={<ChartTooltip />}/>
-                <Area type="monotone" dataKey="temperature" stroke="#E65100" strokeWidth={2} fill="url(#grad-ks)" dot={false} connectNulls name="Suhu \u00B0C"/>
+                <Area type="monotone" dataKey="temperature" stroke="#E65100" strokeWidth={2} fill="url(#grad-ks)" dot={false} connectNulls name="Suhu °C"/>
                 <Area type="monotone" dataKey="humidity"    stroke="#1565C0" strokeWidth={2} fill="url(#grad-kh)" dot={false} connectNulls name="Kelembapan %"/>
               </AreaChart>
             </ResponsiveContainer>
@@ -216,26 +216,26 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
           <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
             {(['manual', 'auto'] as const).map(t => (
               <button key={t} onClick={() => setActiveTab(t)} style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: 13, background: activeTab === t ? 'var(--color-primary,#3B82F6)' : 'var(--bg-base)', color: activeTab === t ? 'white' : 'var(--text-secondary)' }}>
-                {t === 'manual' ? '\u{1F579}\uFE0F Manual' : '\u{1F916} Otomatis'}
+                {t === 'manual' ? '🕹️ Manual' : '🤖 Otomatis'}
               </button>
             ))}
           </div>
 
           {activeTab === 'manual' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <CtrlRow icon="\u{1F4A1}" label="Lampu Kandang" sub={lampAuto ? '(Auto aktif)' : lampOn ? 'Menyala' : 'Mati'} subColor={lampOn ? '#059669' : '#9CA3AF'} right={<Toggle isOn={lampOn} onChange={toggleLamp} disabled={lampAuto} />} />
-              <CtrlRow icon="\u{1F4A7}" label="Pompa Air"     sub={pompaAuto ? '(Auto aktif)' : pompaOn ? 'Menyala' : 'Mati'} subColor={pompaOn ? '#059669' : '#9CA3AF'} right={<Toggle isOn={pompaOn} onChange={togglePompa} disabled={pompaAuto} />} />
-              <CtrlRow icon="\u{1F33E}" label="Unit Pakan"    sub={feederOn ? 'Membuka...' : 'Tertutup'} subColor={feederOn ? '#059669' : '#9CA3AF'} right={<Toggle isOn={feederOn} onChange={toggleFeeder} />} />
+              <CtrlRow icon="💡" label="Lampu Kandang" sub={lampAuto ? '(Auto aktif)' : lampOn ? 'Menyala' : 'Mati'} subColor={lampOn ? '#059669' : '#9CA3AF'} right={<Toggle isOn={lampOn} onChange={toggleLamp} disabled={lampAuto} />} />
+              <CtrlRow icon="💧" label="Pompa Air"     sub={pompaAuto ? '(Auto aktif)' : pompaOn ? 'Menyala' : 'Mati'} subColor={pompaOn ? '#059669' : '#9CA3AF'} right={<Toggle isOn={pompaOn} onChange={togglePompa} disabled={pompaAuto} />} />
+              <CtrlRow icon="🌾" label="Unit Pakan"    sub={feederOn ? 'Membuka...' : 'Tertutup'} subColor={feederOn ? '#059669' : '#9CA3AF'} right={<Toggle isOn={feederOn} onChange={toggleFeeder} />} />
               <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-color)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <span style={{ fontSize: 18 }}>\u2699\uFE0F</span>
+                  <span style={{ fontSize: 18 }}>⚙️</span>
                   <div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Conveyor Kotoran</div><div style={{ fontSize: 11, color: convOn ? '#059669' : '#9CA3AF' }}>{convOn ? <b style={{ color: '#059669' }}>{convPhase}</b> : 'Diam'}</div></div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
-                  <button onClick={startConv} style={{ ...btn4, background: '#dcfce7', color: '#059669', borderColor: '#059669' }}>\u25B6 Jalankan</button>
-                  <button onClick={stopConv}  style={{ ...btn4, background: '#fee2e2', color: '#dc2626', borderColor: '#dc2626' }}>\u23F9 Stop</button>
-                  <button onMouseDown={() => jogConv('fwd')} onMouseUp={() => jogConv('stop')} onTouchStart={() => jogConv('fwd')} onTouchEnd={() => jogConv('stop')} disabled={jogSending} style={{ ...btn4, background: '#dbeafe', color: '#1d4ed8', borderColor: '#1d4ed8' }}>\u2191 Maju</button>
-                  <button onMouseDown={() => jogConv('rev')} onMouseUp={() => jogConv('stop')} onTouchStart={() => jogConv('rev')} onTouchEnd={() => jogConv('stop')} disabled={jogSending} style={{ ...btn4, background: '#fef3c7', color: '#d97706', borderColor: '#d97706' }}>\u2193 Mundur</button>
+                  <button onClick={startConv} style={{ ...btn4, background: '#dcfce7', color: '#059669', borderColor: '#059669' }}>▶ Jalankan</button>
+                  <button onClick={stopConv}  style={{ ...btn4, background: '#fee2e2', color: '#dc2626', borderColor: '#dc2626' }}>⏹ Stop</button>
+                  <button onMouseDown={() => jogConv('fwd')} onMouseUp={() => jogConv('stop')} onTouchStart={() => jogConv('fwd')} onTouchEnd={() => jogConv('stop')} disabled={jogSending} style={{ ...btn4, background: '#dbeafe', color: '#1d4ed8', borderColor: '#1d4ed8' }}>↑ Maju</button>
+                  <button onMouseDown={() => jogConv('rev')} onMouseUp={() => jogConv('stop')} onTouchStart={() => jogConv('rev')} onTouchEnd={() => jogConv('stop')} disabled={jogSending} style={{ ...btn4, background: '#fef3c7', color: '#d97706', borderColor: '#d97706' }}>↓ Mundur</button>
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 5, textAlign: 'center' }}>Tahan Maju/Mundur untuk jog. Lepas = stop (maks 10 dtk)</div>
               </div>
@@ -245,7 +245,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
               {/* Auto Lampu */}
               <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: 12, border: '1px solid var(--border-color)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: lampAuto ? 10 : 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 18 }}>\u{1F4A1}</span><div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Otomasi Lampu</div><div style={{ fontSize: 11, color: lampAuto ? '#2E7D32' : '#9CA3AF' }}>{lampAuto ? 'Berdasarkan jadwal' : 'Mode manual'}</div></div></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 18 }}>💡</span><div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Otomasi Lampu</div><div style={{ fontSize: 11, color: lampAuto ? '#2E7D32' : '#9CA3AF' }}>{lampAuto ? 'Berdasarkan jadwal' : 'Mode manual'}</div></div></div>
                   <Toggle isOn={lampAuto} onChange={toggleLampAuto} />
                 </div>
                 {lampAuto && <div style={{ display: 'flex', gap: 10 }}>
@@ -255,7 +255,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
               </div>
               {/* Auto Conveyor */}
               <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: 12, border: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><span style={{ fontSize: 18 }}>\u2699\uFE0F</span><div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Conveyor \u2014 Jam mulai</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Satu siklus maju\u2013jeda\u2013mundur per jadwal</div></div></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><span style={{ fontSize: 18 }}>⚙️</span><div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Conveyor — Jam mulai</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Satu siklus maju–jeda–mundur per jadwal</div></div></div>
                 <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
                   <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 1</div><input type="time" value={cv1On} style={inp} onChange={e => { setCv1On(e.target.value); cfg('conveyoron', e.target.value) }}/></div>
                   <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 2</div><input type="time" value={cv2On} style={{ ...inp, opacity: cv2En ? 1 : 0.4 }} disabled={!cv2En} onChange={e => { setCv2On(e.target.value); cfg('conveyor2on', e.target.value) }}/></div>
@@ -272,19 +272,19 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
               </div>
               {/* Auto Pompa */}
               <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: 12, border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 18 }}>\u{1F4A7}</span><div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Otomasi Pompa Air</div><div style={{ fontSize: 11, color: pompaAuto ? '#2E7D32' : '#9CA3AF' }}>{pompaAuto ? 'Sensor mengatur otomatis' : 'Mode manual'}</div></div></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 18 }}>💧</span><div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Otomasi Pompa Air</div><div style={{ fontSize: 11, color: pompaAuto ? '#2E7D32' : '#9CA3AF' }}>{pompaAuto ? 'Sensor mengatur otomatis' : 'Mode manual'}</div></div></div>
                 <Toggle isOn={pompaAuto} onChange={togglePompaAuto}/>
               </div>
               {/* Auto Pakan */}
               <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: 12, border: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><span style={{ fontSize: 18 }}>\u{1F33E}</span><div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>\u{1F33E} Pemberian 1</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Penutup membuka lalu menutup sendiri</div></div></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><span style={{ fontSize: 18 }}>🌾</span><div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>🌾 Pemberian 1</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Penutup membuka lalu menutup sendiri</div></div></div>
                 <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
                   <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JAM</div><input type="time" value={feedTime1} style={inp} onChange={e => { setFeedTime1(e.target.value); cfg('feedtime1', e.target.value) }}/></div>
                   <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>LAMA BUKA (DETIK)</div><input type="number" min="1" max="120" value={feedDur} style={inp} onChange={e => { setFeedDur(e.target.value); cfg('feedduration', e.target.value) }}/></div>
                 </div>
                 <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: feedTime2En ? 10 : 0 }}>
-                    <div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>\u{1F33E} Pemberian 2</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Matikan kalau cukup sekali sehari</div></div>
+                    <div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>🌾 Pemberian 2</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Matikan kalau cukup sekali sehari</div></div>
                     <Toggle isOn={feedTime2En} onChange={() => { const n = !feedTime2En; setFeedTime2En(n); cfg('feedtime2en', n ? '1' : '0') }}/>
                   </div>
                   {feedTime2En && <div><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JAM</div><input type="time" value={feedTime2} style={inp} onChange={e => { setFeedTime2(e.target.value); cfg('feedtime2', e.target.value) }}/></div>}
@@ -320,7 +320,7 @@ function AiModal({ sector, aiLoading, aiResult, onClose }: any) {
       <div className="card fade-up" style={{ width: '100%', maxWidth: 500, padding: 24, margin: 20, position: 'relative' }}>
         <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><IcX size={20}/></button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20 }}>\u2728</div>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20 }}>✨</div>
           <div><h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>Agen Analisis Pintar</h3><div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Mengevaluasi {sector.name}</div></div>
         </div>
         {aiLoading ? (
@@ -399,16 +399,16 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   return (
     <div className="sector-dash fade-up">
       <div className="sector-dash-header">
-        <div className="sector-dash-icon" style={{ background: sector.colorLight || '#f0f0f0' }}>{sector.icon || '\u{1F331}'}</div>
-        <div><h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{sector.name}</h2><p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{sector.unit} \u2014 Monitoring Real-time</p></div>
+        <div className="sector-dash-icon" style={{ background: sector.colorLight || '#f0f0f0' }}>{sector.icon || '🌱'}</div>
+        <div><h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{sector.name}</h2><p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{sector.unit} — Monitoring Real-time</p></div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button className="btn" onClick={handleAiEvaluate} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer' }}>\u2728 Analisis AI</button>
+          <button className="btn" onClick={handleAiEvaluate} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer' }}>✨ Analisis AI</button>
           <button className="btn btn-ghost btn-sm" onClick={() => setLastRefresh(new Date())}><IcRefresh size={13}/> Perbarui</button>
           <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{lastRefresh.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
       </div>
       <div className="sector-dash-grid">
-        {metricsData.length > 0 ? metricsData.map(m => (<div key={m.key} className="sector-dash-metric"><div className="metric-label">{m.icon} {m.label}</div><div className="metric-value" style={{ color: m.color }}>{m.value} {m.isProgress ? '%' : (m.key.toLowerCase().includes('temp') ? '\u00B0C' : '')}</div></div>))
+        {metricsData.length > 0 ? metricsData.map(m => (<div key={m.key} className="sector-dash-metric"><div className="metric-label">{m.icon} {m.label}</div><div className="metric-value" style={{ color: m.color }}>{m.value} {m.isProgress ? '%' : (m.key.toLowerCase().includes('temp') ? '°C' : '')}</div></div>))
         : <div style={{ padding: 20, color: 'var(--text-secondary)' }}>Menunggu data sensor...</div>}
       </div>
       <div className="sector-dash-main-grid">
@@ -435,7 +435,7 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {controls.length > 0 ? controls.map((c: any) => (
               <div key={c.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'var(--bg-base)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 20 }}>\u{1F504}</span><div><div style={{ fontSize: 14, fontWeight: 600 }}>{c.label}</div><div style={{ fontSize: 12, color: c.isOn ? '#10b981' : 'var(--text-secondary)', marginTop: 1 }}>{c.isOn ? 'ON' : 'OFF'}</div></div></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span style={{ fontSize: 20 }}>🔄</span><div><div style={{ fontSize: 14, fontWeight: 600 }}>{c.label}</div><div style={{ fontSize: 12, color: c.isOn ? '#10b981' : 'var(--text-secondary)', marginTop: 1 }}>{c.isOn ? 'ON' : 'OFF'}</div></div></div>
                 <Toggle isOn={c.isOn} onChange={() => toggleControl(c.key, c.isOn)}/>
               </div>
             )) : <div style={{ padding: 20, color: 'var(--text-secondary)', textAlign: 'center' }}>Tidak ada kontrol.</div>}
