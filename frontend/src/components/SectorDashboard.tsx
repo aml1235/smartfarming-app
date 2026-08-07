@@ -173,7 +173,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
           <div style={{ fontSize: 26, marginBottom: 4 }}>🌬️</div>
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Amonia</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: amoniaColor }}>{amonia}</div>
-          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: < 15</div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: &lt; 15</div>
         </div>
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
@@ -182,7 +182,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
             <div style={{ fontSize: 22, fontWeight: 800, color: levelAir < 20 ? '#dc2626' : '#1565C0' }}>{levelAir}<span style={{ fontSize: 12 }}>%</span></div></div>
           </div>
           <ProgressBar value={levelAir} color={levelAir < 20 ? '#dc2626' : '#1565C0'} />
-          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 8 }}>Normal: > 20%</div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 8 }}>Normal: &gt; 20%</div>
         </div>
 
       </div>
