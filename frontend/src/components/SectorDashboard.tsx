@@ -161,17 +161,19 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
           <div style={{ fontSize: 26, marginBottom: 4 }}>🌡️</div>
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Suhu</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: suhuColor }}>{suhu}<span style={{ fontSize: 13 }}>°C</span></div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: 28-32°C</div>
         </div>
         <div style={{ ...card, textAlign: 'center' }}>
           <div style={{ fontSize: 26, marginBottom: 4 }}>💧</div>
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Kelembapan</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: '#1565C0' }}>{lembap}<span style={{ fontSize: 13 }}>%</span></div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: 50-70%</div>
         </div>
         <div style={{ ...card, textAlign: 'center' }}>
           <div style={{ fontSize: 26, marginBottom: 4 }}>🌬️</div>
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Amonia</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: amoniaColor }}>{amonia}</div>
-          <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>ADC raw</div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: < 15</div>
         </div>
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
@@ -180,16 +182,9 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
             <div style={{ fontSize: 22, fontWeight: 800, color: levelAir < 20 ? '#dc2626' : '#1565C0' }}>{levelAir}<span style={{ fontSize: 12 }}>%</span></div></div>
           </div>
           <ProgressBar value={levelAir} color={levelAir < 20 ? '#dc2626' : '#1565C0'} />
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 8 }}>Normal: > 20%</div>
         </div>
-        <div style={card}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-            <span style={{ fontSize: 22 }}>🌾</span>
-            <div><div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase' }}>Sisa Pakan</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: sisPakan < 20 ? '#dc2626' : '#F59E0B' }}>{sisPakan}<span style={{ fontSize: 12 }}>%</span></div></div>
-          </div>
-          <ProgressBar value={sisPakan} color={sisPakan < 20 ? '#dc2626' : '#F59E0B'} />
-          {jrkPakan !== '--' && <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>📏 Jarak: {jrkPakan} cm</div>}
-        </div>
+
       </div>
 
       {/* Chart + Control Panel */}
@@ -234,7 +229,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
               <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-color)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <span style={{ fontSize: 18 }}>⚙️</span>
-                  <div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Conveyor Kotoran</div><div style={{ fontSize: 11, color: convOn ? '#059669' : '#9CA3AF' }}>{convOn ? <b style={{ color: '#059669' }}>{convPhase}</b> : 'Diam'}</div></div>
+                  <div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Conveyor Pakan</div><div style={{ fontSize: 11, color: convOn ? '#059669' : '#9CA3AF' }}>{convOn ? <b style={{ color: '#059669' }}>{convPhase}</b> : 'Diam'}</div></div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
                   <button onClick={startConv} style={{ ...btn4, background: '#dcfce7', color: '#059669', borderColor: '#059669' }}>▶ Jalankan</button>
@@ -270,37 +265,30 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
                   <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JAM MATI</div><input type="time" value={lampJadwalOff} style={inp} onChange={e => { setLampJadwalOff(e.target.value); cfg('lampoff', e.target.value) }}/></div>
                 </div>}
               </div>
-              {/* Auto Conveyor */}
-              <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: 12, border: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><span style={{ fontSize: 18 }}>⚙️</span><div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Conveyor — Jam mulai</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Satu siklus maju–jeda–mundur per jadwal</div></div></div>
-                <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-                  <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 1</div><input type="time" value={cv1On} style={inp} onChange={e => { setCv1On(e.target.value); cfg('conveyoron', e.target.value) }}/></div>
-                  <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 2</div><input type="time" value={cv2On} style={{ ...inp, opacity: cv2En ? 1 : 0.4 }} disabled={!cv2En} onChange={e => { setCv2On(e.target.value); cfg('conveyor2on', e.target.value) }}/></div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}><span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Aktifkan jadwal 2</span><Toggle isOn={cv2En} onChange={() => { const n = !cv2En; setCv2En(n); cfg('conveyor2en', n ? '1' : '0') }}/></div>
-
-              </div>
+              
               {/* Auto Pompa */}
               <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: 12, border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 18 }}>💧</span><div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Otomasi Pompa Air</div><div style={{ fontSize: 11, color: pompaAuto ? '#2E7D32' : '#9CA3AF' }}>{pompaAuto ? 'Sensor mengatur otomatis' : 'Mode manual'}</div></div></div>
                 <Toggle isOn={pompaAuto} onChange={togglePompaAuto}/>
               </div>
-              {/* Auto Pakan */}
+              {/* Auto Conveyor & Pakan */}
               <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: 12, border: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><span style={{ fontSize: 18 }}>🌾</span><div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>🌾 Pemberian 1</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Penutup membuka lalu menutup sendiri</div></div></div>
-                <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
-                  <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JAM</div><input type="time" value={feedTime1} style={inp} onChange={e => { setFeedTime1(e.target.value); cfg('feedtime1', e.target.value) }}/></div>
-                  <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>LAMA BUKA (DETIK)</div><input type="number" min="1" max="120" value={feedDur} style={inp} onChange={e => { setFeedDur(e.target.value); cfg('feedduration', e.target.value) }}/></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><span style={{ fontSize: 18 }}>⚙️🌾</span><div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Otomasi Conveyor & Pakan</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Waktu nyala disamakan</div></div></div>
+                <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+                  <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 1 (JAM MULAI)</div><input type="time" value={cv1On} style={inp} onChange={e => { const val = e.target.value; setCv1On(val); cfg('conveyoron', val); setFeedTime1(val); cfg('feedtime1', val); }}/></div>
+                  <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>LAMA BUKA PAKAN (DTK)</div><input type="number" min="1" max="120" value={feedDur} style={inp} onChange={e => { setFeedDur(e.target.value); cfg('feedduration', e.target.value) }}/></div>
                 </div>
                 <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: feedTime2En ? 10 : 0 }}>
-                    <div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>🌾 Pemberian 2</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Matikan kalau cukup sekali sehari</div></div>
-                    <Toggle isOn={feedTime2En} onChange={() => { const n = !feedTime2En; setFeedTime2En(n); cfg('feedtime2en', n ? '1' : '0') }}/>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: cv2En ? 10 : 0 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>Aktifkan jadwal 2</span>
+                    <Toggle isOn={cv2En} onChange={() => { const n = !cv2En; setCv2En(n); cfg('conveyor2en', n ? '1' : '0'); setFeedTime2En(n); cfg('feedtime2en', n ? '1' : '0') }}/>
                   </div>
-                  {feedTime2En && <div><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JAM</div><input type="time" value={feedTime2} style={inp} onChange={e => { setFeedTime2(e.target.value); cfg('feedtime2', e.target.value) }}/></div>}
+                  {cv2En && <div style={{ display: 'flex', gap: 10 }}>
+                    <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 2 (JAM MULAI)</div><input type="time" value={cv2On} style={inp} onChange={e => { const val = e.target.value; setCv2On(val); cfg('conveyor2on', val); setFeedTime2(val); cfg('feedtime2', val); }}/></div>
+                  </div>}
                 </div>
               </div>
-            </div>
+</div>
           )}
         </div>
       </div>

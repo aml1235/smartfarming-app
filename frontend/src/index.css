@@ -1397,7 +1397,7 @@ body.dark .badge-gray { background: rgba(156, 163, 175, 0.2); color: #9ca3af; }
 
 .kandang-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin-bottom: 16px;
 }
