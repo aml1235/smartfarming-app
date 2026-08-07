@@ -1,5 +1,5 @@
 import { API_URL } from '../constants'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Sector } from '../types'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Toggle, ProgressBar, ChartTooltip } from './UIComponents'
@@ -62,7 +62,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   const [aiLoading, setAiLoading]   = useState(false)
   const [aiResult, setAiResult]     = useState<any>(null)
   const [activeTab, setActiveTab]   = useState<'manual' | 'auto'>('manual')
-  const lastAction = React.useRef<number>(0)
+  const lastAction = useRef<number>(0)
   const sectorId = sector.sector_id || sector.id
 
   useEffect(() => {
