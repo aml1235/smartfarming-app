@@ -239,12 +239,15 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 5, textAlign: 'center' }}>Tahan Maju/Mundur untuk jog. Lepas = stop (maks 10 dtk)</div>
                 <div style={{ marginTop: 12, borderTop: '1px solid var(--border-color)', paddingTop: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#0f172a', borderRadius: 8, border: '1px solid #38bdf8' }}>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: '#f8fafc' }}>Pakan + Conveyor</div>
-                      <div style={{ fontSize: 11, color: '#64748b' }}>jalan bersamaan</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--bg-base)', borderRadius: 8, border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 18 }}>🌾⚙️</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Pakan + Conveyor</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>jalan bersamaan</div>
+                      </div>
                     </div>
-                    <button onClick={() => { toggleFeeder(); setTimeout(startConv, 500); }} style={{ padding: '6px 16px', background: '#38bdf8', color: '#0f172a', fontWeight: 700, borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 13 }}>Jalankan</button>
+                    <button onClick={() => { toggleFeeder(); setTimeout(startConv, 500); }} style={{ padding: '6px 16px', background: '#e0f2fe', color: '#0284c7', fontWeight: 700, borderRadius: 6, border: '1px solid #0284c7', cursor: 'pointer', fontSize: 13 }}>▶ Jalankan</button>
                   </div>
                 </div>
               </div>
