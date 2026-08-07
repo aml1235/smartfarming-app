@@ -238,6 +238,15 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
                   <button onMouseDown={() => jogConv('rev')} onMouseUp={() => jogConv('stop')} onTouchStart={() => jogConv('rev')} onTouchEnd={() => jogConv('stop')} disabled={jogSending} style={{ ...btn4, background: '#fef3c7', color: '#d97706', borderColor: '#d97706' }}>↓ Mundur</button>
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 5, textAlign: 'center' }}>Tahan Maju/Mundur untuk jog. Lepas = stop (maks 10 dtk)</div>
+                <div style={{ marginTop: 12, borderTop: '1px solid var(--border-color)', paddingTop: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#0f172a', borderRadius: 8, border: '1px solid #38bdf8' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#f8fafc' }}>Pakan + Conveyor</div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>jalan bersamaan</div>
+                    </div>
+                    <button onClick={() => { toggleFeeder(); setTimeout(startConv, 500); }} style={{ padding: '6px 16px', background: '#38bdf8', color: '#0f172a', fontWeight: 700, borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 13 }}>Jalankan</button>
+                  </div>
+                </div>
               </div>
             </div>
           ) : (
@@ -261,14 +270,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
                   <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 2</div><input type="time" value={cv2On} style={{ ...inp, opacity: cv2En ? 1 : 0.4 }} disabled={!cv2En} onChange={e => { setCv2On(e.target.value); cfg('conveyor2on', e.target.value) }}/></div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}><span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Aktifkan jadwal 2</span><Toggle isOn={cv2En} onChange={() => { const n = !cv2En; setCv2En(n); cfg('conveyor2en', n ? '1' : '0') }}/></div>
-                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 10 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8, textTransform: 'uppercase' }}>Parameter Siklus</div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>DURASI (dtk)</div><input type="number" min="1" max="300" value={cvRun} style={inp} onChange={e => { setCvRun(e.target.value); cfg('convrun', e.target.value) }}/></div>
-                    <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JEDA (dtk)</div><input type="number" min="1" max="300" value={cvPause} style={inp} onChange={e => { setCvPause(e.target.value); cfg('convpause', e.target.value) }}/></div>
-                    <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>KECEP. %</div><input type="number" min="20" max="100" value={cvSpeed} style={inp} onChange={e => { setCvSpeed(e.target.value); cfg('convspeed', e.target.value) }}/></div>
-                  </div>
-                </div>
+
               </div>
               {/* Auto Pompa */}
               <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: 12, border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
