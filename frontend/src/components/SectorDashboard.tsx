@@ -62,6 +62,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   const [aiLoading, setAiLoading]   = useState(false)
   const [aiResult, setAiResult]     = useState<any>(null)
   const [activeTab, setActiveTab]   = useState<'manual' | 'auto'>('manual')
+  const lastAction = React.useRef<number>(0)
   const sectorId = sector.sector_id || sector.id
 
   useEffect(() => {
@@ -90,32 +91,36 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         if (latest.waterLevel !== undefined) setLevelAir(Math.min(100, Math.max(0, Number(latest.waterLevel))))
         if (latest.feedLevel !== undefined) setSisPakan(Math.min(100, Math.max(0, Number(latest.feedLevel))))
         if (latest.feedDistance !== undefined) setJrkPakan(String(latest.feedDistance))
-        if (latest.lampStatus !== undefined) setLampOn(String(latest.lampStatus) === '1')
-        if (latest.conveyorStatus !== undefined) setConvOn(String(latest.conveyorStatus) === '1')
-        if (latest.conveyorPhase !== undefined) setConvPhase(latest.conveyorPhase)
-        if (latest.pumpStatus !== undefined) setPompaOn(String(latest.pumpStatus) === '1')
-        if (latest.feederStatus !== undefined) setFeederOn(String(latest.feederStatus) === '1')
-        if (latest.lampAutoMode !== undefined) setLampAuto(String(latest.lampAutoMode) === '1')
-        if (latest.pompaAutoMode !== undefined) setPompaAuto(String(latest.pompaAutoMode) === '1')
-        if (latest.lampOn) setLampJadwalOn(latest.lampOn)
-        if (latest.lampOff) setLampJadwalOff(latest.lampOff)
-        if (latest.cv1On) setCv1On(latest.cv1On)
-        if (latest.cv2On) setCv2On(latest.cv2On)
-        if (latest.cv2En !== undefined) setCv2En(String(latest.cv2En) === '1')
-        if (latest.convRun) setCvRun(String(latest.convRun))
-        if (latest.convPause) setCvPause(String(latest.convPause))
-        if (latest.convSpeed) setCvSpeed(String(latest.convSpeed))
-        if (latest.feedTime1) setFeedTime1(latest.feedTime1)
-        if (latest.feedTime2) setFeedTime2(latest.feedTime2)
-        if (latest.feedTime2En !== undefined) setFeedTime2En(String(latest.feedTime2En) === '1')
-        if (latest.feedDuration) setFeedDur(String(latest.feedDuration))
+        
+        // Prevent state revert if user recently toggled something (give hardware 15s to sync)
+        if (Date.now() - lastAction.current > 15000) {
+          if (latest.lampStatus !== undefined) setLampOn(String(latest.lampStatus) === '1')
+          if (latest.conveyorStatus !== undefined) setConvOn(String(latest.conveyorStatus) === '1')
+          if (latest.conveyorPhase !== undefined) setConvPhase(latest.conveyorPhase)
+          if (latest.pumpStatus !== undefined) setPompaOn(String(latest.pumpStatus) === '1')
+          if (latest.feederStatus !== undefined) setFeederOn(String(latest.feederStatus) === '1')
+          if (latest.lampAutoMode !== undefined) setLampAuto(String(latest.lampAutoMode) === '1')
+          if (latest.pompaAutoMode !== undefined) setPompaAuto(String(latest.pompaAutoMode) === '1')
+          if (latest.lampOn) setLampJadwalOn(latest.lampOn)
+          if (latest.lampOff) setLampJadwalOff(latest.lampOff)
+          if (latest.cv1On) setCv1On(latest.cv1On)
+          if (latest.cv2On) setCv2On(latest.cv2On)
+          if (latest.cv2En !== undefined) setCv2En(String(latest.cv2En) === '1')
+          if (latest.convRun) setCvRun(String(latest.convRun))
+          if (latest.convPause) setCvPause(String(latest.convPause))
+          if (latest.convSpeed) setCvSpeed(String(latest.convSpeed))
+          if (latest.feedTime1) setFeedTime1(latest.feedTime1)
+          if (latest.feedTime2) setFeedTime2(latest.feedTime2)
+          if (latest.feedTime2En !== undefined) setFeedTime2En(String(latest.feedTime2En) === '1')
+          if (latest.feedDuration) setFeedDur(String(latest.feedDuration))
+        }
       } catch (e) { console.error(e) }
     }
     load(); const iv = setInterval(load, 10000); return () => clearInterval(iv)
   }, [sector, lastRefresh])
 
-  const ctrl = async (target: string, command: string) => { try { await fetch(`${API_URL}/api/sector/${sectorId}/control`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ command, target }) }) } catch (e) { console.error(e) } }
-  const cfg  = async (target: string, value: string)   => { try { await fetch(`${API_URL}/api/sector/${sectorId}/config`,  { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ target, value })   }) } catch (e) { console.error(e) } }
+  const ctrl = async (target: string, command: string) => { lastAction.current = Date.now(); try { await fetch(`${API_URL}/api/sector/${sectorId}/control`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ command, target }) }) } catch (e) { console.error(e) } }
+  const cfg  = async (target: string, value: string)   => { lastAction.current = Date.now(); try { await fetch(`${API_URL}/api/sector/${sectorId}/config`,  { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ target, value })   }) } catch (e) { console.error(e) } }
   const logA = (action: string) => { if (!loggedInUser) return; fetch(`${API_URL}/api/activities`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_name: loggedInUser.name, action, target: sector.name }) }).catch(() => {}) }
 
   const toggleLamp   = () => { const n = !lampOn;   setLampOn(n);   ctrl('lamp',  n ? 'ON' : 'OFF'); logA(n ? 'Menyalakan Lampu'  : 'Mematikan Lampu')  }
