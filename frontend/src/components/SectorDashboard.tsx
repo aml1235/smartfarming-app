@@ -134,7 +134,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   const handleAiEvaluate = async () => { setShowAiModal(true); setAiLoading(true); try { const r = await fetch(`${API_URL}/api/sectors/${sectorId}/evaluate`); setAiResult(await r.json()) } catch { setAiResult({ status: 'Error', kesimpulan: 'Gagal.', rekomendasi: 'Periksa koneksi.' }) } finally { setAiLoading(false) } }
 
   const ac  = Number(amonia); const sc = Number(suhu)
-  const amoniaColor = ac > 25 ? '#dc2626' : ac > 15 ? '#d97706' : '#059669'
+  const amoniaColor = ac > 300 ? '#dc2626' : ac >= 250 ? '#d97706' : '#059669'
   const suhuColor   = sc > 32 ? '#dc2626' : sc > 28 ? '#d97706' : '#059669'
   const card: any = { background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px' }
   const inp:  any = { width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 13 }
@@ -173,7 +173,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
           <div style={{ fontSize: 26, marginBottom: 4 }}>🌬️</div>
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Amonia</div>
           <div style={{ fontSize: 26, fontWeight: 800, color: amoniaColor }}>{amonia}</div>
-          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: &lt; 15</div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: &lt; 250</div>
         </div>
         <div style={{ ...card, textAlign: 'center' }}>
           <div style={{ fontSize: 26, marginBottom: 4 }}>🌊</div>
