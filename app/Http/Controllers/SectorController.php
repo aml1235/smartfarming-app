@@ -471,4 +471,32 @@ class SectorController extends Controller
         \Illuminate\Support\Facades\Cache::forget("pump_command_{$id}");
         return response()->json(['message' => 'Command acknowledged']);
     }
+
+    public function analyzeSectorWithAi($id)
+    {
+        $sector = \App\Models\Sector::where('sector_id', $id)->first();
+        if (!$sector) {
+            return response()->json([
+                'status' => 'Error',
+                'kesimpulan' => 'Sektor tidak ditemukan.'
+            ], 404);
+        }
+
+        $metrics = is_string($sector->metrics) ? json_decode($sector->metrics, true) : $sector->metrics;
+        
+        if (empty($metrics)) {
+            return response()->json([
+                'status' => 'Data Kosong',
+                'kesimpulan' => 'Belum ada data sensor untuk sektor ini.'
+            ]);
+        }
+
+        $aiService = new \App\Services\AiExpertService();
+        $analisis = $aiService->analyzeSensorData($sector->sector_id, $metrics);
+
+        return response()->json([
+            'status' => 'Berhasil',
+            'analisis_ai' => $analisis
+        ]);
+    }
 }
