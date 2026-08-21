@@ -131,7 +131,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   const jogConv   = async (dir: 'fwd' | 'rev' | 'stop') => { setJogSending(true); setConvPhase(dir === 'fwd' ? 'Maju' : dir === 'rev' ? 'Mundur' : 'Diam'); await ctrl('convjog', dir); setJogSending(false) }
   const toggleLampAuto  = () => { const n = !lampAuto;  setLampAuto(n);  ctrl('lampauto',  n ? 'ON' : 'OFF') }
   const togglePompaAuto = () => { const n = !pompaAuto; setPompaAuto(n); ctrl('pompaauto', n ? 'ON' : 'OFF') }
-  const handleAiEvaluate = async () => { setShowAiModal(true); setAiLoading(true); try { const r = await fetch(`${API_URL}/api/sectors/${sectorId}/evaluate`); setAiResult(await r.json()) } catch { setAiResult({ status: 'Error', kesimpulan: 'Gagal.', rekomendasi: 'Periksa koneksi.' }) } finally { setAiLoading(false) } }
+  const handleAiEvaluate = async () => { setShowAiModal(true); setAiLoading(true); try { const r = await fetch(`${API_URL}/api/sectors/${sectorId}/ai-analysis`); setAiResult(await r.json()) } catch { setAiResult({ status: 'Error', analisis_ai: 'Gagal mendapatkan analisis. Periksa koneksi atau konfigurasi API Key.' }) } finally { setAiLoading(false) } }
 
   const ac  = Number(amonia); const sc = Number(suhu)
   const amoniaColor = ac > 300 ? '#dc2626' : ac >= 250 ? '#d97706' : '#059669'
@@ -321,16 +321,25 @@ function AiModal({ sector, aiLoading, aiResult, onClose }: any) {
         {aiLoading ? (
           <div style={{ padding: '40px 20px', textAlign: 'center' }}>
             <div style={{ margin: '0 auto 16px', width: 30, height: 30, border: '3px solid var(--border-color)', borderTopColor: '#8B5CF6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}/>
-            <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Sedang menganalisis data riwayat...</p>
+            <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: 14 }}>🌿 Pakar AI sedang menganalisis data sensor...</p>
           </div>
         ) : aiResult ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ padding: 16, background: aiResult.status === 'Normal' ? '#dcfce7' : '#fee2e2', borderRadius: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: aiResult.status === 'Normal' ? '#059669' : '#dc2626', marginBottom: 4, textTransform: 'uppercase' }}>Status Sektor</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#111' }}>{aiResult.status}</div>
-            </div>
-            <div><div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase' }}>Kesimpulan</div><p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.5 }}>{aiResult.kesimpulan}</p></div>
-            <div style={{ padding: 16, border: '1px solid var(--border-color)', borderRadius: 12 }}><div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase' }}>Rekomendasi</div><p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.5 }}>{aiResult.rekomendasi}</p></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '65vh', overflowY: 'auto', paddingRight: 4 }}>
+            {aiResult.analisis_ai ? (
+              <div style={{ padding: 16, background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>🤖 Analisis Pakar Pertanian (Gemini AI)</div>
+                <div style={{ fontSize: 13.5, color: 'var(--text-primary)', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>{aiResult.analisis_ai}</div>
+              </div>
+            ) : (
+              <>
+                <div style={{ padding: 16, background: aiResult.status === 'Normal' ? '#dcfce7' : '#fee2e2', borderRadius: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: aiResult.status === 'Normal' ? '#059669' : '#dc2626', marginBottom: 4, textTransform: 'uppercase' }}>Status Sektor</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: '#111' }}>{aiResult.status}</div>
+                </div>
+                <div><div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase' }}>Kesimpulan</div><p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.5 }}>{aiResult.kesimpulan}</p></div>
+                {aiResult.rekomendasi && <div style={{ padding: 16, border: '1px solid var(--border-color)', borderRadius: 12 }}><div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase' }}>Rekomendasi</div><p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.5 }}>{aiResult.rekomendasi}</p></div>}
+              </>
+            )}
           </div>
         ) : null}
         <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
@@ -380,8 +389,8 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
 
   const handleAiEvaluate = async () => {
     setShowAiModal(true); setAiLoading(true)
-    try { const r = await fetch(`${API_URL}/api/sectors/${sector.sector_id || sector.id}/evaluate`); setAiResult(await r.json()) }
-    catch { setAiResult({ status: 'Error', kesimpulan: 'Gagal.', rekomendasi: 'Periksa koneksi.' }) }
+    try { const r = await fetch(`${API_URL}/api/sectors/${sector.sector_id || sector.id}/ai-analysis`); setAiResult(await r.json()) }
+    catch { setAiResult({ status: 'Error', analisis_ai: 'Gagal mendapatkan analisis. Periksa koneksi atau konfigurasi API Key.' }) }
     finally { setAiLoading(false) }
   }
   const toggleControl = async (ctrlKey: string, cur: boolean) => {
