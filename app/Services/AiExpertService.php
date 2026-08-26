@@ -80,7 +80,7 @@ PROMPT;
                 ],
                 'generationConfig' => [
                     'temperature' => 0.5,
-                    'maxOutputTokens' => 600,
+                    'maxOutputTokens' => 900,
                 ]
             ]);
 
