@@ -32,15 +32,16 @@ class AiExpertService
         try {
             // Trim untuk menghapus whitespace/\r\n dari Windows line endings
             $apiKey = trim($apiKey);
+            $model  = config('services.gemini.model', 'gemini-3.6-flash');
 
-            $url     = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+            $url     = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent";
             $headers = ['Content-Type' => 'application/json'];
 
             if (str_starts_with($apiKey, 'AIza')) {
-                // Format lama AIza... → query param
+                // Format AIza... → query param (sudah ditest, bekerja)
                 $url .= "?key={$apiKey}";
             } else {
-                // Format baru AQ... → x-goog-api-key header
+                // Format AQ... → x-goog-api-key header
                 $headers['x-goog-api-key'] = $apiKey;
             }
 

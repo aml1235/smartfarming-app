@@ -1,6 +1,29 @@
 /*
   ============================================================================
-  SMART CHICKEN COOP - ESP32 DEVKIT V1  [MQTT FINAL - TERINTEGRASI LARAVEL]
+  SMART CHICKEN COOP - ESP32   [v4: TIMER CONFIGURABLE + LCD FIX]
+  ============================================================================
+  Perubahan dari versi MQTT_FIX:
+   1. Jadwal Lampu & Conveyor bisa diatur dari dashboard web via MQTT
+      (tidak lagi hardcode 18:00/06:00 dan jam 6 & 18)
+   2. Jadwal disimpan di NVS (Preferences.h) -> tidak hilang saat restart
+   3. ESP32 publish balik jadwal aktif (retained) supaya dashboard sinkron
+   4. Conveyor punya 2 slot jadwal (pagi & sore), slot 2 bisa dimatikan
+   6. [v5] Conveyor relay GPIO 16 DIGANTI motor DC 12V + driver H-bridge
+      MOSFET (PWM di GPIO 25, DIR di GPIO 26). Satu siklus =
+      MAJU (n detik) -> JEDA -> MUNDUR (n detik + CONV_REV_EXTRA_MS) -> berhenti.
+   5. FIX LCD karakter corrupt:
+        - Wire.setClock(50000) -> I2C lebih lambat & tahan noise
+        - init sequence dengan delay yang benar
+        - tulis 1 baris penuh (20 char) sekali jalan, tidak per-potongan
+        - hanya menulis baris yang isinya berubah -> traffic I2C jauh berkurang
+        - auto re-init kalau LCD hilang dari bus (kena noise relay)
+  ============================================================================
+  LIBRARY YANG DIBUTUHKAN:
+   - WiFi, Wire, Preferences  (bawaan ESP32 core)
+   - RTClib (Adafruit)
+   - DHT sensor library (Adafruit)
+   - LiquidCrystal_I2C (johnrickman)
+   - PubSubClient (Nick O'Leary)
   ============================================================================
 */
 
@@ -11,25 +34,19 @@
 #include <LiquidCrystal_I2C.h>
 #include <PubSubClient.h>
 #include <WiFiClientSecure.h>
-#include <ArduinoJson.h> // WAJIB ADA: Untuk kirim data ke Laravel
+#include <Preferences.h>
 
 /* ============================================================================
    KONFIGURASI - WAJIB GANTI
    ============================================================================ */
-char ssid[] = "ucup";
-char pass[] = "12345678";
+char ssid[] = "SMARTFARM";
+char pass[] = "KADETUNHAN";
 
 const char* mqtt_server = "7953ca21897d4be78141b6206bf9c205.s1.eu.hivemq.cloud";
-const int mqtt_port = 8883;
-const char* mqtt_user = "rendi";
-const char* mqtt_pass = "12345678";
-const char* client_id = "ESP32_KandangAyam_SEC011";
-
-/* ============================================================================
-   MQTT TOPICS (Wajib disamakan dengan Laravel Backend)
-   ============================================================================ */
-const char* TOPIC_SENSOR = "smartfarming/poultry/sensor/SEC-011";
-const char* TOPIC_CMD = "smartfarming/poultry/cmd/SEC-011";
+const int   mqtt_port   = 8883;           // TLS port
+const char* mqtt_user   = "rendi";
+const char* mqtt_pass   = "12345678";
+const char* client_id   = "esp32_smartcoop_001";
 
 /* ============================================================================
    PIN HARDWARE
@@ -37,10 +54,25 @@ const char* TOPIC_CMD = "smartfarming/poultry/cmd/SEC-011";
 #define DHT_PIN     13
 #define DHT_TYPE    DHT22
 #define MQ135_PIN   34
+#define WATER_PIN   35
+
 #define RELAY_LAMP      4
-#define RELAY_MOTOR     16
 #define RELAY_POMPA     17
-#define RELAY_EXHAUST   5
+// GPIO 16 (bekas relay conveyor) sekarang tidak dipakai.
+
+// ---- Motor DC conveyor: driver H-bridge MOSFET, gaya PWM + DIR ----
+#define MOTOR_PWM_PIN   25
+#define MOTOR_DIR_PIN   26
+#define MOTOR_PWM_CH    0        // channel LEDC (hanya dipakai pada core 2.x)
+#define MOTOR_PWM_FREQ  1000     // 1 kHz. Sengaja rendah: IRF3205 bukan MOSFET
+                                 // logic-level, di frekuensi tinggi peralihannya
+                                 // lambat dan MOSFET jadi panas.
+#define MOTOR_PWM_RES   8        // 8 bit -> duty 0..255
+#define MOTOR_DEADTIME_MS 200    // jeda wajib sebelum arah berubah
+#define CONV_JOG_MAX_MS   10000  // pengaman: jog manual mati sendiri setelah ini
+#define CONV_REV_EXTRA_MS 1000   // mundur berjalan sekian ms LEBIH LAMA dari maju,
+                                 // untuk mengembalikan conveyor ke titik awal
+
 #define RTC_SDA     22
 #define RTC_SCL     23
 #define LCD_SDA     18
@@ -48,52 +80,163 @@ const char* TOPIC_CMD = "smartfarming/poultry/cmd/SEC-011";
 #define LCD_COLS    20
 #define LCD_ROWS    4
 
+#define I2C_CLOCK_LCD 50000UL   // 50 kHz -- lebih tahan noise & kabel panjang
+
 /* ============================================================================
-   OBJEK
+   OBJEK GLOBAL
    ============================================================================ */
 DHT dht(DHT_PIN, DHT_TYPE);
 RTC_DS3231 rtc;
 LiquidCrystal_I2C* lcd = nullptr;
 WiFiClientSecure espClient;
 PubSubClient mqtt(espClient);
+Preferences prefs;
 
 /* ============================================================================
-   VARIABEL
+   VARIABEL SENSOR & STATUS
    ============================================================================ */
-float temperature = 0.0;
-float humidity = 0.0;
+float temperature = 0.0, humidity = 0.0;
+bool dhtValid = false;          // false selama DHT22 belum pernah terbaca sukses
 int mq135Value = 0;
 float mq135Voltage = 0.0;
+
+#define WATER_SAMPLE_COUNT 20
+#define WATER_READ_INTERVAL 100
+int waterSamples[WATER_SAMPLE_COUNT] = {0};
+int waterSampleIndex = 0;
+long waterSampleSum = 0;
+int waterAvgADC = 0;
+float waterVoltage = 0.0;
+int waterLevelPercent = 0;
+
 bool lampStatus = false;
-bool exhaustStatus = false;
-bool motorStatus = false;
+// Conveyor motor DC
 bool pompaStatus = false;
 bool lampAutoMode = true;
 bool lampManualState = false;
-bool exhaustActive = false;
+
+// Pompa punya mode sendiri. Tanpa ini, mematikan pompa manual saat air masih
+// rendah percuma: pumpAutomation() menyalakannya lagi 3 detik kemudian.
+bool pompaAutoMode = true;
+bool pompaManualState = false;
+
+enum ConvPhase { CONV_IDLE, CONV_FWD, CONV_PAUSE, CONV_DEADTIME, CONV_REV,
+                 CONV_JOG_FWD, CONV_JOG_REV };
+ConvPhase convPhase = CONV_IDLE;
+ConvPhase convAfterDead = CONV_IDLE;   // fase yang dituju setelah dead-time
+unsigned long convPhaseMillis = 0;
+int convLastTrigDay1 = -1;      // tanggal terakhir slot 1 dipicu (anti dobel)
+int convLastTrigDay2 = -1;
+
+// Dipakai di updateLCD() dan mqttCallback() yang letaknya lebih awal
+const char* convPhaseName();
+void convStartCycle(const char* sumber);
+void convStopNow(const char* alasan);
+void convStartJog(bool forward);
+
+enum PumpAutoState { PUMP_AUTO_IDLE, PUMP_AUTO_CONFIRM_LOW, PUMP_AUTO_ON, PUMP_AUTO_CONFIRM_HIGH };
+PumpAutoState pumpAutoState = PUMP_AUTO_IDLE;
+unsigned long pumpConfirmMillis = 0;
+const unsigned long PUMP_CONFIRM_DELAY = 3000;
+
 bool lcdAvailable = false;
 bool rtcAvailable = false;
+bool timeFromNTP = false;          // true = jam berasal dari internet
+unsigned long prevRtcSyncMillis = 0;
+const unsigned long RTC_SYNC_INTERVAL = 6UL * 3600UL * 1000UL;   // 6 jam
 uint8_t lcdAddress = 0x27;
-
-unsigned long prevSensorMillis = 0;
-const unsigned long SENSOR_INTERVAL = 5000;
-unsigned long lastMqttReconnectAttempt = 0;
-const unsigned long MQTT_RECONNECT_INTERVAL = 5000;
-unsigned long prevPublishMillis = 0;
-const unsigned long PUBLISH_INTERVAL = 5000;
-unsigned long prevSerialMillis = 0;
-const unsigned long SERIAL_INTERVAL = 2000;
-unsigned long prevWifiMillis = 0;
-const unsigned long WIFI_INTERVAL = 10000;
-unsigned long prevLcdMillis = 0;
-const unsigned long LCD_INTERVAL = 1000;
-
 DateTime rtcLastValid;
-const char* NAMA_HARI[] = {"Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"};
-
 
 /* ============================================================================
-   DEBUG MQTT STATE
+   KONFIGURASI TIMER  (disimpan sebagai menit-sejak-tengah-malam, 0..1439)
+   ============================================================================ */
+uint16_t lampOnMin   = 18 * 60;      // 18:00
+uint16_t lampOffMin  =  6 * 60;      // 06:00
+uint16_t conv1OnMin  =  6 * 60;      // jam mulai siklus 1
+uint16_t conv2OnMin  = 18 * 60;      // jam mulai siklus 2
+bool     conv2Enabled = true;
+
+// Durasi satu siklus conveyor (detik) + kecepatan (persen)
+uint16_t convRunSec   = 10;          // lama maju, sama dengan lama mundur
+uint16_t convPauseSec = 3;           // jeda antara maju dan mundur
+uint8_t  convSpeedPct = 100;
+
+// Simpan NVS & publish jadwal dikerjakan di loop(), bukan di dalam callback MQTT,
+// supaya callback tetap cepat dan koneksi TLS tidak tersendat.
+bool timerConfigDirty = false;
+
+/* ============================================================================
+   TIMING
+   ============================================================================ */
+unsigned long prevSensorMillis = 0;
+const unsigned long SENSOR_INTERVAL = 1000;
+unsigned long prevPublishMillis = 0;
+const unsigned long PUBLISH_INTERVAL = 1000;
+unsigned long prevWifiMillis = 0;
+const unsigned long WIFI_INTERVAL = 10000;
+unsigned long lastMqttReconnectAttempt = 0;
+const unsigned long MQTT_RECONNECT_INTERVAL = 5000;
+unsigned long prevLcdMillis = 0;
+const unsigned long LCD_INTERVAL = 1000;
+unsigned long prevLcdCheckMillis = 0;
+const unsigned long LCD_CHECK_INTERVAL = 10000;
+unsigned long prevSerialMillis = 0;
+const unsigned long SERIAL_INTERVAL = 2000;
+unsigned long prevWaterReadMillis = 0;
+unsigned long prevWaterDebugMillis = 0;
+const unsigned long WATER_DEBUG_INTERVAL = 5000;   // dulu 1000, dikurangi agar Serial tidak membanjiri loop
+
+const char* NAMA_HARI[] = {"Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"};
+
+/* ============================================================================
+   MQTT TOPICS
+   ============================================================================ */
+const char* TOPIC_TEMP        = "smartcoop/sensor/temp";
+const char* TOPIC_HUM         = "smartcoop/sensor/humidity";
+const char* TOPIC_MQ135       = "smartcoop/sensor/mq135";
+const char* TOPIC_MQ135_VOLT  = "smartcoop/sensor/mq135volt";
+const char* TOPIC_WATER_ADC   = "smartcoop/sensor/wateradc";
+const char* TOPIC_WATER_VOLT  = "smartcoop/sensor/watervoltage";
+const char* TOPIC_WATER_LEVEL = "smartcoop/sensor/waterlevel";
+
+const char* TOPIC_LAMP        = "smartcoop/status/lamp";
+const char* TOPIC_CONVEYOR    = "smartcoop/status/conveyor";
+const char* TOPIC_CONVPHASE   = "smartcoop/status/conveyorphase";
+const char* TOPIC_POMPA       = "smartcoop/status/pompa";
+const char* TOPIC_LAMPAUTO    = "smartcoop/status/lampauto";
+const char* TOPIC_POMPAAUTO   = "smartcoop/status/pompaauto";
+const char* TOPIC_TIME        = "smartcoop/status/time";
+const char* TOPIC_SYSTEM      = "smartcoop/status/system";
+
+const char* TOPIC_CTRL_LAMP     = "smartcoop/control/lamp";
+const char* TOPIC_CTRL_CONVEYOR = "smartcoop/control/conveyor";
+const char* TOPIC_CTRL_CONVJOG  = "smartcoop/control/convjog";
+const char* TOPIC_CTRL_POMPA    = "smartcoop/control/pompa";
+const char* TOPIC_CTRL_LAMPAUTO = "smartcoop/control/lampauto";
+const char* TOPIC_CTRL_POMPAAUTO = "smartcoop/control/pompaauto";
+
+// --- Dashboard -> ESP32 (set jadwal) ---
+const char* TOPIC_CFG_LAMPON    = "smartcoop/config/lampon";
+const char* TOPIC_CFG_LAMPOFF   = "smartcoop/config/lampoff";
+const char* TOPIC_CFG_CONVON    = "smartcoop/config/conveyoron";
+const char* TOPIC_CFG_CONV2ON   = "smartcoop/config/conveyor2on";
+const char* TOPIC_CFG_CONV2EN   = "smartcoop/config/conveyor2en";
+const char* TOPIC_CFG_CONVRUN   = "smartcoop/config/convrun";
+const char* TOPIC_CFG_CONVPAUSE = "smartcoop/config/convpause";
+const char* TOPIC_CFG_CONVSPEED = "smartcoop/config/convspeed";
+
+// --- ESP32 -> Dashboard (jadwal yang sedang aktif, retained) ---
+const char* TOPIC_ST_LAMPON     = "smartcoop/status/lampon";
+const char* TOPIC_ST_LAMPOFF    = "smartcoop/status/lampoff";
+const char* TOPIC_ST_CONVON     = "smartcoop/status/conveyoron";
+const char* TOPIC_ST_CONV2ON    = "smartcoop/status/conveyor2on";
+const char* TOPIC_ST_CONV2EN    = "smartcoop/status/conveyor2en";
+const char* TOPIC_ST_CONVRUN    = "smartcoop/status/convrun";
+const char* TOPIC_ST_CONVPAUSE  = "smartcoop/status/convpause";
+const char* TOPIC_ST_CONVSPEED  = "smartcoop/status/convspeed";
+
+/* ============================================================================
+   HELPER: string status
    ============================================================================ */
 const char* mqttStateString(int state) {
   switch (state) {
@@ -111,6 +254,148 @@ const char* mqttStateString(int state) {
   }
 }
 
+const char* wifiStateString(wl_status_t status) {
+  switch (status) {
+    case WL_IDLE_STATUS:     return "IDLE";
+    case WL_NO_SSID_AVAIL:   return "NO_SSID_AVAIL";
+    case WL_SCAN_COMPLETED:  return "SCAN_COMPLETED";
+    case WL_CONNECTED:       return "CONNECTED";
+    case WL_CONNECT_FAILED:  return "CONNECT_FAILED";
+    case WL_CONNECTION_LOST: return "CONNECTION_LOST";
+    case WL_DISCONNECTED:    return "DISCONNECTED";
+    default:                 return "UNKNOWN";
+  }
+}
+
+/* ============================================================================
+   HELPER TIMER: parsing "HH:MM"  <->  menit
+   ============================================================================ */
+bool parseHHMM(const String& s, uint16_t &outMinutes) {
+  // Format valid: "H:MM", "HH:MM" (panjang 4 atau 5)
+  int colon = s.indexOf(':');
+  if (colon < 1 || colon > 2) return false;
+  if (s.length() - colon - 1 != 2) return false;
+
+  for (unsigned int i = 0; i < s.length(); i++) {
+    if (i == (unsigned int)colon) continue;
+    if (!isdigit(s.charAt(i))) return false;
+  }
+
+  int h = s.substring(0, colon).toInt();
+  int m = s.substring(colon + 1).toInt();
+  if (h < 0 || h > 23 || m < 0 || m > 59) return false;
+
+  outMinutes = (uint16_t)(h * 60 + m);
+  return true;
+}
+
+void minToStr(uint16_t v, char* out) {          // out minimal char[6]
+  sprintf(out, "%02u:%02u", v / 60, v % 60);
+}
+
+// Cek apakah "nowMin" berada di dalam jendela onMin -> offMin.
+// Mendukung jendela yang melewati tengah malam (contoh: 18:00 -> 06:00).
+bool inWindow(uint16_t nowMin, uint16_t onMin, uint16_t offMin) {
+  if (onMin == offMin) return false;                 // jendela kosong = nonaktif
+  if (onMin < offMin)  return (nowMin >= onMin && nowMin < offMin);
+  return (nowMin >= onMin || nowMin < offMin);       // lewat tengah malam
+}
+
+/* ============================================================================
+   NVS (Preferences) - simpan & muat jadwal
+   ============================================================================ */
+void loadTimerConfig() {
+  prefs.begin("coop", true);            // read-only
+  lampOnMin    = prefs.getUShort("lampOn",   18 * 60);
+  lampOffMin   = prefs.getUShort("lampOff",   6 * 60);
+  conv1OnMin   = prefs.getUShort("cv1On",     6 * 60);
+  conv2OnMin   = prefs.getUShort("cv2On",    18 * 60);
+  conv2Enabled = prefs.getBool  ("cv2En",    true);
+  convRunSec   = prefs.getUShort("cvRun",    10);
+  convPauseSec = prefs.getUShort("cvPause",  3);
+  convSpeedPct = prefs.getUChar ("cvSpeed",  100);
+  prefs.end();
+
+  // Jaga-jaga kalau NVS pernah terisi nilai aneh
+  if (lampOnMin  > 1439) lampOnMin  = 18 * 60;
+  if (lampOffMin > 1439) lampOffMin =  6 * 60;
+  if (conv1OnMin > 1439) conv1OnMin = 6 * 60;
+  if (conv2OnMin > 1439) conv2OnMin = 18 * 60;
+  if (convRunSec < 1 || convRunSec > 300) convRunSec = 10;
+  // Jeda tidak boleh lebih pendek dari dead-time, kalau tidak arah berubah
+  // saat motor masih berputar dan MOSFET bisa rusak.
+  if (convPauseSec < 1 || convPauseSec > 300) convPauseSec = 3;
+  if (convSpeedPct < 20 || convSpeedPct > 100) convSpeedPct = 100;
+
+  char b1[6], b2[6], b3[6], b5[6];
+  minToStr(lampOnMin, b1);   minToStr(lampOffMin, b2);
+  minToStr(conv1OnMin, b3);  minToStr(conv2OnMin, b5);
+  Serial.println(F("[NVS] Jadwal dimuat:"));
+  Serial.print(F("      Lampu     : ")); Serial.print(b1); Serial.print(F(" -> ")); Serial.println(b2);
+  Serial.print(F("      Conveyor 1: ")); Serial.println(b3);
+  Serial.print(F("      Conveyor 2: ")); Serial.print(b5);
+  Serial.println(conv2Enabled ? F("  [AKTIF]") : F("  [NONAKTIF]"));
+  Serial.print(F("      Siklus    : maju/mundur ")); Serial.print(convRunSec);
+  Serial.print(F(" dtk, jeda ")); Serial.print(convPauseSec);
+  Serial.print(F(" dtk, kecepatan ")); Serial.print(convSpeedPct); Serial.println(F(" %"));
+}
+
+void saveTimerConfig() {
+  prefs.begin("coop", false);           // read-write
+  prefs.putUShort("lampOn",  lampOnMin);
+  prefs.putUShort("lampOff", lampOffMin);
+  prefs.putUShort("cv1On",   conv1OnMin);
+  prefs.putUShort("cv2On",   conv2OnMin);
+  prefs.putBool  ("cv2En",   conv2Enabled);
+  prefs.putUShort("cvRun",   convRunSec);
+  prefs.putUShort("cvPause", convPauseSec);
+  prefs.putUChar ("cvSpeed", convSpeedPct);
+  prefs.end();
+  Serial.println(F("[NVS] Jadwal disimpan"));
+}
+
+// Publish jadwal aktif ke dashboard (retained) supaya form web ikut terisi
+void publishTimerConfig() {
+  if (!mqtt.connected()) return;
+  char b[6];
+  minToStr(lampOnMin,   b); mqtt.publish(TOPIC_ST_LAMPON,   b, true);
+  minToStr(lampOffMin,  b); mqtt.publish(TOPIC_ST_LAMPOFF,  b, true);
+  minToStr(conv1OnMin,  b); mqtt.publish(TOPIC_ST_CONVON,   b, true);
+  minToStr(conv2OnMin,  b); mqtt.publish(TOPIC_ST_CONV2ON,  b, true);
+  mqtt.publish(TOPIC_ST_CONV2EN, conv2Enabled ? "1" : "0", true);
+  itoa(convRunSec, b, 10);   mqtt.publish(TOPIC_ST_CONVRUN,   b, true);
+  itoa(convPauseSec, b, 10); mqtt.publish(TOPIC_ST_CONVPAUSE, b, true);
+  itoa(convSpeedPct, b, 10); mqtt.publish(TOPIC_ST_CONVSPEED, b, true);
+  Serial.println(F("[MQTT] Jadwal aktif dikirim ke dashboard"));
+}
+
+/* ============================================================================
+   NTP - wajib sebelum TLS
+   ============================================================================ */
+void syncNTP() {
+  Serial.println(F("[NTP] Syncing time..."));
+  configTime(7 * 3600, 0, "pool.ntp.org", "time.google.com"); // GMT+7 (WIB)
+
+  time_t now = time(nullptr);
+  int retries = 0;
+  while (now < 1700000000 && retries < 20) {
+    delay(500);
+    now = time(nullptr);
+    retries++;
+    Serial.print(F("."));
+  }
+  Serial.println();
+
+  if (now < 1700000000) {
+    Serial.println(F("[NTP] FAILED! Time not synced. TLS may fail."));
+  } else {
+    struct tm timeinfo;
+    localtime_r(&now, &timeinfo);
+    Serial.print(F("[NTP] OK! Current time: "));
+    Serial.println(asctime(&timeinfo));
+  }
+}
+
 /* ============================================================================
    RTC
    ============================================================================ */
@@ -124,11 +409,35 @@ bool isRTCValid(DateTime dt) {
   return true;
 }
 
+// NTP dianggap sah kalau epoch sudah melewati akhir 2023
+bool ntpValid() { return time(nullptr) > 1700000000; }
+
+/*
+   Sumber waktu utama adalah NTP, bukan RTC.
+
+   Yang sering disalahpahami: ESP32 TIDAK kehilangan jam saat WiFi putus.
+   Begitu NTP menyetel waktu sistem sekali, jam internal terus berjalan
+   sendiri. WiFi hanya dibutuhkan untuk sinkronisasi berkala. Jadi memakai
+   NTP justru lebih tahan gangguan daripada RTC yang modulnya bermasalah.
+
+   RTC tetap dipakai sebagai cadangan untuk kondisi listrik mati lalu
+   menyala kembali sementara WiFi belum tersedia.
+*/
 DateTime getSafeTime() {
-  if (!rtcAvailable) return rtcLastValid + TimeSpan(millis()/1000);
+  if (ntpValid()) {
+    struct tm t;
+    if (getLocalTime(&t, 10)) {
+      timeFromNTP = true;
+      return DateTime(t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
+                      t.tm_hour, t.tm_min, t.tm_sec);
+    }
+  }
+
+  timeFromNTP = false;
+  if (!rtcAvailable) return rtcLastValid + TimeSpan(millis() / 1000);
   DateTime now = rtc.now();
   if (!isRTCValid(now)) {
-    Serial.println(F("[RTC] Invalid! Reset to compile time"));
+    Serial.println(F("[RTC] Tidak valid, dipakai waktu kompilasi"));
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
     now = rtc.now();
   }
@@ -136,9 +445,24 @@ DateTime getSafeTime() {
   return now;
 }
 
+// Selaraskan RTC dari NTP secara berkala supaya cadangannya ikut akurat
+void rtcSyncTask(unsigned long ms) {
+  if (!rtcAvailable || !ntpValid()) return;
+  if (prevRtcSyncMillis != 0 && ms - prevRtcSyncMillis < RTC_SYNC_INTERVAL) return;
+  prevRtcSyncMillis = ms;
+
+  struct tm t;
+  if (!getLocalTime(&t, 10)) return;
+  rtc.adjust(DateTime(t.tm_year + 1900, t.tm_mon + 1, t.tm_mday,
+                      t.tm_hour, t.tm_min, t.tm_sec));
+  Serial.println(F("[RTC] Diselaraskan dari NTP"));
+}
+
 /* ============================================================================
-   LCD
+   LCD - versi anti karakter corrupt
    ============================================================================ */
+char lcdPrev[LCD_ROWS][LCD_COLS + 1];
+
 uint8_t scanI2CAddress() {
   const uint8_t addresses[] = {0x27, 0x3F};
   for (uint8_t i = 0; i < 2; i++) {
@@ -152,54 +476,208 @@ uint8_t scanI2CAddress() {
   return 0;
 }
 
+bool i2cPing(uint8_t addr) {
+  Wire.beginTransmission(addr);
+  return (Wire.endTransmission() == 0);
+}
+
+void lcdForceRedraw() {
+  for (uint8_t r = 0; r < LCD_ROWS; r++) lcdPrev[r][0] = '\0';
+}
+
+// Tulis satu baris penuh 20 karakter dalam SATU panggilan print().
+// Ini kunci fix corrupt: LCD tidak lagi menerima banyak burst I2C pendek
+// yang gampang terpotong saat relay switching.
+void lcdWriteLine(uint8_t row, const char* text) {
+  if (!lcdAvailable || lcd == nullptr || row >= LCD_ROWS) return;
+
+  char buf[LCD_COLS + 1];
+  snprintf(buf, sizeof(buf), "%-*s", LCD_COLS, text);   // pad kanan sampai 20 char
+  buf[LCD_COLS] = '\0';
+
+  if (strcmp(buf, lcdPrev[row]) == 0) return;           // tidak berubah -> skip
+  strcpy(lcdPrev[row], buf);
+
+  lcd->setCursor(0, row);
+  delayMicroseconds(120);        // beri waktu HD44780 memproses perintah alamat
+  lcd->print(buf);
+}
+
 bool initLCD() {
   lcdAddress = scanI2CAddress();
   if (lcdAddress == 0) {
     Serial.println(F("[LCD] NOT DETECTED"));
     return false;
   }
-  lcd = new LiquidCrystal_I2C(lcdAddress, LCD_COLS, LCD_ROWS);
-  lcd->init(); lcd->backlight();
+
+  if (lcd == nullptr) lcd = new LiquidCrystal_I2C(lcdAddress, LCD_COLS, LCD_ROWS);
+
+  lcd->init();
+  delay(100);                      // HD44780 butuh waktu setelah init
+  Wire.setClock(I2C_CLOCK_LCD);    // library init() sempat reset clock -> set ulang
+  lcd->backlight();
+  delay(50);
   lcd->clear();
-  lcd->setCursor(0,0); lcd->print("  SMART CHICKEN COOP  ");
-  lcd->setCursor(0,1); lcd->print("    MQTT Final Ver    ");
-  lcd->setCursor(0,2); lcd->print("   ESP32 DevKit V1    ");
-  lcd->setCursor(0,3); lcd->print("   LCD OK! Addr:0x"); lcd->print(lcdAddress, HEX);
+  delay(50);                       // clear butuh ~1.6 ms, beri margin
+
+  lcdForceRedraw();
   Serial.print(F("[LCD] OK at 0x")); Serial.println(lcdAddress, HEX);
   return true;
 }
 
+// Kalau LCD hilang dari bus (kena spike relay), init ulang otomatis
+void lcdHealthCheck(unsigned long currentMillis) {
+  if (!lcdAvailable) return;
+  if (currentMillis - prevLcdCheckMillis < LCD_CHECK_INTERVAL) return;
+  prevLcdCheckMillis = currentMillis;
+
+  if (!i2cPing(lcdAddress)) {
+    Serial.println(F("[LCD] Tidak merespon! Init ulang..."));
+    lcd->init();
+    delay(100);
+    Wire.setClock(I2C_CLOCK_LCD);
+    lcd->backlight();
+    delay(50);
+    lcdForceRedraw();
+  }
+}
+
+void updateLCD(unsigned long currentMillis) {
+  if (!lcdAvailable || lcd == nullptr) return;
+  if (currentMillis - prevLcdMillis < LCD_INTERVAL) return;
+  prevLcdMillis = currentMillis;
+
+  DateTime now = getSafeTime();
+  char line[LCD_COLS + 1];
+
+  // CATATAN: jangan pakai "%f" di snprintf. Sebagian build ESP32 memakai
+  // newlib "nano format" yang tidak mendukung float, hasilnya jadi kosong/0.
+  // dtostrf() adalah rutin Arduino dan selalu bekerja.
+  char tStr[10], hStr[10];
+  if (dhtValid) {
+    dtostrf(temperature, 0, 1, tStr);
+    dtostrf(humidity,    0, 0, hStr);
+  } else {
+    strcpy(tStr, "--");         // DHT belum pernah berhasil dibaca
+    strcpy(hStr, "--");
+  }
+  snprintf(line, sizeof(line), "Suhu  :%sC Hum:%s%%", tStr, hStr);
+  lcdWriteLine(0, line);
+
+  snprintf(line, sizeof(line), "Amonia:%-4d  Air:%-3d%%", mq135Value, waterLevelPercent);
+  lcdWriteLine(1, line);
+
+  snprintf(line, sizeof(line), "Conv  :%-4s Pump:%-3s",
+           convPhaseName(), pompaStatus ? "ON" : "OFF");
+  lcdWriteLine(2, line);
+
+  snprintf(line, sizeof(line), "%-6s %02d:%02d Lmp:%-3s",
+           NAMA_HARI[now.dayOfTheWeek()], now.hour(), now.minute(),
+           lampStatus ? "ON" : "OFF");
+  lcdWriteLine(3, line);
+}
+
 /* ============================================================================
-   MQTT CALLBACK (Perintah dari Laravel)
+   MQTT CALLBACK
    ============================================================================ */
+void handleTimerConfig(const char* topic, const String& message) {
+  uint16_t v = 0;
+  bool changed = false;
+
+  if (strcmp(topic, TOPIC_CFG_CONV2EN) == 0) {
+    bool en = (message == "1" || message == "ON" || message == "true");
+    if (en != conv2Enabled) { conv2Enabled = en; changed = true; }
+  }
+  else if (strcmp(topic, TOPIC_CFG_CONVRUN) == 0) {
+    int d = message.toInt();
+    if (d < 1 || d > 300) { Serial.println(F("[CONFIG] Durasi maju/mundur harus 1-300 detik")); return; }
+    if ((uint16_t)d != convRunSec) { convRunSec = d; changed = true; }
+  }
+  else if (strcmp(topic, TOPIC_CFG_CONVPAUSE) == 0) {
+    int d = message.toInt();
+    if (d < 1 || d > 300) { Serial.println(F("[CONFIG] Jeda harus 1-300 detik")); return; }
+    if ((uint16_t)d != convPauseSec) { convPauseSec = d; changed = true; }
+  }
+  else if (strcmp(topic, TOPIC_CFG_CONVSPEED) == 0) {
+    int d = message.toInt();
+    // Di bawah 20% motor DC biasanya hanya mendengung tanpa berputar
+    if (d < 20 || d > 100) { Serial.println(F("[CONFIG] Kecepatan harus 20-100 persen")); return; }
+    if ((uint8_t)d != convSpeedPct) { convSpeedPct = d; changed = true; }
+  }
+  else if (!parseHHMM(message, v)) {
+    Serial.print(F("[CONFIG] Format jam tidak valid: ")); Serial.println(message);
+    return;
+  }
+  else if (strcmp(topic, TOPIC_CFG_LAMPON) == 0)   { if (v != lampOnMin)   { lampOnMin = v;   changed = true; } }
+  else if (strcmp(topic, TOPIC_CFG_LAMPOFF) == 0)  { if (v != lampOffMin)  { lampOffMin = v;  changed = true; } }
+  else if (strcmp(topic, TOPIC_CFG_CONVON) == 0)   { if (v != conv1OnMin) { conv1OnMin = v; changed = true; } }
+  else if (strcmp(topic, TOPIC_CFG_CONV2ON) == 0)  { if (v != conv2OnMin) { conv2OnMin = v; changed = true; } }
+
+  if (changed) {
+    Serial.print(F("[CONFIG] Jadwal diperbarui via ")); Serial.println(topic);
+    timerConfigDirty = true;          // simpan & publish dikerjakan di loop()
+  }
+}
+
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   String message = "";
   for (unsigned int i = 0; i < length; i++) message += (char)payload[i];
   message.trim();
   Serial.print(F("[MQTT] RX [")); Serial.print(topic); Serial.print(F("]: ")); Serial.println(message);
 
-  // Parse JSON command dari Laravel
-  StaticJsonDocument<256> doc;
-  if (!deserializeJson(doc, message)) {
-    if (doc.containsKey("lamp")) {
-      lampManualState = (doc["lamp"] == "ON");
-      if (!lampAutoMode) { lampStatus = lampManualState; digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH); }
+  if (strncmp(topic, "smartcoop/config/", 17) == 0) {
+    handleTimerConfig(topic, message);
+    return;
+  }
+
+  if (strcmp(topic, TOPIC_CTRL_LAMP) == 0) {
+    lampManualState = (message == "1" || message == "ON" || message == "true");
+    if (!lampAutoMode) {
+      lampStatus = lampManualState;
+      digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH);
+      mqtt.publish(TOPIC_LAMP, lampStatus ? "1" : "0", true);
     }
-    if (doc.containsKey("motor")) {
-      motorStatus = (doc["motor"] == "ON");
-      digitalWrite(RELAY_MOTOR, motorStatus ? LOW : HIGH);
-    }
-    if (doc.containsKey("pompa")) {
-      pompaStatus = (doc["pompa"] == "ON");
+  }
+  else if (strcmp(topic, TOPIC_CTRL_CONVJOG) == 0) {
+    if (message == "fwd" || message == "maju")       convStartJog(true);
+    else if (message == "rev" || message == "mundur") convStartJog(false);
+    else convStopNow("jog dilepas");
+  }
+  else if (strcmp(topic, TOPIC_CTRL_CONVEYOR) == 0) {
+    if (message == "1" || message == "ON" || message == "true") convStartCycle("manual");
+    else convStopNow("perintah manual");
+  }
+  else if (strcmp(topic, TOPIC_CTRL_POMPA) == 0) {
+    pompaManualState = (message == "1" || message == "ON" || message == "true");
+    if (!pompaAutoMode) {
+      pompaStatus = pompaManualState;
       digitalWrite(RELAY_POMPA, pompaStatus ? LOW : HIGH);
+      mqtt.publish(TOPIC_POMPA, pompaStatus ? "1" : "0", true);
+      Serial.print(F("[POMPA] Manual -> ")); Serial.println(pompaStatus ? F("ON") : F("OFF"));
+    } else {
+      Serial.println(F("[POMPA] Diabaikan: masih mode AUTO. Matikan mode auto dulu."));
     }
-    if (doc.containsKey("lampAutoMode")) {
-      lampAutoMode = (doc["lampAutoMode"] == "ON");
-      if (!lampAutoMode) { lampStatus = lampManualState; digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH); }
+  }
+  else if (strcmp(topic, TOPIC_CTRL_POMPAAUTO) == 0) {
+    pompaAutoMode = (message == "1" || message == "ON" || message == "true");
+    if (pompaAutoMode) {
+      // Kembali ke auto: selaraskan state machine dengan kondisi relay saat ini
+      pumpAutoState = pompaStatus ? PUMP_AUTO_ON : PUMP_AUTO_IDLE;
+      Serial.println(F("[POMPA] Mode AUTO"));
+    } else {
+      pompaManualState = pompaStatus;   // mulai manual dari kondisi sekarang
+      Serial.println(F("[POMPA] Mode MANUAL"));
     }
-    
-    // Publikasi status kembali ke server secara instan (opsional)
-    publishMQTT();
+    mqtt.publish(TOPIC_POMPAAUTO, pompaAutoMode ? "1" : "0", true);
+  }
+  else if (strcmp(topic, TOPIC_CTRL_LAMPAUTO) == 0) {
+    lampAutoMode = (message == "1" || message == "ON" || message == "true");
+    if (!lampAutoMode) {
+      lampStatus = lampManualState;
+      digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH);
+      mqtt.publish(TOPIC_LAMP, lampStatus ? "1" : "0", true);
+    }
+    mqtt.publish(TOPIC_LAMPAUTO, lampAutoMode ? "1" : "0", true);
   }
 }
 
@@ -207,18 +685,490 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
    MQTT RECONNECT
    ============================================================================ */
 bool reconnectMQTT() {
-  Serial.println(F("\n[MQTT] Connecting..."));
-  if (mqtt.connect(client_id, mqtt_user, mqtt_pass)) {
-    Serial.println(F("[MQTT] CONNECTED!"));
-    mqtt.subscribe(TOPIC_CMD);
-    Serial.println(F("[MQTT] Subscribed to unified command topic"));
-    return true;
-  } else {
-    int state = mqtt.state();
-    Serial.print(F("[MQTT] FAILED: ")); Serial.print(state);
-    Serial.print(F(" = ")); Serial.println(mqttStateString(state));
+  Serial.println(F("\n========================================"));
+  Serial.println(F("[MQTT] Attempting connection..."));
+  Serial.print(F("[MQTT] Server: ")); Serial.print(mqtt_server);
+  Serial.print(F(":")); Serial.println(mqtt_port);
+
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println(F("[MQTT] ABORT: WiFi not connected!"));
+    Serial.print(F("[WIFI] Status: ")); Serial.println(wifiStateString(WiFi.status()));
     return false;
   }
+
+  time_t now = time(nullptr);
+  if (now < 1700000000) {
+    Serial.println(F("[MQTT] WARNING: NTP time not synced yet! TLS may fail."));
+  }
+
+  if (mqtt.connect(client_id, mqtt_user, mqtt_pass)) {
+    Serial.println(F("[MQTT] >>> CONNECTED SUCCESS! <<<"));
+
+    mqtt.subscribe(TOPIC_CTRL_LAMP);
+    mqtt.subscribe(TOPIC_CTRL_CONVEYOR);
+    mqtt.subscribe(TOPIC_CTRL_CONVJOG);
+    mqtt.subscribe(TOPIC_CTRL_POMPA);
+    mqtt.subscribe(TOPIC_CTRL_LAMPAUTO);
+    mqtt.subscribe(TOPIC_CTRL_POMPAAUTO);
+    mqtt.subscribe(TOPIC_CFG_LAMPON);
+    mqtt.subscribe(TOPIC_CFG_LAMPOFF);
+    mqtt.subscribe(TOPIC_CFG_CONVON);
+    mqtt.subscribe(TOPIC_CFG_CONV2ON);
+    mqtt.subscribe(TOPIC_CFG_CONV2EN);
+    mqtt.subscribe(TOPIC_CFG_CONVRUN);
+    mqtt.subscribe(TOPIC_CFG_CONVPAUSE);
+    mqtt.subscribe(TOPIC_CFG_CONVSPEED);
+    Serial.println(F("[MQTT] Subscribed: control + config"));
+
+    mqtt.publish(TOPIC_SYSTEM, "online", true);
+    publishTimerConfig();
+    return true;
+  }
+
+  int state = mqtt.state();
+  Serial.print(F("[MQTT] FAILED! Code: ")); Serial.print(state);
+  Serial.print(F(" = ")); Serial.println(mqttStateString(state));
+  if (state == -2) Serial.println(F("[HINT] -2 CONN_FAILED: Cek host, port, WiFi, atau TLS cert"));
+  if (state == -4) Serial.println(F("[HINT] -4 TIMEOUT: Server tidak merespon, cek firewall/port"));
+  if (state == 4)  Serial.println(F("[HINT] 4 BAD_CREDENTIALS: Username atau password SALAH!"));
+  if (state == 5)  Serial.println(F("[HINT] 5 UNAUTHORIZED: Password salah atau client ID diblokir"));
+  if (state == 2)  Serial.println(F("[HINT] 2 BAD_CLIENT_ID: Client ID terlalu panjang atau duplikat"));
+  Serial.println(F("========================================"));
+  return false;
+}
+
+/* ============================================================================
+   SENSOR
+   ============================================================================ */
+void readSensor(unsigned long currentMillis) {
+  if (currentMillis - prevSensorMillis >= SENSOR_INTERVAL) {
+    prevSensorMillis = currentMillis;
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+    if (isnan(h) || isnan(t)) {
+      Serial.println(F("[SENSOR] DHT22 error! (cek pin 13, resistor pull-up 10k, supply 5V)"));
+    } else {
+      temperature = t; humidity = h - 40; dhtValid = true;
+    }
+    mq135Value = analogRead(MQ135_PIN);
+    mq135Voltage = mq135Value * (3.3 / 4095.0);
+    if (mq135Value < 50) Serial.println(F("[SENSOR] MQ135 low! Check wiring."));
+  }
+}
+
+void readWaterSensor(unsigned long currentMillis) {
+  if (currentMillis - prevWaterReadMillis >= WATER_READ_INTERVAL) {
+    prevWaterReadMillis = currentMillis;
+    int raw = analogRead(WATER_PIN);
+    waterSampleSum -= waterSamples[waterSampleIndex];
+    waterSamples[waterSampleIndex] = raw;
+    waterSampleSum += raw;
+    waterSampleIndex++;
+    if (waterSampleIndex >= WATER_SAMPLE_COUNT) waterSampleIndex = 0;
+    waterAvgADC = waterSampleSum / WATER_SAMPLE_COUNT;
+  }
+}
+
+void calculateWaterLevel() {
+  waterVoltage = waterAvgADC * (3.3 / 4095.0);
+  waterLevelPercent = map(waterAvgADC, 100, 2500, 0, 100);
+  waterLevelPercent = constrain(waterLevelPercent, 0, 100);
+}
+
+/* ============================================================================
+   WIFI TASK
+   ============================================================================ */
+void wifiTask(unsigned long currentMillis) {
+  if (currentMillis - prevWifiMillis >= WIFI_INTERVAL) {
+    prevWifiMillis = currentMillis;
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println(F("[WIFI] Reconnecting..."));
+      WiFi.disconnect(); WiFi.begin(ssid, pass);
+    }
+  }
+}
+
+/* ============================================================================
+   LAMPU OTOMATIS - pakai jadwal dari NVS/MQTT
+   ============================================================================ */
+void lampAutomation(unsigned long currentMillis) {
+  static bool lastAutoMode = true;
+
+  if (lampAutoMode) {
+    if (!lastAutoMode) lastAutoMode = true;
+    DateTime now = getSafeTime();
+    uint16_t nowMin = now.hour() * 60 + now.minute();
+    bool shouldLampOn = inWindow(nowMin, lampOnMin, lampOffMin);
+
+    if (shouldLampOn != lampStatus) {
+      lampStatus = shouldLampOn;
+      digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH);
+      if (mqtt.connected()) mqtt.publish(TOPIC_LAMP, lampStatus ? "1" : "0", true);
+      Serial.print(F("[LAMPU] Jadwal -> ")); Serial.println(lampStatus ? F("ON") : F("OFF"));
+    }
+  } else {
+    if (lastAutoMode) {
+      lastAutoMode = false;
+      lampStatus = lampManualState;
+      digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH);
+      if (mqtt.connected()) mqtt.publish(TOPIC_LAMP, lampStatus ? "1" : "0", true);
+    } else if (lampStatus != lampManualState) {
+      lampStatus = lampManualState;
+      digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH);
+      if (mqtt.connected()) mqtt.publish(TOPIC_LAMP, lampStatus ? "1" : "0", true);
+    }
+  }
+}
+
+/* ============================================================================
+   CONVEYOR MOTOR DC - driver H-bridge MOSFET (PWM + DIR)
+   ----------------------------------------------------------------------------
+   Satu siklus: MAJU -> JEDA -> (dead-time) -> MUNDUR -> berhenti.
+   Arah TIDAK PERNAH diubah saat PWM masih aktif. Mengubah DIR sementara
+   motor berputar membuat kedua sisi jembatan konduksi sesaat (shoot-through)
+   dan itulah cara tercepat membakar MOSFET.
+   ============================================================================ */
+void motorPwmWrite(uint8_t duty) {
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+  ledcWrite(MOTOR_PWM_PIN, duty);
+#else
+  ledcWrite(MOTOR_PWM_CH, duty);
+#endif
+}
+
+void motorInit() {
+  pinMode(MOTOR_DIR_PIN, OUTPUT);
+  digitalWrite(MOTOR_DIR_PIN, LOW);
+#if ESP_ARDUINO_VERSION_MAJOR >= 3
+  ledcAttach(MOTOR_PWM_PIN, MOTOR_PWM_FREQ, MOTOR_PWM_RES);
+#else
+  ledcSetup(MOTOR_PWM_CH, MOTOR_PWM_FREQ, MOTOR_PWM_RES);
+  ledcAttachPin(MOTOR_PWM_PIN, MOTOR_PWM_CH);
+#endif
+  motorPwmWrite(0);
+  Serial.println(F("[MOTOR] Driver siap, motor berhenti"));
+}
+
+void motorStop() {
+  motorPwmWrite(0);
+}
+
+// forward = true -> DIR LOW, false -> DIR HIGH.
+// Kalau motor berputar terbalik dari yang Anda harapkan, tukar saja
+// kedua kabel motor di terminal driver, jangan ubah kode.
+void motorRun(bool forward) {
+  digitalWrite(MOTOR_DIR_PIN, forward ? LOW : HIGH);
+  uint8_t duty = (uint16_t)convSpeedPct * 255 / 100;
+  motorPwmWrite(duty);
+}
+
+const char* convPhaseName() {
+  switch (convPhase) {
+    case CONV_FWD:
+    case CONV_JOG_FWD:  return "Maju";
+    case CONV_PAUSE:
+    case CONV_DEADTIME: return "Jeda";
+    case CONV_REV:
+    case CONV_JOG_REV:  return "Mndr";
+    default:            return "Diam";
+  }
+}
+
+bool convIsJogging() {
+  return convPhase == CONV_JOG_FWD || convPhase == CONV_JOG_REV;
+}
+
+void publishConvStatus() {
+  if (!mqtt.connected()) return;
+  mqtt.publish(TOPIC_CONVEYOR, convPhase == CONV_IDLE ? "0" : "1", true);
+  mqtt.publish(TOPIC_CONVPHASE, convPhaseName(), true);
+}
+
+void convStartCycle(const char* sumber) {
+  if (convPhase != CONV_IDLE) {
+    Serial.println(F("[CONVEYOR] Diabaikan: siklus sedang berjalan"));
+    return;
+  }
+  convPhase = CONV_FWD;
+  convAfterDead = CONV_REV;
+  convPhaseMillis = millis();
+  motorRun(true);
+  publishConvStatus();
+  Serial.print(F("[CONVEYOR] Siklus mulai, sumber: ")); Serial.println(sumber);
+}
+
+// Jog manual. Motor SELALU dihentikan dulu lalu melewati dead-time sebelum
+// berputar, apa pun kondisi sebelumnya. Membalik DIR sementara motor masih
+// berputar membuat kedua sisi H-bridge konduksi bersamaan dan MOSFET terbakar.
+void convStartJog(bool forward) {
+  ConvPhase target = forward ? CONV_JOG_FWD : CONV_JOG_REV;
+
+  // Tombol arah yang sama ditekan lagi -> cukup ulang hitungan pengaman
+  if (convPhase == target) {
+    convPhaseMillis = millis();
+    Serial.println(F("[CONVEYOR] Jog diperpanjang 10 detik"));
+    return;
+  }
+
+  motorStop();
+  convAfterDead = target;
+  convPhase = CONV_DEADTIME;
+  convPhaseMillis = millis();
+  publishConvStatus();
+  Serial.print(F("[CONVEYOR] Jog manual "));
+  Serial.println(forward ? F("MAJU") : F("MUNDUR"));
+}
+
+void convStopNow(const char* alasan) {
+  motorStop();
+  convPhase = CONV_IDLE;
+  convAfterDead = CONV_IDLE;
+  convPhaseMillis = millis();
+  publishConvStatus();
+  Serial.print(F("[CONVEYOR] Berhenti: ")); Serial.println(alasan);
+}
+
+// PENTING: waktu diambil SEGAR di sini, bukan dioper dari loop().
+// Kalau memakai nilai millis() yang diambil di awal loop(), sementara
+// convPhaseMillis dicatat belakangan di dalam callback MQTT, maka
+// (ms - convPhaseMillis) menjadi negatif. Pada unsigned long hasilnya
+// membesar jadi ~4,29 miliar, dan setiap fase langsung dianggap habis.
+void conveyorStateMachine() {
+  unsigned long ms = millis();
+
+  // Perbandingan bertanda: aman walau convPhaseMillis sempat mendahului ms
+  #define CONV_ELAPSED(d) ((long)(ms - convPhaseMillis) >= (long)(d))
+
+  switch (convPhase) {
+    case CONV_IDLE:
+      break;
+
+    case CONV_FWD:
+      if (CONV_ELAPSED(convRunSec * 1000UL)) {
+        motorStop();                       // PWM nol DULU, arah belum diubah
+        convPhase = CONV_PAUSE;
+        convPhaseMillis = ms;
+        publishConvStatus();
+        Serial.println(F("[CONVEYOR] Maju selesai, jeda"));
+      }
+      break;
+
+    case CONV_PAUSE:
+      if (CONV_ELAPSED(convPauseSec * 1000UL)) {
+        convPhase = CONV_DEADTIME;
+        convPhaseMillis = ms;
+      }
+      break;
+
+    case CONV_DEADTIME:
+      // Jaminan terakhir: motor sudah benar-benar diam sebelum DIR dibalik
+      if (CONV_ELAPSED(MOTOR_DEADTIME_MS)) {
+        convPhase = convAfterDead;
+        convPhaseMillis = ms;
+        switch (convPhase) {
+          case CONV_REV:
+            motorRun(false);
+            Serial.print(F("[CONVEYOR] Mundur ("));
+            Serial.print(convRunSec * 1000UL + CONV_REV_EXTRA_MS);
+            Serial.println(F(" ms)"));
+            break;
+          case CONV_JOG_FWD: motorRun(true);  break;
+          case CONV_JOG_REV: motorRun(false); break;
+          default:           motorStop();     break;
+        }
+        publishConvStatus();
+      }
+      break;
+
+    case CONV_REV:
+      if (CONV_ELAPSED(convRunSec * 1000UL + CONV_REV_EXTRA_MS)) {
+        convStopNow("siklus selesai");
+      }
+      break;
+
+    case CONV_JOG_FWD:
+    case CONV_JOG_REV:
+      // Pengaman: jog manual tidak pernah berjalan lebih dari 10 detik,
+      // walau dashboard tertutup atau WiFi putus setelah tombol ditekan
+      if (CONV_ELAPSED(CONV_JOG_MAX_MS)) {
+        convStopNow("pengaman jog 10 detik");
+      }
+      break;
+  }
+  #undef CONV_ELAPSED
+}
+
+// Jadwal: siklus dipicu sekali pada jam yang ditentukan, maksimal 1x per hari
+void conveyorSchedule() {
+  if (convIsJogging()) return;    // jangan ganggu kendali manual
+  DateTime now = getSafeTime();
+  uint16_t nowMin = now.hour() * 60 + now.minute();
+  int today = now.day();
+
+  if (nowMin == conv1OnMin && convLastTrigDay1 != today) {
+    convLastTrigDay1 = today;
+    convStartCycle("jadwal 1");
+  }
+  if (conv2Enabled && nowMin == conv2OnMin && convLastTrigDay2 != today) {
+    convLastTrigDay2 = today;
+    convStartCycle("jadwal 2");
+  }
+}
+
+/* ============================================================================
+   POMPA OTOMATIS
+   ============================================================================ */
+void pumpAutomation(unsigned long currentMillis) {
+  if (!pompaAutoMode) {
+    // Mode manual: pompa sepenuhnya mengikuti perintah dari web
+    if (pompaStatus != pompaManualState) {
+      pompaStatus = pompaManualState;
+      digitalWrite(RELAY_POMPA, pompaStatus ? LOW : HIGH);
+      if (mqtt.connected()) mqtt.publish(TOPIC_POMPA, pompaStatus ? "1" : "0", true);
+    }
+    return;
+  }
+
+  switch (pumpAutoState) {
+    case PUMP_AUTO_IDLE:
+      if (waterAvgADC <= 100) {
+        pumpAutoState = PUMP_AUTO_CONFIRM_LOW;
+        pumpConfirmMillis = currentMillis;
+        Serial.println(F("[PUMP] Low water! Confirming ON..."));
+      }
+      break;
+    case PUMP_AUTO_CONFIRM_LOW:
+      if (waterAvgADC > 100) {
+        pumpAutoState = PUMP_AUTO_IDLE;
+        Serial.println(F("[PUMP] Cancel ON (level rose)"));
+      } else if (currentMillis - pumpConfirmMillis >= PUMP_CONFIRM_DELAY) {
+        pompaStatus = true;
+        digitalWrite(RELAY_POMPA, LOW);
+        pumpAutoState = PUMP_AUTO_ON;
+        Serial.println(F("[PUMP] CONFIRMED ON"));
+        if (mqtt.connected()) mqtt.publish(TOPIC_POMPA, "1", true);
+      }
+      break;
+    case PUMP_AUTO_ON:
+      if (waterAvgADC >= 2500) {
+        pumpAutoState = PUMP_AUTO_CONFIRM_HIGH;
+        pumpConfirmMillis = currentMillis;
+        Serial.println(F("[PUMP] High water! Confirming OFF..."));
+      }
+      break;
+    case PUMP_AUTO_CONFIRM_HIGH:
+      if (waterAvgADC < 2500) {
+        pumpAutoState = PUMP_AUTO_ON;
+        Serial.println(F("[PUMP] Cancel OFF (level dropped)"));
+      } else if (currentMillis - pumpConfirmMillis >= PUMP_CONFIRM_DELAY) {
+        pompaStatus = false;
+        digitalWrite(RELAY_POMPA, HIGH);
+        pumpAutoState = PUMP_AUTO_IDLE;
+        Serial.println(F("[PUMP] CONFIRMED OFF"));
+        if (mqtt.connected()) mqtt.publish(TOPIC_POMPA, "0", true);
+      }
+      break;
+  }
+}
+
+/* ============================================================================
+   PUBLISH
+   ============================================================================ */
+void publishMQTT(unsigned long currentMillis) {
+  if (currentMillis - prevPublishMillis < PUBLISH_INTERVAL) return;
+  prevPublishMillis = currentMillis;
+
+  if (!mqtt.connected()) {
+    Serial.println(F("[PUB] SKIP: MQTT not connected"));
+    return;
+  }
+
+  char buf[32];
+  dtostrf(temperature, 1, 1, buf);   mqtt.publish(TOPIC_TEMP, buf);
+  dtostrf(humidity, 1, 1, buf);      mqtt.publish(TOPIC_HUM, buf);
+  itoa(mq135Value, buf, 10);         mqtt.publish(TOPIC_MQ135, buf);
+  dtostrf(mq135Voltage, 1, 3, buf);  mqtt.publish(TOPIC_MQ135_VOLT, buf);
+
+  mqtt.publish(TOPIC_LAMP,     lampStatus     ? "1" : "0", true);
+  mqtt.publish(TOPIC_CONVEYOR, convPhase == CONV_IDLE ? "0" : "1", true);
+  mqtt.publish(TOPIC_CONVPHASE, convPhaseName(), true);
+  mqtt.publish(TOPIC_POMPA,    pompaStatus    ? "1" : "0", true);
+  mqtt.publish(TOPIC_LAMPAUTO, lampAutoMode   ? "1" : "0", true);
+  mqtt.publish(TOPIC_POMPAAUTO, pompaAutoMode ? "1" : "0", true);
+
+  DateTime now = getSafeTime();
+  char timeStr[30];
+  sprintf(timeStr, "%s, %02d:%02d:%02d",
+          NAMA_HARI[now.dayOfTheWeek()], now.hour(), now.minute(), now.second());
+  mqtt.publish(TOPIC_TIME, timeStr, true);
+}
+
+void publishWaterData(unsigned long currentMillis) {
+  static unsigned long prevWaterPublishMillis = 0;
+  if (currentMillis - prevWaterPublishMillis < PUBLISH_INTERVAL) return;
+  prevWaterPublishMillis = currentMillis;
+
+  if (!mqtt.connected()) return;
+  char buf[32];
+  itoa(waterAvgADC, buf, 10);          mqtt.publish(TOPIC_WATER_ADC, buf);
+  dtostrf(waterVoltage, 1, 3, buf);    mqtt.publish(TOPIC_WATER_VOLT, buf);
+  itoa(waterLevelPercent, buf, 10);    mqtt.publish(TOPIC_WATER_LEVEL, buf);
+}
+
+/* ============================================================================
+   SERIAL MONITOR
+   ============================================================================ */
+void printSerial(unsigned long currentMillis) {
+  if (currentMillis - prevSerialMillis < SERIAL_INTERVAL) return;
+  prevSerialMillis = currentMillis;
+
+  DateTime now = getSafeTime();
+  char b1[6], b2[6], b3[6], b5[6];
+  minToStr(lampOnMin, b1);   minToStr(lampOffMin, b2);
+  minToStr(conv1OnMin, b3);  minToStr(conv2OnMin, b5);
+
+  Serial.println(F("\n========================================"));
+  Serial.print(F("Sumber waktu : "));
+  Serial.println(timeFromNTP ? F("NTP (internet)") : F("RTC (cadangan)"));
+  Serial.print(F("Jam          : "));
+  if (now.hour() < 10) Serial.print(F("0")); Serial.print(now.hour()); Serial.print(F(":"));
+  if (now.minute() < 10) Serial.print(F("0")); Serial.print(now.minute()); Serial.print(F(":"));
+  if (now.second() < 10) Serial.print(F("0")); Serial.println(now.second());
+  Serial.print(F("Temperature  : ")); Serial.print(temperature); Serial.println(F(" C"));
+  Serial.print(F("Humidity     : ")); Serial.print(humidity); Serial.println(F(" %"));
+  Serial.print(F("MQ135        : ")); Serial.println(mq135Value);
+  Serial.print(F("Water ADC    : ")); Serial.print(waterAvgADC);
+  Serial.print(F("  (")); Serial.print(waterLevelPercent); Serial.println(F(" %)"));
+  Serial.print(F("Lampu        : ")); Serial.print(lampStatus ? F("ON ") : F("OFF"));
+  Serial.print(F("  Mode: ")); Serial.print(lampAutoMode ? F("AUTO") : F("MANUAL"));
+  Serial.print(F("  Jadwal: ")); Serial.print(b1); Serial.print(F(" -> ")); Serial.println(b2);
+  Serial.print(F("Conveyor     : ")); Serial.print(convPhaseName());
+  if (convIsJogging()) Serial.print(F(" [MANUAL]"));
+  Serial.print(F("  Jadwal: ")); Serial.print(b3);
+  if (conv2Enabled) { Serial.print(F(" & ")); Serial.print(b5); }
+  Serial.print(F("  Siklus: maju ")); Serial.print(convRunSec);
+  Serial.print(F("s / mundur ")); Serial.print(convRunSec + CONV_REV_EXTRA_MS / 1000.0, 1);
+  Serial.print(F("s / jeda ")); Serial.print(convPauseSec);
+  Serial.print(F("s / ")); Serial.print(convSpeedPct); Serial.println(F("%"));
+  Serial.print(F("Pompa        : ")); Serial.print(pompaStatus ? F("ON ") : F("OFF"));
+  Serial.print(F("  Mode: ")); Serial.println(pompaAutoMode ? F("AUTO") : F("MANUAL"));
+  Serial.print(F("WiFi         : ")); Serial.print(WiFi.status() == WL_CONNECTED ? F("OK") : F("DISC"));
+  Serial.print(F(" (")); Serial.print(WiFi.RSSI()); Serial.println(F(" dBm)"));
+  Serial.print(F("MQTT         : ")); Serial.println(mqtt.connected() ? F("OK") : F("DISC"));
+  if (!mqtt.connected()) {
+    Serial.print(F("MQTT LastErr : ")); Serial.print(mqtt.state());
+    Serial.print(F(" = ")); Serial.println(mqttStateString(mqtt.state()));
+  }
+  Serial.println(F("========================================"));
+}
+
+void printWaterDebug(unsigned long currentMillis) {
+  if (currentMillis - prevWaterDebugMillis < WATER_DEBUG_INTERVAL) return;
+  prevWaterDebugMillis = currentMillis;
+  Serial.print(F("[WATER] ADC=")); Serial.print(waterAvgADC);
+  Serial.print(F("  V=")); Serial.print(waterVoltage, 3);
+  Serial.print(F("  Level=")); Serial.print(waterLevelPercent);
+  Serial.print(F("%  Pump=")); Serial.println(pompaStatus ? F("ON") : F("OFF"));
 }
 
 /* ============================================================================
@@ -226,85 +1176,116 @@ bool reconnectMQTT() {
    ============================================================================ */
 void setup() {
   Serial.begin(115200);
-  while (!Serial && millis() < 2000);
+  while (!Serial && millis() < 3000);
 
   Serial.println(F("\n========================================"));
-  Serial.println(F("   SMART CHICKEN COOP - MQTT FINAL"));
+  Serial.println(F("   SMART CHICKEN COOP v4 - TIMER CONFIG"));
   Serial.println(F("========================================"));
 
-  pinMode(RELAY_LAMP, OUTPUT); pinMode(RELAY_MOTOR, OUTPUT);
-  pinMode(RELAY_POMPA, OUTPUT); pinMode(RELAY_EXHAUST, OUTPUT);
-  digitalWrite(RELAY_LAMP, HIGH); digitalWrite(RELAY_MOTOR, HIGH);
-  digitalWrite(RELAY_POMPA, HIGH); digitalWrite(RELAY_EXHAUST, HIGH);
+  pinMode(RELAY_LAMP, OUTPUT);
+  pinMode(RELAY_POMPA, OUTPUT);
+  digitalWrite(RELAY_LAMP, HIGH);
+  digitalWrite(RELAY_POMPA, HIGH);
+  Serial.println(F("[INIT] Relay OK (Lampu, Pompa)"));
+
+  // Muat jadwal dari NVS sebelum apa pun berjalan
+  loadTimerConfig();
+
+  // Motor diinisialisasi SETELAH loadTimerConfig supaya convSpeedPct sudah terisi
+  motorInit();
 
   dht.begin();
+  Serial.println(F("[INIT] DHT22 OK"));
+
   Wire.begin(LCD_SDA, LCD_SCL);
+  Wire.setClock(I2C_CLOCK_LCD);
+  delay(50);
   lcdAvailable = initLCD();
+  if (lcdAvailable) {
+    lcdWriteLine(0, " SMART CHICKEN COOP");
+    lcdWriteLine(1, "   BENGPUSKOMLEK");
+    lcdWriteLine(2, "         X");
+    lcdWriteLine(3, "  KADET UNHAN  RI");
+  }
 
   Wire1.begin(RTC_SDA, RTC_SCL);
+  Wire1.setClock(100000);
   if (!rtc.begin(&Wire1)) {
-    Serial.println(F("[RTC] NOT FOUND"));
+    Serial.println(F("[ERROR] RTC NOT FOUND"));
     rtcAvailable = false;
     rtcLastValid = DateTime(F(__DATE__), F(__TIME__));
+    //if (lcdAvailable) lcdWriteLine(3, "RTC NOT FOUND!");
   } else {
-    Serial.println(F("[RTC] OK"));
+    Serial.println(F("[INIT] RTC OK"));
     if (rtc.lostPower()) rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
     rtcAvailable = true;
     rtcLastValid = rtc.now();
+    //if (lcdAvailable) lcdWriteLine(3, "RTC OK");
   }
 
   analogSetAttenuation(ADC_11db);
   analogSetWidth(12);
   pinMode(MQ135_PIN, INPUT);
+  pinMode(WATER_PIN, INPUT);
+  Serial.println(F("[INIT] MQ135 & Water Sensor OK"));
 
+  // ===== WIFI =====
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, pass);
-  Serial.print(F("[WIFI] Connecting"));
-  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print("."); }
+  Serial.print(F("[WIFI] Connecting to ")); Serial.print(ssid);
+  //if (lcdAvailable) lcdWriteLine(3, "WiFi connecting...");
+  int wifiRetries = 0;
+  while (WiFi.status() != WL_CONNECTED && wifiRetries < 40) {
+    delay(500); Serial.print(".");
+    wifiRetries++;
+  }
   Serial.println();
-  Serial.print(F("[WIFI] IP: ")); Serial.println(WiFi.localIP());
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.print(F("[WIFI] CONNECTED! IP: ")); Serial.println(WiFi.localIP());
+    Serial.print(F("[WIFI] RSSI: ")); Serial.print(WiFi.RSSI()); Serial.println(F(" dBm"));
+    //if (lcdAvailable) lcdWriteLine(3, "WiFi OK");
+  } else {
+    Serial.println(F("[WIFI] FAILED TO CONNECT!"));
+    Serial.print(F("[WIFI] Status: ")); Serial.println(wifiStateString(WiFi.status()));
+    //if (lcdAvailable) lcdWriteLine(3, "WiFi GAGAL");
+  }
 
+  // ===== NTP =====
+  // configTime dipanggil TANPA SYARAT. SNTP akan terus mencoba sendiri
+  // begitu WiFi tersambung, walau saat boot jaringannya belum ada.
+  configTime(7 * 3600, 0, "pool.ntp.org", "time.google.com");
+  if (WiFi.status() == WL_CONNECTED) syncNTP();
+
+  // ===== MQTT =====
   espClient.setInsecure();
   mqtt.setServer(mqtt_server, mqtt_port);
   mqtt.setCallback(mqttCallback);
   mqtt.setBufferSize(512);
-  reconnectMQTT();
 
-  if (lcdAvailable) { delay(2000); lcd->clear(); }
+  if (WiFi.status() == WL_CONNECTED) {
+    reconnectMQTT();
+  } else {
+    Serial.println(F("[MQTT] SKIP: WiFi not ready"));
+  }
+
+  // ===== Isi buffer water sensor =====
+  Serial.println(F("[INIT] Pre-filling water buffer..."));
+  waterSampleSum = 0;
+  for (int i = 0; i < WATER_SAMPLE_COUNT; i++) {
+    waterSamples[i] = analogRead(WATER_PIN);
+    waterSampleSum += waterSamples[i];
+    delay(50);
+  }
+  waterAvgADC = waterSampleSum / WATER_SAMPLE_COUNT;
+  calculateWaterLevel();
+  Serial.print(F("[INIT] Water ADC init: ")); Serial.println(waterAvgADC);
+
+  if (lcdAvailable) { delay(1500); lcd->clear(); delay(50); lcdForceRedraw(); }
 
   Serial.println(F("========================================"));
-  Serial.println(F("   Ready! Publishing every 5s"));
+  Serial.println(F("   Setup Complete!"));
   Serial.println(F("========================================"));
 }
-
-
-/* ============================================================================
-   FUNGSI PUBLISH MQTT KE LARAVEL
-   ============================================================================ */
-void publishMQTT() {
-    if (mqtt.connected()) {
-      StaticJsonDocument<512> doc;
-      doc["temperature"] = round(temperature * 10) / 10.0;
-      doc["humidity"] = round(humidity * 10) / 10.0;
-      doc["ammonia"] = mq135Value; 
-      doc["mq135Voltage"] = mq135Voltage;
-      
-      // Status Relay
-      doc["lampStatus"] = lampStatus ? "ON" : "OFF";
-      doc["exhaustStatus"] = exhaustStatus ? "ON" : "OFF";
-      doc["motorStatus"] = motorStatus ? "ON" : "OFF";
-      doc["pumpStatus"] = pompaStatus ? "ON" : "OFF"; 
-      doc["lampAutoMode"] = lampAutoMode ? "ON" : "OFF";
-
-      String payload; 
-      serializeJson(doc, payload);
-      bool ok = mqtt.publish(TOPIC_SENSOR, payload.c_str());
-      
-      Serial.print(F("[PUB] Sending Data JSON... "));
-      Serial.println(ok ? F("OK") : F("FAIL"));
-    }
-}
-
 
 /* ============================================================================
    LOOP
@@ -312,7 +1293,6 @@ void publishMQTT() {
 void loop() {
   unsigned long currentMillis = millis();
 
-  // MQTT
   if (!mqtt.connected()) {
     if (currentMillis - lastMqttReconnectAttempt >= MQTT_RECONNECT_INTERVAL) {
       lastMqttReconnectAttempt = currentMillis;
@@ -322,95 +1302,26 @@ void loop() {
     mqtt.loop();
   }
 
-  // Sensor
-  if (currentMillis - prevSensorMillis >= SENSOR_INTERVAL) {
-    prevSensorMillis = currentMillis;
-    float h = dht.readHumidity();
-    float t = dht.readTemperature();
-    if (!isnan(h) && !isnan(t)) { temperature = t; humidity = h; }
-    mq135Value = analogRead(MQ135_PIN);
-    mq135Voltage = mq135Value * (3.3 / 4095.0);
+  // Jadwal baru dari dashboard: simpan ke NVS lalu kirim balik konfirmasinya
+  if (timerConfigDirty && mqtt.connected()) {
+    timerConfigDirty = false;
+    saveTimerConfig();
+    publishTimerConfig();
   }
 
-  // Publish MQTT Terpusat
-  if (currentMillis - prevPublishMillis >= PUBLISH_INTERVAL) {
-    prevPublishMillis = currentMillis;
-    publishMQTT();
-  }
-
-  // WiFi reconnect
-  if (currentMillis - prevWifiMillis >= WIFI_INTERVAL) {
-    prevWifiMillis = currentMillis;
-    if (WiFi.status() != WL_CONNECTED) {
-      Serial.println(F("[WIFI] Reconnecting..."));
-      WiFi.disconnect(); WiFi.begin(ssid, pass);
-    }
-  }
-
-  // Lamp automation
-  static bool lastAutoMode = true;
-  if (lampAutoMode) {
-    if (!lastAutoMode) lastAutoMode = true;
-    DateTime now = getSafeTime();
-    bool shouldLampOn = (now.hour() >= 18 || now.hour() < 6);
-    if (shouldLampOn != lampStatus) {
-      lampStatus = shouldLampOn;
-      digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH);
-      publishMQTT();
-    }
-  } else {
-    if (lastAutoMode) {
-      lastAutoMode = false;
-      lampStatus = lampManualState;
-      digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH);
-      publishMQTT();
-    } else if (lampStatus != lampManualState) {
-      lampStatus = lampManualState;
-      digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH);
-      publishMQTT();
-    }
-  }
-
-  // Exhaust automation
-  bool shouldExhaustOn = false;
-  if (!exhaustActive) {
-    if (temperature >= 32.0 || mq135Value >= 250) shouldExhaustOn = true;
-  } else {
-    if (temperature < 31.0 && mq135Value < 220) shouldExhaustOn = false;
-    else shouldExhaustOn = true;
-  }
-  if (shouldExhaustOn != exhaustStatus) {
-    exhaustStatus = shouldExhaustOn;
-    exhaustActive = shouldExhaustOn;
-    digitalWrite(RELAY_EXHAUST, exhaustStatus ? LOW : HIGH);
-    publishMQTT();
-  }
-
-  // LCD
-  if (lcdAvailable && currentMillis - prevLcdMillis >= LCD_INTERVAL) {
-    prevLcdMillis = currentMillis;
-    DateTime now = getSafeTime();
-    lcd->setCursor(0,0); lcd->print("Suhu  : "); lcd->print(temperature,1); lcd->print(" C  ");
-    lcd->setCursor(0,1); lcd->print("Amonia: "); lcd->print(mq135Value); lcd->print("    ");
-    lcd->setCursor(0,2); lcd->print("MQTT  : "); lcd->print(mqtt.connected()?"ONLINE ":"OFFLINE");
-    lcd->setCursor(0,3); lcd->print("Time  : ");
-    if (now.hour()<10) lcd->print("0"); lcd->print(now.hour()); lcd->print(":");
-    if (now.minute()<10) lcd->print("0"); lcd->print(now.minute());
-  }
-
-  // Serial
-  if (currentMillis - prevSerialMillis >= SERIAL_INTERVAL) {
-    prevSerialMillis = currentMillis;
-    DateTime now = getSafeTime();
-    Serial.println(F("\n========================================"));
-    Serial.print(F("Jam         : ")); if (now.hour()<10) Serial.print(F("0")); Serial.print(now.hour());
-    Serial.print(F(":")); if (now.minute()<10) Serial.print(F("0")); Serial.print(now.minute());
-    Serial.print(F(":")); if (now.second()<10) Serial.print(F("0")); Serial.println(now.second());
-    Serial.print(F("Temp        : ")); Serial.print(temperature); Serial.println(F(" C"));
-    Serial.print(F("Humidity    : ")); Serial.print(humidity); Serial.println(F(" %"));
-    Serial.print(F("MQ135       : ")); Serial.println(mq135Value);
-    Serial.print(F("Lampu       : ")); Serial.println(lampStatus?F("ON"):F("OFF"));
-    Serial.print(F("Exhaust     : ")); Serial.println(exhaustStatus?F("ON"):F("OFF"));
-    Serial.println(F("========================================"));
-  }
+  readSensor(currentMillis);
+  readWaterSensor(currentMillis);
+  calculateWaterLevel();
+  wifiTask(currentMillis);
+  rtcSyncTask(currentMillis);
+  lampAutomation(currentMillis);
+  conveyorSchedule();
+  conveyorStateMachine();
+  pumpAutomation(currentMillis);
+  publishMQTT(currentMillis);
+  publishWaterData(currentMillis);
+  updateLCD(currentMillis);
+  lcdHealthCheck(currentMillis);
+  printSerial(currentMillis);
+  printWaterDebug(currentMillis);
 }
