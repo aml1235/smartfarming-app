@@ -30,13 +30,18 @@ class AiExpertService
         $prompt .= "\nMohon berikan analisis Anda sebagai pakar pertanian terhadap data di atas.";
 
         try {
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+            // Trim untuk menghapus whitespace/\r\n dari Windows line endings
+            $apiKey = trim($apiKey);
+
+            $url     = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
             $headers = ['Content-Type' => 'application/json'];
 
             if (str_starts_with($apiKey, 'AIza')) {
+                // Format lama AIza... → query param
                 $url .= "?key={$apiKey}";
             } else {
-                $headers['Authorization'] = "Bearer {$apiKey}";
+                // Format baru AQ... → x-goog-api-key header
+                $headers['x-goog-api-key'] = $apiKey;
             }
 
             $response = Http::withHeaders($headers)->post($url, [
