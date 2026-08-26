@@ -30,9 +30,16 @@ class AiExpertService
         $prompt .= "\nMohon berikan analisis Anda sebagai pakar pertanian terhadap data di atas.";
 
         try {
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-            ])->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
+            $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+            $headers = ['Content-Type' => 'application/json'];
+
+            if (str_starts_with($apiKey, 'AIza')) {
+                $url .= "?key={$apiKey}";
+            } else {
+                $headers['Authorization'] = "Bearer {$apiKey}";
+            }
+
+            $response = Http::withHeaders($headers)->post($url, [
                 'system_instruction' => [
                     'parts' => [
                         ['text' => $systemInstruction]
@@ -56,13 +63,14 @@ class AiExpertService
                 if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
                     return $data['candidates'][0]['content']['parts'][0]['text'];
                 }
+                Log::error('Gemini API Unexpected Response Format: ' . json_encode($data));
                 return "AI tidak mengembalikan analisis yang valid.";
             } else {
-                Log::error('Gemini API Error: ' . $response->body());
+                Log::error('Gemini API Error: ' . $response->status() . ' - ' . $response->body());
                 return "Gagal mendapatkan analisis dari AI. Pesan error: " . $response->status();
             }
         } catch (\Exception $e) {
-            Log::error('Gemini API Exception: ' . $e->getMessage());
+            Log::error('Gemini API Exception: ' . $e->getMessage(), ['exception' => $e]);
             return "Terjadi kesalahan saat memanggil API AI: " . $e->getMessage();
         }
     }
