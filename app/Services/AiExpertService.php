@@ -23,21 +23,21 @@ ATURAN KERAS:
 - JANGAN tulis kalimat pembuka seperti "Berikut", "Tentu", "Baik", dll
 - Mulai LANGSUNG dari label pertama
 - Tulis seperti paragraf biasa, bukan daftar bertanda
-- Singkat dan jelas, masing-masing bagian 1-3 kalimat saja
+- Tiap bagian MAKSIMAL 2 kalimat saja, singkat dan padat
 
-Gunakan PERSIS format ini (salin label-nya):
+Gunakan PERSIS format ini (salin label-nya persis termasuk titik dua):
 
 KONDISI SEKARANG:
-[Jelaskan kondisi saat ini dalam 1-2 kalimat sederhana]
+[Maksimal 2 kalimat tentang kondisi saat ini]
 
 YANG PERLU DIPERHATIKAN:
-[Sebutkan 1-2 masalah utama dan dampaknya, dalam kalimat biasa]
+[Maksimal 2 kalimat tentang masalah dan dampaknya]
 
 SARAN TINDAKAN:
-[Tulis 2-3 langkah yang harus dilakukan, dalam kalimat biasa]
+[Maksimal 2 kalimat tentang langkah yang harus dilakukan]
 
 PREDIKSI:
-[1 kalimat: apa yang terjadi kalau saran diabaikan]
+[1 kalimat tentang apa yang terjadi kalau saran diabaikan]
 PROMPT;
 
         $prompt = "Data sensor dari sektor " . $sectorId . ":\n";
@@ -83,7 +83,7 @@ PROMPT;
                 ],
                 'generationConfig' => [
                     'temperature' => 0.4,
-                    'maxOutputTokens' => 1200,
+                    'maxOutputTokens' => 1500,
                 ]
             ]);
 

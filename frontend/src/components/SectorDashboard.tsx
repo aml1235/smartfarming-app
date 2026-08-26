@@ -316,10 +316,10 @@ function renderAiText(text: string) {
   const clean = text.replace(/\*\*/g, '').replace(/\*/g, '').trim()
 
   const SECTIONS = [
-    { label: 'KONDISI SEKARANG:',        color: '#2563eb', emoji: '📊' },
-    { label: 'YANG PERLU DIPERHATIKAN:', color: '#ea580c', emoji: '⚠️' },
-    { label: 'SARAN TINDAKAN:',          color: '#16a34a', emoji: '💡' },
-    { label: 'PREDIKSI:',                color: '#9333ea', emoji: '🔮' },
+    { label: 'KONDISI SEKARANG:',        color: '#60a5fa', emoji: '📊' },
+    { label: 'YANG PERLU DIPERHATIKAN:', color: '#fb923c', emoji: '⚠️' },
+    { label: 'SARAN TINDAKAN:',          color: '#4ade80', emoji: '💡' },
+    { label: 'PREDIKSI:',                color: '#c084fc', emoji: '🔮' },
   ]
 
   type Chunk = { label: string; color: string; emoji: string; content: string }
@@ -348,7 +348,7 @@ function renderAiText(text: string) {
 
   // Fallback: tampilkan teks mentah jika tidak ada section yang terdeteksi
   if (chunks.length === 0) {
-    return <p style={{ margin: 0, fontSize: 14, color: '#1f2937', lineHeight: 1.8 }}>{clean}</p>
+    return <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.8 }}>{clean}</p>
   }
 
   return (
@@ -358,7 +358,7 @@ function renderAiText(text: string) {
           <div style={{ fontSize: 12, fontWeight: 800, color: c.color, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             {c.emoji} {c.label.replace(':', '')}
           </div>
-          <p style={{ margin: 0, fontSize: 14, color: '#1f2937', lineHeight: 1.8 }}>{c.content}</p>
+          <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.8 }}>{c.content}</p>
         </div>
       ))}
     </div>
