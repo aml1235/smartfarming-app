@@ -308,22 +308,21 @@ function CtrlRow({ icon, label, sub, subColor, right }: { icon: string; label: s
   )
 }
 
-// Helper: tampilkan teks AI sebagai section card sederhana (paragraf biasa)
+// Helper: tampilkan teks AI sebagai paragraf mengalir dengan judul berwarna
 function renderAiText(text: string) {
   if (!text) return null
 
-  // Bersihkan sisa tanda bintang jika ada
+  // Bersihkan semua tanda bintang dan markdown
   const clean = text.replace(/\*\*/g, '').replace(/\*/g, '').trim()
 
   const SECTIONS = [
-    { label: 'KONDISI SEKARANG:',        bg: '#eff6ff', border: '#3b82f6', emoji: '📊' },
-    { label: 'YANG PERLU DIPERHATIKAN:', bg: '#fff7ed', border: '#f97316', emoji: '⚠️' },
-    { label: 'SARAN TINDAKAN:',          bg: '#f0fdf4', border: '#22c55e', emoji: '💡' },
-    { label: 'PREDIKSI:',                bg: '#faf5ff', border: '#a855f7', emoji: '🔮' },
+    { label: 'KONDISI SEKARANG:',        color: '#2563eb', emoji: '📊' },
+    { label: 'YANG PERLU DIPERHATIKAN:', color: '#ea580c', emoji: '⚠️' },
+    { label: 'SARAN TINDAKAN:',          color: '#16a34a', emoji: '💡' },
+    { label: 'PREDIKSI:',                color: '#9333ea', emoji: '🔮' },
   ]
 
-  // Split teks berdasarkan label yang ditemukan
-  type Chunk = { label: string; bg: string; border: string; emoji: string; content: string }
+  type Chunk = { label: string; color: string; emoji: string; content: string }
   const chunks: Chunk[] = []
   let remaining = clean
 
@@ -347,19 +346,19 @@ function renderAiText(text: string) {
     if (!next) break
   }
 
-  // Jika tidak ada section yang terdeteksi, tampilkan sebagai teks biasa
+  // Fallback: tampilkan teks mentah jika tidak ada section yang terdeteksi
   if (chunks.length === 0) {
-    return <p style={{ margin: 0, fontSize: 14, color: '#1f2937', lineHeight: 1.75, whiteSpace: 'pre-wrap', background: '#f8fafc', borderRadius: 10, padding: '12px 16px' }}>{clean}</p>
+    return <p style={{ margin: 0, fontSize: 14, color: '#1f2937', lineHeight: 1.8 }}>{clean}</p>
   }
 
   return (
-    <>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {chunks.map(c => (
-        <div key={c.label} style={{ background: c.bg, border: `1.5px solid ${c.border}`, borderRadius: 12, padding: '12px 16px', marginBottom: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: c.border, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+        <div key={c.label}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: c.color, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             {c.emoji} {c.label.replace(':', '')}
           </div>
-          <p style={{ margin: 0, fontSize: 14, color: '#1f2937', lineHeight: 1.75 }}>{c.content}</p>
+          <p style={{ margin: 0, fontSize: 14, color: '#1f2937', lineHeight: 1.8 }}>{c.content}</p>
         </div>
       ))}
     </>
