@@ -308,40 +308,119 @@ function CtrlRow({ icon, label, sub, subColor, right }: { icon: string; label: s
   )
 }
 
+// Helper: parse teks Gemini menjadi komponen yang diformat dengan bagus
+function renderAiText(text: string) {
+  if (!text) return null
+
+  const lines = text.split('\n')
+  const elements: React.ReactNode[] = []
+
+  const sectionColors: Record<string, { bg: string; border: string; icon: string }> = {
+    'KONDISI SEKARANG': { bg: '#eff6ff', border: '#3b82f6', icon: '📊' },
+    'YANG PERLU DIPERHATIKAN': { bg: '#fff7ed', border: '#f97316', icon: '⚠️' },
+    'SARAN TINDAKAN': { bg: '#f0fdf4', border: '#22c55e', icon: '💡' },
+    'PREDIKSI': { bg: '#faf5ff', border: '#a855f7', icon: '🔮' },
+  }
+
+  let currentSection: string | null = null
+  let sectionLines: string[] = []
+
+  const flushSection = () => {
+    if (!currentSection || sectionLines.length === 0) return
+    const cfg = Object.entries(sectionColors).find(([k]) => currentSection!.includes(k))
+    const style = cfg ? cfg[1] : { bg: 'var(--bg-surface)', border: 'var(--border-color)', icon: '' }
+
+    elements.push(
+      <div key={currentSection} style={{ background: style.bg, border: `1.5px solid ${style.border}`, borderRadius: 12, padding: '14px 16px', marginBottom: 4 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: style.border, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          {style.icon} {currentSection.replace(/\*\*/g, '').replace(/📊|⚠️|💡|🔮/g, '').trim()}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {sectionLines.map((line, i) => {
+            const clean = line.replace(/\*\*(.*?)\*\*/g, '$1').trim()
+            if (!clean) return null
+            const isBullet = clean.startsWith('•') || clean.startsWith('-')
+            const isNumbered = /^\d+\./.test(clean)
+            const content = isBullet ? clean.replace(/^[•\-]\s*/, '') : isNumbered ? clean.replace(/^\d+\.\s*/, '') : clean
+            return (
+              <div key={i} style={{ display: 'flex', gap: 8, fontSize: 13.5, color: 'var(--text-primary)', lineHeight: 1.65 }}>
+                {(isBullet || isNumbered) && (
+                  <span style={{ color: style.border, fontWeight: 700, minWidth: 18, flexShrink: 0 }}>
+                    {isNumbered ? line.match(/^(\d+)\./)?.[1] + '.' : '•'}
+                  </span>
+                )}
+                <span>{content}</span>
+              </div>
+            )
+          }).filter(Boolean)}
+        </div>
+      </div>
+    )
+    sectionLines = []
+    currentSection = null
+  }
+
+  for (const raw of lines) {
+    const line = raw.trim()
+    if (!line) continue
+
+    // Deteksi heading section (line yang mengandung ** dan merupakan judul)
+    const headingMatch = line.match(/^\*\*([^*]+)\*\*$/) || line.match(/^[📊⚠️💡🔮]\s+\*\*([^*]+)\*\*/)
+    const isHeading = headingMatch || Object.keys(sectionColors).some(k => line.replace(/\*\*/g, '').replace(/[📊⚠️💡🔮]\s*/g, '').trim().includes(k))
+
+    if (isHeading) {
+      flushSection()
+      currentSection = line.replace(/\*\*/g, '').replace(/[📊⚠️💡🔮]\s*/g, '').trim()
+    } else if (currentSection) {
+      sectionLines.push(line)
+    } else {
+      // Teks sebelum section pertama
+      elements.push(<p key={`pre-${line}`} style={{ margin: '0 0 8px', fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.65 }}>{line.replace(/\*\*(.*?)\*\*/g, '$1')}</p>)
+    }
+  }
+  flushSection()
+
+  return <>{elements}</>
+}
+
 // AI Modal shared component
 function AiModal({ sector, aiLoading, aiResult, onClose }: any) {
   return (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="card fade-up" style={{ width: '100%', maxWidth: 500, padding: 24, margin: 20, position: 'relative' }}>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div className="card fade-up" style={{ width: '100%', maxWidth: 540, padding: 24, position: 'relative', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
         <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><IcX size={20}/></button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20 }}>✨</div>
-          <div><h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>Agen Analisis Pintar</h3><div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Mengevaluasi {sector.name}</div></div>
+          <div style={{ width: 44, height: 44, borderRadius: 14, background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 22, flexShrink: 0 }}>✨</div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>Agen Analisis Pintar</h3>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Mengevaluasi {sector.name} · Powered by Gemini AI</div>
+          </div>
         </div>
-        {aiLoading ? (
-          <div style={{ padding: '40px 20px', textAlign: 'center' }}>
-            <div style={{ margin: '0 auto 16px', width: 30, height: 30, border: '3px solid var(--border-color)', borderTopColor: '#8B5CF6', borderRadius: '50%', animation: 'spin 1s linear infinite' }}/>
-            <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: 14 }}>🌿 Pakar AI sedang menganalisis data sensor...</p>
-          </div>
-        ) : aiResult ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '65vh', overflowY: 'auto', paddingRight: 4 }}>
-            {aiResult.analisis_ai ? (
-              <div style={{ padding: 16, background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.08em' }}>🤖 Analisis Pakar Pertanian (Gemini AI)</div>
-                <div style={{ fontSize: 13.5, color: 'var(--text-primary)', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>{aiResult.analisis_ai}</div>
-              </div>
-            ) : (
-              <>
-                <div style={{ padding: 16, background: aiResult.status === 'Normal' ? '#dcfce7' : '#fee2e2', borderRadius: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: aiResult.status === 'Normal' ? '#059669' : '#dc2626', marginBottom: 4, textTransform: 'uppercase' }}>Status Sektor</div>
-                  <div style={{ fontSize: 16, fontWeight: 800, color: '#111' }}>{aiResult.status}</div>
-                </div>
-                <div><div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase' }}>Kesimpulan</div><p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.5 }}>{aiResult.kesimpulan}</p></div>
-                {aiResult.rekomendasi && <div style={{ padding: 16, border: '1px solid var(--border-color)', borderRadius: 12 }}><div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase' }}>Rekomendasi</div><p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.5 }}>{aiResult.rekomendasi}</p></div>}
-              </>
-            )}
-          </div>
-        ) : null}
+        <div style={{ overflowY: 'auto', flex: 1, paddingRight: 2 }}>
+          {aiLoading ? (
+            <div style={{ padding: '50px 20px', textAlign: 'center' }}>
+              <div style={{ margin: '0 auto 16px', width: 36, height: 36, border: '3px solid var(--border-color)', borderTopColor: '#8B5CF6', borderRadius: '50%', animation: 'spin 0.9s linear infinite' }}/>
+              <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: 14, fontWeight: 500 }}>🌿 Pakar AI sedang menganalisis data sensor...</p>
+              <p style={{ color: 'var(--text-secondary)', margin: '6px 0 0', fontSize: 12 }}>Mohon tunggu sebentar</p>
+            </div>
+          ) : aiResult ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {aiResult.analisis_ai
+                ? renderAiText(aiResult.analisis_ai)
+                : (
+                  <>
+                    <div style={{ padding: 16, background: aiResult.status === 'Normal' ? '#dcfce7' : '#fee2e2', borderRadius: 12 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: aiResult.status === 'Normal' ? '#059669' : '#dc2626', marginBottom: 4, textTransform: 'uppercase' }}>Status Sektor</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: '#111' }}>{aiResult.status}</div>
+                    </div>
+                    <div><div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase' }}>Kesimpulan</div><p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.5 }}>{aiResult.kesimpulan}</p></div>
+                    {aiResult.rekomendasi && <div style={{ padding: 16, border: '1px solid var(--border-color)', borderRadius: 12 }}><div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase' }}>Rekomendasi</div><p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.5 }}>{aiResult.rekomendasi}</p></div>}
+                  </>
+                )
+              }
+            </div>
+          ) : null}
+        </div>
         <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
       </div>
     </div>
