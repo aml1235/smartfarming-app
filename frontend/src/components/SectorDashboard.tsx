@@ -361,7 +361,7 @@ function renderAiText(text: string) {
           <p style={{ margin: 0, fontSize: 14, color: '#1f2937', lineHeight: 1.8 }}>{c.content}</p>
         </div>
       ))}
-    </>
+    </div>
   )
 }
 
