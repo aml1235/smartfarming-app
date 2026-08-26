@@ -9,7 +9,7 @@ interface LoginPageProps {
   setDarkMode: (val: boolean) => void;
 }
 
-export function LoginPage({ onLogin, onBack, darkMode, setDarkMode }: LoginPageProps) {
+export function LoginPage({ onLogin, onBack }: LoginPageProps) {
   const [view, setView] = useState<'login' | 'forgot' | 'reset'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -68,7 +68,7 @@ export function LoginPage({ onLogin, onBack, darkMode, setDarkMode }: LoginPageP
       } else {
         setMessage(data.message || data.email?.[0] || 'Login gagal');
       }
-    } catch (err) {
+    } catch {
       setMessage('Terjadi kesalahan jaringan');
     }
     setIsLoading(false);
@@ -99,7 +99,7 @@ export function LoginPage({ onLogin, onBack, darkMode, setDarkMode }: LoginPageP
       } else {
         setMessage(data.message || data.email?.[0] || 'Gagal memproses permintaan');
       }
-    } catch (err) {
+    } catch {
       setMessage('Terjadi kesalahan jaringan');
     }
     setIsLoading(false);
@@ -137,7 +137,7 @@ export function LoginPage({ onLogin, onBack, darkMode, setDarkMode }: LoginPageP
       } else {
         setMessage(data.message || 'Gagal mengubah password');
       }
-    } catch (err) {
+    } catch {
       setMessage('Terjadi kesalahan jaringan');
     }
     setIsLoading(false);

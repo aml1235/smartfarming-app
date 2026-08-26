@@ -36,8 +36,6 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   const [lembap, setLembap]     = useState('--')
   const [amonia, setAmonia]     = useState('--')
   const [levelAir, setLevelAir] = useState(0)
-  const [sisPakan, setSisPakan] = useState(0)
-  const [jrkPakan, setJrkPakan] = useState('--')
   const [lampOn, setLampOn]     = useState(false)
   const [pompaOn, setPompaOn]   = useState(false)
   const [convOn, setConvOn]     = useState(false)
@@ -50,14 +48,6 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   const [cv1On, setCv1On]     = useState('06:00')
   const [cv2On, setCv2On]     = useState('18:00')
   const [cv2En, setCv2En]     = useState(true)
-  const [cvRun, setCvRun]     = useState('10')
-  const [cvPause, setCvPause] = useState('3')
-  const [cvSpeed, setCvSpeed] = useState('100')
-  const [feedTime1, setFeedTime1]     = useState('07:00')
-  const [feedDur, setFeedDur]         = useState('15')
-  const [feedTime2, setFeedTime2]     = useState('17:00')
-  const [feedTime2En, setFeedTime2En] = useState(true)
-  const [jogSending, setJogSending] = useState(false)
   const [showAiModal, setShowAiModal] = useState(false)
   const [aiLoading, setAiLoading]   = useState(false)
   const [aiResult, setAiResult]     = useState<any>(null)
@@ -73,7 +63,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         const data = await res.json()
         setTempData(data.map((d: any) => ({ ...d, temperature: (d.temperature != null && Number(d.temperature) > 0) ? d.temperature : null, humidity: (d.humidity != null && Number(d.humidity) > 0) ? d.humidity : null })))
         let latest: any = {}
-        if (typeof sector.metrics === 'string') { try { latest = JSON.parse(sector.metrics) } catch (_) {} }
+        if (typeof sector.metrics === 'string') { try { latest = JSON.parse(sector.metrics) } catch { /* ignore */ } }
         else if (sector.metrics) { latest = { ...sector.metrics } }
         if (data && data.length > 0) {
           const rev = [...data].reverse()
@@ -89,8 +79,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         if (latest.humidity !== undefined) setLembap(Number(latest.humidity).toFixed(0))
         if (latest.ammonia !== undefined) setAmonia(Number(latest.ammonia).toFixed(0))
         if (latest.waterLevel !== undefined) setLevelAir(Math.min(100, Math.max(0, Number(latest.waterLevel))))
-        if (latest.feedLevel !== undefined) setSisPakan(Math.min(100, Math.max(0, Number(latest.feedLevel))))
-        if (latest.feedDistance !== undefined) setJrkPakan(String(latest.feedDistance))
+        
         
         // Prevent state revert if user recently toggled something (give hardware 15s to sync)
         if (Date.now() - lastAction.current > 15000) {
@@ -106,17 +95,11 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
           if (latest.cv1On) setCv1On(latest.cv1On)
           if (latest.cv2On) setCv2On(latest.cv2On)
           if (latest.cv2En !== undefined) setCv2En(String(latest.cv2En) === '1')
-          if (latest.convRun) setCvRun(String(latest.convRun))
-          if (latest.convPause) setCvPause(String(latest.convPause))
-          if (latest.convSpeed) setCvSpeed(String(latest.convSpeed))
-          if (latest.feedTime1) setFeedTime1(latest.feedTime1)
-          if (latest.feedTime2) setFeedTime2(latest.feedTime2)
-          if (latest.feedTime2En !== undefined) setFeedTime2En(String(latest.feedTime2En) === '1')
-          if (latest.feedDuration) setFeedDur(String(latest.feedDuration))
         }
       } catch (e) { console.error(e) }
     }
     load(); const iv = setInterval(load, 10000); return () => clearInterval(iv)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sector, lastRefresh])
 
   const ctrl = async (target: string, command: string) => { lastAction.current = Date.now(); try { await fetch(`${API_URL}/api/sector/${sectorId}/control`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ command, target }) }) } catch (e) { console.error(e) } }
@@ -428,7 +411,7 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         const data = await res.json()
         setTempData(data.map((d: any) => ({ ...d, temperature: (d.temperature != null && Number(d.temperature) > 0) ? d.temperature : null, humidity: (d.humidity != null && Number(d.humidity) > 0) ? d.humidity : null })))
         let latest: any = {}
-        if (typeof sector.metrics === 'string') { try { latest = JSON.parse(sector.metrics) } catch (_) {} } else if (sector.metrics) { latest = { ...sector.metrics } }
+        if (typeof sector.metrics === 'string') { try { latest = JSON.parse(sector.metrics) } catch { /* ignore */ } } else if (sector.metrics) { latest = { ...sector.metrics } }
         if (data?.length > 0) latest = { ...latest, ...data[data.length - 1] }
         if (Object.keys(latest).length > 0) {
           const nm: any[] = [], nc: any[] = []
@@ -447,6 +430,7 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
       } catch (e) { console.error(e) }
     }
     fetchLogs(); const iv = setInterval(fetchLogs, 10000); return () => clearInterval(iv)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sector, lastRefresh])
 
   const handleAiEvaluate = async () => {

@@ -3,9 +3,9 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Sector, SectorId, User, AdminTab, ActivityLog } from '../types';
 import { SECTORS, STATUS_MAP } from '../constants';
 import {
-  IcLeaf, IcGrid, IcUsers, IcLink, IcClock, IcSettings,
-  IcLogOut, IcEdit, IcTrash, IcSearch,
-  IcCheck, IcX, IcUserPlus, IcShield, IcBell, IcSun, IcMoon, IcEye, IcEyeOff
+  IcLeaf, IcGrid, IcUsers, IcLink,
+  IcEdit, IcTrash, IcSearch,
+  IcCheck, IcX, IcUserPlus, IcSun, IcMoon, IcEye, IcEyeOff
 } from './Icons';
 import { Toggle } from './UIComponents';
 import { SettingsPage } from './SettingsPage';
