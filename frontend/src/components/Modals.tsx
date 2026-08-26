@@ -56,7 +56,7 @@ export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd:
 }
 
 
-import { SectorDashboard } from './SectorDashboard'
+import { SectorDashboard, AiModal } from './SectorDashboard'
 
 export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () => void }) {
   return (
@@ -80,6 +80,22 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
   const [auto, setAuto] = useState(true)
   
   const [hydroData, setHydroData] = useState({ waterLevel: 0, temp: 0, humidity: 0, light: 0, pumpStatus: 'OFF' })
+  const [showAiModal, setShowAiModal] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResult, setAiResult] = useState<any>(null)
+
+  const handleAiEvaluate = async () => {
+    setShowAiModal(true)
+    setAiLoading(true)
+    try {
+      const r = await fetch(`${API_URL}/api/sectors/${sector.id}/ai-analysis`)
+      setAiResult(await r.json())
+    } catch {
+      setAiResult({ status: 'Error', analisis_ai: 'Gagal mendapatkan analisis. Periksa koneksi atau konfigurasi API Key.' })
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   useEffect(() => {
     const isHydro = String(sector.id).toLowerCase().includes('sec-010') || String(sector.id).toLowerCase().includes('hidro');
@@ -171,6 +187,9 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
               <div style={{ fontSize: 12, color: '#6B7280' }}>Detail Monitoring</div>
             </div>
           </div>
+          <div style={{ marginLeft: 'auto' }}>
+            <button className="btn" onClick={handleAiEvaluate} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer' }}>✨ Analisis AI</button>
+          </div>
         </div>
 
         <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16, maxHeight: 'calc(85vh - 70px)', overflowY: 'auto' }}>
@@ -222,6 +241,7 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
           )}
         </div>
       </div>
+      {showAiModal && <AiModal sector={sector} aiLoading={aiLoading} aiResult={aiResult} onClose={() => setShowAiModal(false)} />}
     </div>
   )
 }
