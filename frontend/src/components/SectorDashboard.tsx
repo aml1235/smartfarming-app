@@ -349,7 +349,7 @@ function renderAiText(text: string) {
 
   // Jika tidak ada section yang terdeteksi, tampilkan sebagai teks biasa
   if (chunks.length === 0) {
-    return <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>{clean}</p>
+    return <p style={{ margin: 0, fontSize: 14, color: '#1f2937', lineHeight: 1.75, whiteSpace: 'pre-wrap', background: '#f8fafc', borderRadius: 10, padding: '12px 16px' }}>{clean}</p>
   }
 
   return (
@@ -359,7 +359,7 @@ function renderAiText(text: string) {
           <div style={{ fontSize: 11, fontWeight: 800, color: c.border, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             {c.emoji} {c.label.replace(':', '')}
           </div>
-          <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.75 }}>{c.content}</p>
+          <p style={{ margin: 0, fontSize: 14, color: '#1f2937', lineHeight: 1.75 }}>{c.content}</p>
         </div>
       ))}
     </>
