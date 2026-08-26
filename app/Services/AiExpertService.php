@@ -16,29 +16,32 @@ class AiExpertService
         }
 
         $systemInstruction = <<<PROMPT
-Kamu adalah asisten kandang/kebun pintar. Balas HANYA dengan format 4 bagian di bawah ini. DILARANG KERAS menulis kalimat apapun sebelum atau sesudah format ini. DILARANG menulis kata-kata seperti "Berikut", "Tentu", "Baik", atau kalimat pembuka lainnya.
+Kamu adalah asisten pertanian pintar. Tulis analisis dalam bahasa Indonesia yang santai dan mudah dipahami orang awam.
 
-Gunakan bahasa Indonesia yang santai, singkat, dan mudah dipahami orang awam. Tiap bagian maksimal 2 poin saja. Gunakan emoji.
+ATURAN KERAS:
+- JANGAN gunakan tanda bintang (*) atau simbol markdown apapun
+- JANGAN tulis kalimat pembuka seperti "Berikut", "Tentu", "Baik", dll
+- Mulai LANGSUNG dari label pertama
+- Tulis seperti paragraf biasa, bukan daftar bertanda
+- Singkat dan jelas, masing-masing bagian 1-3 kalimat saja
 
-GUNAKAN FORMAT INI PERSIS (mulai langsung dari emoji pertama):
+Gunakan PERSIS format ini (salin label-nya):
 
-📊 **KONDISI SEKARANG**
-[1-2 kalimat ringkas kondisi saat ini]
+KONDISI SEKARANG:
+[Jelaskan kondisi saat ini dalam 1-2 kalimat sederhana]
 
-⚠️ **YANG PERLU DIPERHATIKAN**
-• [Masalah utama dan dampaknya, singkat]
-• [Masalah ke-2 jika ada, atau ✅ Semua aman]
+YANG PERLU DIPERHATIKAN:
+[Sebutkan 1-2 masalah utama dan dampaknya, dalam kalimat biasa]
 
-💡 **SARAN TINDAKAN**
-1. [Langkah pertama yang harus dilakukan sekarang]
-2. [Langkah kedua]
+SARAN TINDAKAN:
+[Tulis 2-3 langkah yang harus dilakukan, dalam kalimat biasa]
 
-🔮 **PREDIKSI**
+PREDIKSI:
 [1 kalimat: apa yang terjadi kalau saran diabaikan]
 PROMPT;
 
         $prompt = "Data sensor dari sektor " . $sectorId . ":\n";
-        
+
         if (is_array($metrics)) {
             foreach ($metrics as $key => $value) {
                 $prompt .= "- " . ucfirst($key) . ": " . $value . "\n";
@@ -79,15 +82,19 @@ PROMPT;
                     ]
                 ],
                 'generationConfig' => [
-                    'temperature' => 0.5,
-                    'maxOutputTokens' => 900,
+                    'temperature' => 0.4,
+                    'maxOutputTokens' => 1000,
                 ]
             ]);
 
             if ($response->successful()) {
                 $data = $response->json();
                 if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
-                    return $data['candidates'][0]['content']['parts'][0]['text'];
+                    // Bersihkan semua tanda bintang sisa markdown
+                    $text = $data['candidates'][0]['content']['parts'][0]['text'];
+                    $text = str_replace(['**', '*'], '', $text);
+                    $text = trim($text);
+                    return $text;
                 }
                 Log::error('Gemini API Unexpected Response Format: ' . json_encode($data));
                 return "AI tidak mengembalikan analisis yang valid.";

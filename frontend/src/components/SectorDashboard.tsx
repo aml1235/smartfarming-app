@@ -308,98 +308,64 @@ function CtrlRow({ icon, label, sub, subColor, right }: { icon: string; label: s
   )
 }
 
-// Helper: parse teks Gemini menjadi card section berwarna
+// Helper: tampilkan teks AI sebagai section card sederhana (paragraf biasa)
 function renderAiText(text: string) {
   if (!text) return null
 
+  // Bersihkan sisa tanda bintang jika ada
+  const clean = text.replace(/\*\*/g, '').replace(/\*/g, '').trim()
+
   const SECTIONS = [
-    { key: 'KONDISI SEKARANG',        bg: '#eff6ff', border: '#3b82f6', emoji: '📊' },
-    { key: 'YANG PERLU DIPERHATIKAN', bg: '#fff7ed', border: '#f97316', emoji: '⚠️' },
-    { key: 'SARAN TINDAKAN',          bg: '#f0fdf4', border: '#22c55e', emoji: '💡' },
-    { key: 'PREDIKSI',                bg: '#faf5ff', border: '#a855f7', emoji: '🔮' },
+    { label: 'KONDISI SEKARANG:',        bg: '#eff6ff', border: '#3b82f6', emoji: '📊' },
+    { label: 'YANG PERLU DIPERHATIKAN:', bg: '#fff7ed', border: '#f97316', emoji: '⚠️' },
+    { label: 'SARAN TINDAKAN:',          bg: '#f0fdf4', border: '#22c55e', emoji: '💡' },
+    { label: 'PREDIKSI:',                bg: '#faf5ff', border: '#a855f7', emoji: '🔮' },
   ]
 
-  // Cari posisi setiap section di dalam teks
-  type Chunk = { key: string; bg: string; border: string; emoji: string; content: string }
+  // Split teks berdasarkan label yang ditemukan
+  type Chunk = { label: string; bg: string; border: string; emoji: string; content: string }
   const chunks: Chunk[] = []
-  let remaining = text
+  let remaining = clean
 
-  // Cari section pertama yang ada dalam teks
-  const findFirst = (t: string): { idx: number; sec: typeof SECTIONS[0] } | null => {
+  const findFirst = (t: string) => {
     let best: { idx: number; sec: typeof SECTIONS[0] } | null = null
     for (const sec of SECTIONS) {
-      const idx = t.indexOf(sec.key)
-      if (idx !== -1 && (best === null || idx < best.idx)) {
-        best = { idx, sec }
-      }
+      const idx = t.indexOf(sec.label)
+      if (idx !== -1 && (best === null || idx < best.idx)) best = { idx, sec }
     }
     return best
   }
 
-  // Teks sebelum section pertama (biasanya kosong karena prompt sudah ketat)
-  const firstHit = findFirst(remaining)
-  const preText = firstHit ? remaining.slice(0, firstHit.idx).trim() : remaining.trim()
-  if (firstHit) remaining = remaining.slice(firstHit.idx)
-
-  // Ekstrak setiap section berurutan
   while (remaining.length > 0) {
     const hit = findFirst(remaining)
     if (!hit) break
-
-    // Potong dari setelah nama section
-    const afterKey = remaining.slice(hit.idx + hit.sec.key.length)
-    remaining = remaining.slice(hit.idx + hit.sec.key.length)
-
-    // Cari section berikutnya
-    const nextHit = findFirst(remaining)
-    const content = nextHit ? remaining.slice(0, nextHit.idx) : remaining
-    remaining = nextHit ? remaining.slice(nextHit.idx) : ''
-
-    // Bersihkan header markdown (**...**) dan whitespace
-    const cleanContent = content.replace(/\*\*/g, '').trim()
-    if (cleanContent) {
-      chunks.push({ ...hit.sec, content: cleanContent })
-    }
-
-    if (!nextHit) break
+    remaining = remaining.slice(hit.idx + hit.sec.label.length)
+    const next = findFirst(remaining)
+    const content = (next ? remaining.slice(0, next.idx) : remaining).trim()
+    remaining = next ? remaining.slice(next.idx) : ''
+    if (content) chunks.push({ ...hit.sec, content })
+    if (!next) break
   }
 
-  const renderLines = (content: string, color: string) =>
-    content.split('\n').map((raw, i) => {
-      const line = raw.replace(/\*\*/g, '').trim()
-      if (!line) return null
-      const isBullet   = line.startsWith('•') || line.startsWith('-') || line.startsWith('*')
-      const isNumbered = /^\d+\./.test(line)
-      const body = isBullet
-        ? line.replace(/^[•\-\*]\s*/, '')
-        : isNumbered
-          ? line.replace(/^\d+\.\s*/, '')
-          : line
-      const prefix = isNumbered ? line.match(/^(\d+)\./)?.[1] + '.' : isBullet ? '•' : null
-      return (
-        <div key={i} style={{ display: 'flex', gap: 8, fontSize: 13.5, color: 'var(--text-primary)', lineHeight: 1.7 }}>
-          {prefix && <span style={{ color, fontWeight: 700, minWidth: 18, flexShrink: 0 }}>{prefix}</span>}
-          <span>{body}</span>
-        </div>
-      )
-    }).filter(Boolean)
+  // Jika tidak ada section yang terdeteksi, tampilkan sebagai teks biasa
+  if (chunks.length === 0) {
+    return <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>{clean}</p>
+  }
 
   return (
     <>
-      {preText ? <p style={{ margin: '0 0 10px', fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.6 }}>{preText}</p> : null}
       {chunks.map(c => (
-        <div key={c.key} style={{ background: c.bg, border: `1.5px solid ${c.border}`, borderRadius: 12, padding: '12px 16px', marginBottom: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: c.border, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-            {c.emoji} {c.key}
+        <div key={c.label} style={{ background: c.bg, border: `1.5px solid ${c.border}`, borderRadius: 12, padding: '12px 16px', marginBottom: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: c.border, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+            {c.emoji} {c.label.replace(':', '')}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {renderLines(c.content, c.border)}
-          </div>
+          <p style={{ margin: 0, fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.75 }}>{c.content}</p>
         </div>
       ))}
     </>
   )
 }
+
 
 // AI Modal shared component
 function AiModal({ sector, aiLoading, aiResult, onClose }: any) {
