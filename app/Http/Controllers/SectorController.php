@@ -67,6 +67,37 @@ class SectorController extends Controller
         return response()->json(['message' => "Sektor {$sectorName} berhasil dihapus."]);
     }
 
+    public function update(Request $request, $sector_id)
+    {
+        // Hanya admin yang boleh mengedit sektor
+        if ($request->user() && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        $sector = Sector::where('sector_id', $sector_id)->firstOrFail();
+
+        $validated = $request->validate([
+            'name'   => 'sometimes|string|max:255',
+            'unit'   => 'sometimes|string|max:100',
+            'status' => 'sometimes|in:baik,normal,peringatan,kritis',
+        ]);
+
+        if (isset($validated['name']))   $sector->name   = $validated['name'];
+        if (isset($validated['unit']))   $sector->unit   = $validated['unit'];
+        if (isset($validated['status'])) $sector->status = $validated['status'];
+
+        $sector->save();
+
+        // Catat aktivitas
+        \App\Models\Activity::create([
+            'user_name' => $request->user() ? $request->user()->name : 'Admin',
+            'action'    => 'Mengedit sektor',
+            'target'    => $sector->name,
+        ]);
+
+        return response()->json($sector);
+    }
+
     public function logs($id)
     {
         $latestLog = SensorLog::where('sector_id', $id)->latest('created_at')->first();

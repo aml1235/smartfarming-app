@@ -225,6 +225,33 @@ export default function App() {
     }
   }, [])
 
+  const handleEditSector = useCallback(async (sectorId: string, name: string, unit: string, status: string) => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_URL}/api/sectors/${sectorId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name, unit, status }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setSectors(prev => prev.map(s =>
+          String(s.id) === sectorId
+            ? { ...s, name: updated.name, unit: updated.unit, status: updated.status }
+            : s
+        ));
+      } else {
+        const err = await res.json();
+        alert('Gagal mengedit sektor: ' + (err.message || 'Unknown error'));
+      }
+    } catch (e) {
+      console.error('Failed to edit sector', e);
+    }
+  }, [])
+
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
   const handleLogin = (user: any) => {
@@ -331,6 +358,7 @@ export default function App() {
           onUpdateUser={(updatedUser) => setLoggedInUser(prev => prev ? { ...prev, ...updatedUser } : updatedUser)}
           onAddSector={handleAddSector}
           onDeleteSector={handleDeleteSector}
+          onEditSector={handleEditSector}
         />
         {renderLogoutModal()}
       </>

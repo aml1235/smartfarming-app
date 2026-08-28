@@ -46,6 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Sektor management — admin only (enforced in controller)
     Route::post('/sectors', [SectorController::class, 'store']);
+    Route::put('/sectors/{sector_id}', [SectorController::class, 'update']);
     Route::delete('/sectors/{sector_id}', [SectorController::class, 'destroy']);
 });
 

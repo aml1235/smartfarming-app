@@ -22,15 +22,21 @@ interface AdminPageProps {
   onUpdateUser: (user: User) => void;
   onAddSector: (name: string, unit: string, sectorId: string, icon: string, color: string) => Promise<void>;
   onDeleteSector: (sectorId: string) => Promise<void>;
+  onEditSector: (sectorId: string, name: string, unit: string, status: string) => Promise<void>;
 }
 
-export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, setDarkMode, loggedInUser, onUpdateUser, onAddSector, onDeleteSector }: AdminPageProps) {
+export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, setDarkMode, loggedInUser, onUpdateUser, onAddSector, onDeleteSector, onEditSector }: AdminPageProps) {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [activities, setActivities] = useState<any[]>([]);
 
   // Sector management state
   const [showAddSectorModal, setShowAddSectorModal] = useState(false);
   const [sectorToDelete, setSectorToDelete] = useState<string | null>(null);
+  const [sectorToEdit, setSectorToEdit] = useState<Sector | null>(null);
+  const [editSectorName, setEditSectorName] = useState('');
+  const [editSectorUnit, setEditSectorUnit] = useState('');
+  const [editSectorStatus, setEditSectorStatus] = useState('baik');
+  const [editSectorLoading, setEditSectorLoading] = useState(false);
   const [newSectorName, setNewSectorName] = useState('');
   const [newSectorUnit, setNewSectorUnit] = useState('');
   const [newSectorId, setNewSectorId] = useState('');
@@ -586,6 +592,27 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
     }
   };
 
+  const openEditSector = (sector: Sector) => {
+    setSectorToEdit(sector);
+    setEditSectorName(sector.name);
+    setEditSectorUnit(sector.unit);
+    setEditSectorStatus(sector.status);
+  };
+
+  const handleEditSectorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sectorToEdit) return;
+    if (!editSectorName.trim() || !editSectorUnit.trim()) {
+      alert('Nama dan Unit tidak boleh kosong!');
+      return;
+    }
+    setEditSectorLoading(true);
+    await onEditSector(String(sectorToEdit.id), editSectorName.trim(), editSectorUnit.trim(), editSectorStatus);
+    setEditSectorLoading(false);
+    addActivity('Mengedit sektor', editSectorName.trim());
+    setSectorToEdit(null);
+  };
+
   const renderSectors = () => (
     <div className="tab-sectors">
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px' }}>
@@ -618,13 +645,23 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
                 {String(sector.id)}
               </span>
             </div>
-            <button
-              onClick={() => setSectorToDelete(String(sector.id))}
-              style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', transition: 'background 0.2s' }}
-              title="Hapus sektor"
-            >
-              <IcTrash size={14} />
-            </button>
+            {/* Tombol aksi: Edit + Hapus */}
+            <div style={{ position: 'absolute', top: 12, right: 12, display: 'flex', gap: '6px' }}>
+              <button
+                onClick={() => openEditSector(sector)}
+                style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1', border: 'none', borderRadius: '8px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'background 0.2s' }}
+                title="Edit sektor"
+              >
+                <IcEdit size={14} />
+              </button>
+              <button
+                onClick={() => setSectorToDelete(String(sector.id))}
+                style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'background 0.2s' }}
+                title="Hapus sektor"
+              >
+                <IcTrash size={14} />
+              </button>
+            </div>
           </div>
         ))}
         {sectors.length === 0 && (
@@ -704,6 +741,58 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
               <button onClick={() => setSectorToDelete(null)} style={{ flex: 1, padding: '10px', background: 'var(--bg-base)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 500, cursor: 'pointer' }}>Batal</button>
               <button onClick={confirmDeleteSector} style={{ flex: 1, padding: '10px', background: '#ef4444', color: '#fff', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer' }}>Ya, Hapus</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Edit Sektor */}
+      {sectorToEdit && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: 'var(--bg-surface)', padding: '28px', borderRadius: '18px', width: '100%', maxWidth: '440px', boxShadow: '0 24px 48px rgba(0,0,0,0.18)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: '10px', background: sectorToEdit.color ? `${sectorToEdit.color}20` : '#05966920', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>
+                  {sectorToEdit.icon || '📋'}
+                </div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>Edit Sektor</h3>
+              </div>
+              <button onClick={() => setSectorToEdit(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }}><IcX size={20} /></button>
+            </div>
+            <form onSubmit={handleEditSectorSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ID Sektor</label>
+                <input disabled value={String(sectorToEdit.id)} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.05)', color: 'var(--text-secondary)', fontSize: '14px', fontFamily: 'monospace', cursor: 'not-allowed' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nama Sektor</label>
+                <input required type="text" value={editSectorName} onChange={e => setEditSectorName(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', outline: 'none', fontSize: '14px' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Unit / Kategori</label>
+                <input required type="text" value={editSectorUnit} onChange={e => setEditSectorUnit(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', outline: 'none', fontSize: '14px' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                  {(['baik', 'normal', 'peringatan', 'kritis'] as const).map(s => {
+                    const colors: Record<string, string> = { baik: '#059669', normal: '#1565C0', peringatan: '#f59e0b', kritis: '#ef4444' };
+                    const c = colors[s];
+                    return (
+                      <button key={s} type="button" onClick={() => setEditSectorStatus(s)}
+                        style={{ padding: '8px 4px', borderRadius: '8px', border: `2px solid ${editSectorStatus === s ? c : 'var(--border-color)'}`, background: editSectorStatus === s ? `${c}18` : 'var(--bg-base)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: editSectorStatus === s ? c : 'var(--text-secondary)', transition: 'all 0.15s' }}>
+                        {STATUS_MAP[s].label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
+                <button type="button" onClick={() => setSectorToEdit(null)} style={{ padding: '10px 18px', background: 'var(--bg-base)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 500, cursor: 'pointer', fontSize: '14px' }}>Batal</button>
+                <button type="submit" disabled={editSectorLoading} style={{ padding: '10px 18px', background: '#6366f1', color: '#fff', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: editSectorLoading ? 'not-allowed' : 'pointer', fontSize: '14px', opacity: editSectorLoading ? 0.7 : 1 }}>
+                  {editSectorLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
