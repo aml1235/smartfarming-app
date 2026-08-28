@@ -48,12 +48,20 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   const [cv1On, setCv1On]     = useState('06:00')
   const [cv2On, setCv2On]     = useState('18:00')
   const [cv2En, setCv2En]     = useState(true)
+  const [jogSending, setJogSending] = useState(false)
+  const [feedDur, setFeedDur]       = useState('5')
   const [showAiModal, setShowAiModal] = useState(false)
   const [aiLoading, setAiLoading]   = useState(false)
   const [aiResult, setAiResult]     = useState<any>(null)
   const [activeTab, setActiveTab]   = useState<'manual' | 'auto'>('manual')
   const lastAction = useRef<number>(0)
   const sectorId = sector.sector_id || sector.id
+
+  // feedTime1 & feedTime2 adalah alias dari cv1On / cv2On — disinkronkan via cfg()
+  const setFeedTime1 = (val: string) => setCv1On(val)
+  const setFeedTime2 = (val: string) => setCv2On(val)
+  // feedTime2En adalah alias dari cv2En
+  const setFeedTime2En = (val: boolean) => setCv2En(val)
 
   useEffect(() => {
     const load = async () => {
