@@ -16,67 +16,48 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // 1. Setup Users
-        User::create([
-            'name' => 'Admin Utama',
-            'email' => 'admin@smartfarming.local',
-            'password' => bcrypt('password'),
-            'role' => 'admin',
-        ]);
-
-        User::create([
-            'name' => 'Operator Kandang',
-            'email' => 'operator1@smartfarming.local',
-            'password' => bcrypt('password'),
-            'role' => 'operator',
-        ]);
-
-        // 2. Setup Sectors
-        $sectors = [
+        User::firstOrCreate(
+            ['email' => 'admin@smartfarming.local'],
             [
-                'sector_id' => 'SEC-011',
-                'name' => 'Kandang Ayam',
-                'unit' => 'Peternakan',
-                'status' => 'baik',
-                'metrics' => ['Suhu' => '28°C', 'Kelembapan' => '65%', 'Populasi Aktif' => '1.240', 'Level Pakan' => '58%', 'Air Minum' => '72%']
-            ],
-            [
-                'sector_id' => 'kolam',
-                'name' => 'Kolam Ikan',
-                'unit' => 'Akuakultur',
-                'status' => 'normal',
-                'metrics' => ['pH Air' => '7.2', 'Suhu Air' => '26°C', 'Kekeruhan' => 'Normal', 'Oksigen Terlarut' => '7.8 mg/L', 'Populasi Ikan' => '850', 'Volume Air' => '92%']
-            ],
-            [
-                'sector_id' => 'hidroponik',
-                'name' => 'Hidroponik',
-                'unit' => 'Tanaman',
-                'status' => 'baik',
-                'metrics' => ['Level Air' => '85%', 'Suhu Lingkungan' => '27°C']
-            ],
-            [
-                'sector_id' => 'irigasi',
-                'name' => 'Irigasi Tanah',
-                'unit' => 'Pertanian',
-                'status' => 'peringatan',
-                'metrics' => ['Kelembapan Tanah' => '45%', 'Status' => 'Kering', 'Lahan Total' => '2.5 Ha', 'Terakhir Irigasi' => '8 jam lalu', 'Volume Air' => '68%', 'Suhu Tanah' => '29°C']
+                'name'     => 'Admin Utama',
+                'password' => bcrypt('password'),
+                'role'     => 'admin',
             ]
-        ];
+        );
 
-        foreach ($sectors as $sector) {
-            \App\Models\Sector::create($sector);
-        }
+        User::firstOrCreate(
+            ['email' => 'operator1@smartfarming.local'],
+            [
+                'name'     => 'Operator Kandang',
+                'password' => bcrypt('password'),
+                'role'     => 'operator',
+            ]
+        );
 
-        // 3. Setup Activities
-        \App\Models\Activity::create([
-            'user_name' => 'Admin Utama',
-            'action' => 'mengubah konfigurasi',
-            'target' => 'Sistem Utama'
-        ]);
-        
-        \App\Models\Activity::create([
-            'user_name' => 'Operator Kandang',
-            'action' => 'mengaktifkan',
-            'target' => 'Pompa Air Minum (Kandang Ayam)'
-        ]);
+        // 2. Setup Sectors — hanya Kandang Ayam & Hidroponik
+        \App\Models\Sector::updateOrCreate(
+            ['sector_id' => 'SEC-011'],
+            [
+                'name'    => 'Kandang Ayam',
+                'unit'    => 'Peternakan',
+                'status'  => 'baik',
+                'metrics' => [],
+            ]
+        );
+
+        \App\Models\Sector::updateOrCreate(
+            ['sector_id' => 'hidroponik'],
+            [
+                'name'    => 'Hidroponik',
+                'unit'    => 'Tanaman',
+                'status'  => 'baik',
+                'metrics' => [],
+            ]
+        );
+
+        // Hapus sektor yang tidak dipakai jika masih ada
+        \App\Models\Sector::whereIn('sector_id', ['kolam', 'irigasi', 'SEC-010'])->delete();
+
+        // 3. Tidak ada aktivitas dummy — log akan terisi dari aksi nyata pengguna
     }
 }

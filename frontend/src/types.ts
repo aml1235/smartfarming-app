@@ -1,8 +1,8 @@
-export type SectorId = 'kandang' | 'kolam' | 'hidroponik' | 'irigasi'
+export type SectorId = string
 export type PageId = SectorId | 'overview' | 'notifications' | 'settings'
 export type AppView = 'landing' | 'login' | 'superadmin' | 'dashboard' | 'apk_download'
 export type StatusLevel = 'baik' | 'normal' | 'peringatan' | 'kritis'
-export type AdminTab = 'dashboard' | 'users' | 'assign' | 'activity' | 'settings'
+export type AdminTab = 'dashboard' | 'users' | 'sectors' | 'assign' | 'activity' | 'settings'
 
 export interface Sector {
   id: string | number

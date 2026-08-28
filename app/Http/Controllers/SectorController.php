@@ -13,6 +13,60 @@ class SectorController extends Controller
         return response()->json(Sector::all());
     }
 
+    public function store(Request $request)
+    {
+        // Hanya admin yang boleh membuat sektor baru
+        if ($request->user() && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        $validated = $request->validate([
+            'sector_id' => 'required|string|max:50|unique:sectors,sector_id',
+            'name'      => 'required|string|max:255',
+            'unit'      => 'required|string|max:100',
+            'status'    => 'sometimes|in:baik,normal,peringatan,kritis',
+            'metrics'   => 'sometimes|array',
+        ]);
+
+        $sector = Sector::create([
+            'sector_id' => $validated['sector_id'],
+            'name'      => $validated['name'],
+            'unit'      => $validated['unit'],
+            'status'    => $validated['status'] ?? 'normal',
+            'metrics'   => $validated['metrics'] ?? [],
+        ]);
+
+        // Catat aktivitas
+        \App\Models\Activity::create([
+            'user_name' => $request->user() ? $request->user()->name : 'Admin',
+            'action'    => 'Menambahkan sektor baru',
+            'target'    => $sector->name,
+        ]);
+
+        return response()->json($sector, 201);
+    }
+
+    public function destroy(Request $request, $sector_id)
+    {
+        // Hanya admin yang boleh menghapus sektor
+        if ($request->user() && $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
+        $sector = Sector::where('sector_id', $sector_id)->firstOrFail();
+        $sectorName = $sector->name;
+        $sector->delete();
+
+        // Catat aktivitas
+        \App\Models\Activity::create([
+            'user_name' => $request->user() ? $request->user()->name : 'Admin',
+            'action'    => 'Menghapus sektor',
+            'target'    => $sectorName,
+        ]);
+
+        return response()->json(['message' => "Sektor {$sectorName} berhasil dihapus."]);
+    }
+
     public function logs($id)
     {
         $latestLog = SensorLog::where('sector_id', $id)->latest('created_at')->first();

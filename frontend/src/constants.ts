@@ -2,10 +2,6 @@ import { Sector, StatusLevel, User, AppNotification, ActivityLog } from './types
 
 export const SECTORS: Sector[] = [
   { id: 'SEC-011', name: 'Kandang Ayam', unit: 'Peternakan', icon: '🐓', color: '#E65100', colorLight: 'var(--kandang-light)', status: 'baik', lastUpdate: '2 mnt lalu' },
-  { id: 'kolam', name: 'Kolam Ikan', unit: 'Akuakultur', icon: '🐟', color: '#1565C0', colorLight: 'var(--kolam-light)', status: 'normal', lastUpdate: '1 mnt lalu' },
-  { id: 'SEC-010', name: 'Hidroponik', unit: 'Tanaman', icon: '🌿', color: '#2E7D32', colorLight: 'var(--hidroponik-light)', status: 'baik', lastUpdate: '3 mnt lalu' },
-  { id: 'irigasi', name: 'Irigasi Tanah', unit: 'Pertanian', icon: '🌱', color: '#795548', colorLight: 'var(--irigasi-light)', status: 'peringatan', lastUpdate: '5 mnt lalu' },
-  // Pertahankan ID hidroponik lama untuk backwards compatibility jika diperlukan
   { id: 'hidroponik', name: 'Hidroponik', unit: 'Tanaman', icon: '🌿', color: '#2E7D32', colorLight: 'var(--hidroponik-light)', status: 'baik', lastUpdate: '3 mnt lalu' },
 ]
 

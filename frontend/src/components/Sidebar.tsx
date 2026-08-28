@@ -29,6 +29,7 @@ export function Sidebar({ activeId, onSelect, alertCount, unitAktif, onLogout, i
   const adminNav: { id: AdminTab; label: string; icon: React.ReactNode }[] = [
     { id: 'dashboard', label: 'Dashboard', icon: <IcGrid size={15} /> },
     { id: 'users', label: 'Kelola Pengguna', icon: <IcUsers size={15} /> },
+    { id: 'sectors', label: 'Kelola Sektor', icon: <IcLeaf size={15} /> },
     { id: 'assign', label: 'Assign Sektor', icon: <IcLink size={15} /> },
     { id: 'activity', label: 'Aktivitas', icon: <IcClock size={15} /> },
   ]

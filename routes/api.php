@@ -12,10 +12,11 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,
 Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:3,1');
 
-// Public/Simulated Sector Route for Frontend
+// Public Routes
 Route::get('/sectors', [SectorController::class, 'index']);
 Route::post('/sector/{sector_id}/control', [SectorController::class, 'control']);
 Route::post('/sector/{sector_id}/config', [SectorController::class, 'configTimer']);
+
 Route::get('/activities', function () {
     return response()->json(\App\Models\Activity::orderBy('created_at', 'desc')->get());
 });
@@ -37,19 +38,22 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
-    // CRUD Users API
+    // CRUD Users API (admin only — enforced in controller)
     Route::apiResource('users', UserController::class);
 
     Route::put('/user/profile', [UserController::class, 'updateProfile']);
     Route::put('/user/password', [UserController::class, 'updatePassword']);
+
+    // Sektor management — admin only (enforced in controller)
+    Route::post('/sectors', [SectorController::class, 'store']);
+    Route::delete('/sectors/{sector_id}', [SectorController::class, 'destroy']);
 });
-
-
 
 // Endpoint HTTP lama untuk sensor telah dihapus dan sepenuhnya digantikan oleh arsitektur MQTT.
 Route::get('/debug-logs', function() {
     return \App\Models\SensorLog::orderBy('created_at', 'desc')->take(5)->get();
 });
+
 // Notification routes
 Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
 Route::put('/notifications/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead']);

@@ -20,11 +20,23 @@ interface AdminPageProps {
   setDarkMode: (val: boolean) => void;
   loggedInUser: User;
   onUpdateUser: (user: User) => void;
+  onAddSector: (name: string, unit: string, sectorId: string, icon: string, color: string) => Promise<void>;
+  onDeleteSector: (sectorId: string) => Promise<void>;
 }
 
-export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, setDarkMode, loggedInUser, onUpdateUser }: AdminPageProps) {
+export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, setDarkMode, loggedInUser, onUpdateUser, onAddSector, onDeleteSector }: AdminPageProps) {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [activities, setActivities] = useState<any[]>([]);
+
+  // Sector management state
+  const [showAddSectorModal, setShowAddSectorModal] = useState(false);
+  const [sectorToDelete, setSectorToDelete] = useState<string | null>(null);
+  const [newSectorName, setNewSectorName] = useState('');
+  const [newSectorUnit, setNewSectorUnit] = useState('');
+  const [newSectorId, setNewSectorId] = useState('');
+  const [newSectorIcon, setNewSectorIcon] = useState('📋');
+  const [newSectorColor, setNewSectorColor] = useState('#059669');
+  const [addSectorLoading, setAddSectorLoading] = useState(false);
 
   const fetchActivities = useCallback(() => {
     fetch(`${API_URL}/api/activities`)
@@ -525,10 +537,179 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
   const TITLE_MAP: Record<AdminTab, { title: string, subtitle: string }> = {
     dashboard: { title: 'Dashboard Admin', subtitle: 'Ringkasan sistem dan status pertanian.' },
     users: { title: 'Kelola Pengguna', subtitle: 'Tambah, hapus, atau ubah status pengguna.' },
+    sectors: { title: 'Kelola Sektor', subtitle: 'Tambah atau hapus sektor pertanian.' },
     assign: { title: 'Assign Sektor ke Pengguna', subtitle: 'Atur sektor mana yang dapat diakses oleh operator.' },
     activity: { title: 'Log Aktivitas', subtitle: 'Pantau aktivitas pengguna dan sistem terbaru.' },
     settings: { title: 'Pengaturan Sistem', subtitle: 'Konfigurasi parameter sistem dan notifikasi.' },
   };
+
+  const ICON_OPTIONS = ['🐓','🌿','🐟','🌱','🏭','🌾','🐄','🐖','🍅','🌻','💧','⚡'];
+  const COLOR_OPTIONS = [
+    { color: '#059669', label: 'Hijau' },
+    { color: '#E65100', label: 'Oranye' },
+    { color: '#1565C0', label: 'Biru' },
+    { color: '#795548', label: 'Coklat' },
+    { color: '#6366f1', label: 'Ungu' },
+    { color: '#e11d48', label: 'Merah' },
+    { color: '#f59e0b', label: 'Kuning' },
+    { color: '#0891b2', label: 'Cyan' },
+  ];
+
+  const handleAddSectorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSectorName.trim() || !newSectorUnit.trim() || !newSectorId.trim()) {
+      alert('Semua field wajib diisi!');
+      return;
+    }
+    // Validasi sector_id: hanya huruf kecil, angka, dan tanda hubung
+    if (!/^[a-z0-9-]+$/.test(newSectorId)) {
+      alert('ID Sektor hanya boleh berisi huruf kecil, angka, dan tanda hubung (-)');
+      return;
+    }
+    setAddSectorLoading(true);
+    await onAddSector(newSectorName.trim(), newSectorUnit.trim(), newSectorId.trim(), newSectorIcon, newSectorColor);
+    setAddSectorLoading(false);
+    setShowAddSectorModal(false);
+    setNewSectorName('');
+    setNewSectorUnit('');
+    setNewSectorId('');
+    setNewSectorIcon('📋');
+    setNewSectorColor('#059669');
+    addActivity('Menambahkan sektor baru', newSectorName.trim());
+  };
+
+  const confirmDeleteSector = async () => {
+    if (sectorToDelete) {
+      await onDeleteSector(sectorToDelete);
+      setSectorToDelete(null);
+      addActivity('Menghapus sektor', sectorToDelete);
+    }
+  };
+
+  const renderSectors = () => (
+    <div className="tab-sectors">
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px' }}>
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowAddSectorModal(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#059669', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}
+        >
+          + Tambah Sektor
+        </button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+        {sectors.map(sector => (
+          <div key={String(sector.id)} style={{ background: 'var(--bg-surface)', borderRadius: '14px', border: '1px solid var(--border-color)', padding: '20px', position: 'relative', transition: 'box-shadow 0.2s' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
+              <div style={{ width: 48, height: 48, borderRadius: '12px', background: sector.color ? `${sector.color}20` : '#05966920', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
+                {sector.icon || '📋'}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sector.name}</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{sector.unit}</div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className={`badge ${STATUS_MAP[sector.status].cls}`} style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600 }}>
+                {STATUS_MAP[sector.status].label}
+              </span>
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'monospace', background: 'var(--bg-base)', padding: '2px 8px', borderRadius: '6px' }}>
+                {String(sector.id)}
+              </span>
+            </div>
+            <button
+              onClick={() => setSectorToDelete(String(sector.id))}
+              style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: 'none', borderRadius: '8px', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '14px', transition: 'background 0.2s' }}
+              title="Hapus sektor"
+            >
+              <IcTrash size={14} />
+            </button>
+          </div>
+        ))}
+        {sectors.length === 0 && (
+          <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px 20px', color: 'var(--text-secondary)' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🌾</div>
+            <p style={{ fontSize: 16, fontWeight: 600 }}>Belum ada sektor</p>
+            <p style={{ fontSize: 14 }}>Klik "Tambah Sektor" untuk memulai.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Modal Tambah Sektor */}
+      {showAddSectorModal && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: 'var(--bg-surface)', padding: '28px', borderRadius: '18px', width: '100%', maxWidth: '460px', boxShadow: '0 24px 48px rgba(0,0,0,0.18)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>Tambah Sektor Baru</h3>
+              <button onClick={() => setShowAddSectorModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }}><IcX size={20} /></button>
+            </div>
+            <form onSubmit={handleAddSectorSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nama Sektor</label>
+                <input required type="text" value={newSectorName} onChange={e => setNewSectorName(e.target.value)} placeholder="cth: Kandang Bebek" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', outline: 'none', fontSize: '14px' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Unit / Kategori</label>
+                <input required type="text" value={newSectorUnit} onChange={e => setNewSectorUnit(e.target.value)} placeholder="cth: Peternakan" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', outline: 'none', fontSize: '14px' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ID Unik Sektor <span style={{ fontWeight: 400, textTransform: 'none' }}>(huruf kecil, angka, tanda hubung)</span></label>
+                <input required type="text" value={newSectorId} onChange={e => setNewSectorId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} placeholder="cth: kandang-bebek" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', outline: 'none', fontSize: '14px', fontFamily: 'monospace' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Icon</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {ICON_OPTIONS.map(ic => (
+                    <button key={ic} type="button" onClick={() => setNewSectorIcon(ic)}
+                      style={{ width: 40, height: 40, borderRadius: '8px', border: `2px solid ${newSectorIcon === ic ? '#059669' : 'var(--border-color)'}`, background: newSectorIcon === ic ? 'rgba(5,150,105,0.1)' : 'var(--bg-base)', fontSize: 20, cursor: 'pointer', transition: 'all 0.15s' }}>
+                      {ic}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Warna</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {COLOR_OPTIONS.map(opt => (
+                    <button key={opt.color} type="button" onClick={() => setNewSectorColor(opt.color)}
+                      style={{ width: 32, height: 32, borderRadius: '50%', background: opt.color, border: `3px solid ${newSectorColor === opt.color ? 'var(--text-primary)' : 'transparent'}`, cursor: 'pointer', transition: 'all 0.15s', outline: 'none', boxShadow: newSectorColor === opt.color ? `0 0 0 2px var(--bg-surface), 0 0 0 4px ${opt.color}` : 'none' }}
+                      title={opt.label}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
+                <button type="button" onClick={() => setShowAddSectorModal(false)} style={{ padding: '10px 18px', background: 'var(--bg-base)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 500, cursor: 'pointer', fontSize: '14px' }}>Batal</button>
+                <button type="submit" disabled={addSectorLoading} style={{ padding: '10px 18px', background: '#059669', color: '#fff', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: addSectorLoading ? 'not-allowed' : 'pointer', fontSize: '14px', opacity: addSectorLoading ? 0.7 : 1 }}>
+                  {addSectorLoading ? 'Menyimpan...' : 'Simpan Sektor'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Hapus Sektor */}
+      {sectorToDelete && (
+        <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: 'var(--bg-surface)', padding: '28px', borderRadius: '18px', width: '100%', maxWidth: '380px', boxShadow: '0 24px 48px rgba(0,0,0,0.18)', textAlign: 'center' }}>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#fee2e2', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <IcTrash size={24} />
+            </div>
+            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>Hapus Sektor?</h3>
+            <p style={{ margin: '0 0 8px', color: 'var(--text-secondary)', fontSize: '14px' }}>ID: <code style={{ background: 'var(--bg-base)', padding: '2px 6px', borderRadius: 4 }}>{sectorToDelete}</code></p>
+            <p style={{ margin: '0 0 24px', color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.5 }}>Tindakan ini tidak dapat dibatalkan. Semua data sensor yang terkait juga akan terputus.</p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button onClick={() => setSectorToDelete(null)} style={{ flex: 1, padding: '10px', background: 'var(--bg-base)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 500, cursor: 'pointer' }}>Batal</button>
+              <button onClick={confirmDeleteSector} style={{ flex: 1, padding: '10px', background: '#ef4444', color: '#fff', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer' }}>Ya, Hapus</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
 
   return (
     <div className="app-layout">
@@ -591,6 +772,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
         <main className="app-content" style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
           {activeTab === 'dashboard' && renderDashboard()}
           {activeTab === 'users' && renderUsers()}
+          {activeTab === 'sectors' && renderSectors()}
           {activeTab === 'assign' && renderAssign()}
           {activeTab === 'activity' && renderActivity()}
           {activeTab === 'settings' && renderSettings()}

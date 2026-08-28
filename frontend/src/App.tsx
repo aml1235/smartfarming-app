@@ -174,16 +174,55 @@ export default function App() {
     return () => clearInterval(t)
   }, [])
 
-  const handleAddSector = useCallback((name: string, type: string) => {
-    const base = SECTORS.find(s => s.id === type as SectorId) || SECTORS[0]
-    const newSector: Sector = {
-      ...base,
-      id: `${type}_${Date.now()}` as SectorId,
-      name,
-      lastUpdate: 'Baru saja',
-      status: 'baik',
+  const handleAddSector = useCallback(async (name: string, unit: string, sectorId: string, icon: string, color: string) => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_URL}/api/sectors`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ sector_id: sectorId, name, unit, status: 'baik', metrics: {} }),
+      });
+      if (res.ok) {
+        const newSectorData = await res.json();
+        const newSector: Sector = {
+          id: newSectorData.sector_id as SectorId,
+          name: newSectorData.name,
+          unit: newSectorData.unit,
+          icon: icon || '📋',
+          color: color || '#059669',
+          colorLight: 'rgba(5,150,105,0.1)',
+          status: 'baik',
+          lastUpdate: 'Baru saja',
+        };
+        setSectors(prev => [...prev, newSector]);
+      } else {
+        const err = await res.json();
+        alert('Gagal menambah sektor: ' + (err.message || JSON.stringify(err.errors)));
+      }
+    } catch (e) {
+      console.error('Failed to add sector', e);
     }
-    setSectors(prev => [...prev, newSector])
+  }, [])
+
+  const handleDeleteSector = useCallback(async (sectorId: string) => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${API_URL}/api/sectors/${sectorId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setSectors(prev => prev.filter(s => s.id !== sectorId));
+      } else {
+        const err = await res.json();
+        alert('Gagal menghapus sektor: ' + (err.message || 'Unknown error'));
+      }
+    } catch (e) {
+      console.error('Failed to delete sector', e);
+    }
   }, [])
 
   const [showLogoutModal, setShowLogoutModal] = useState(false)
@@ -290,6 +329,8 @@ export default function App() {
           setDarkMode={setDarkMode}
           loggedInUser={loggedInUser!}
           onUpdateUser={(updatedUser) => setLoggedInUser(prev => prev ? { ...prev, ...updatedUser } : updatedUser)}
+          onAddSector={handleAddSector}
+          onDeleteSector={handleDeleteSector}
         />
         {renderLogoutModal()}
       </>
