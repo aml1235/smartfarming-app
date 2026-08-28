@@ -100,7 +100,17 @@ export default function App() {
                   else if (diffMins < 1440) lastUpdateStr = `${Math.floor(diffMins/60)} jam lalu`;
                   else lastUpdateStr = `${Math.floor(diffMins/1440)} hari lalu`;
                 }
-                return { ...base, ...d, id: d.sector_id, metrics: d.metrics, lastUpdate: lastUpdateStr };
+                const metricsParsed = typeof d.metrics === 'string' ? JSON.parse(d.metrics) : (d.metrics || {});
+                return { 
+                  ...base, 
+                  ...d, 
+                  id: d.sector_id, 
+                  metrics: d.metrics, 
+                  lastUpdate: lastUpdateStr,
+                  icon: metricsParsed.icon || base.icon || '📋',
+                  color: metricsParsed.color || base.color || '#059669',
+                  colorLight: metricsParsed.color ? `${metricsParsed.color}20` : base.colorLight || 'rgba(5,150,105,0.1)'
+                };
               });
               setSectors(apiSectors);
             }
@@ -183,7 +193,7 @@ export default function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ sector_id: sectorId, name, unit, status: 'baik', metrics: {} }),
+        body: JSON.stringify({ sector_id: sectorId, name, unit, status: 'baik', metrics: { icon, color } }),
       });
       if (res.ok) {
         const newSectorData = await res.json();
@@ -225,7 +235,7 @@ export default function App() {
     }
   }, [])
 
-  const handleEditSector = useCallback(async (sectorId: string, name: string, unit: string, status: string) => {
+  const handleEditSector = useCallback(async (sectorId: string, name: string, unit: string, icon: string, color: string) => {
     const token = localStorage.getItem('token');
     try {
       const res = await fetch(`${API_URL}/api/sectors/${sectorId}`, {
@@ -234,13 +244,21 @@ export default function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ name, unit, status }),
+        body: JSON.stringify({ name, unit, metrics: { icon, color } }),
       });
       if (res.ok) {
         const updated = await res.json();
+        const metricsParsed = typeof updated.metrics === 'string' ? JSON.parse(updated.metrics) : (updated.metrics || {});
         setSectors(prev => prev.map(s =>
           String(s.id) === sectorId
-            ? { ...s, name: updated.name, unit: updated.unit, status: updated.status }
+            ? { 
+                ...s, 
+                name: updated.name, 
+                unit: updated.unit,
+                icon: metricsParsed.icon || s.icon,
+                color: metricsParsed.color || s.color,
+                colorLight: metricsParsed.color ? `${metricsParsed.color}20` : s.colorLight
+              }
             : s
         ));
       } else {

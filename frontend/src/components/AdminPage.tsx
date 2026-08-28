@@ -22,7 +22,7 @@ interface AdminPageProps {
   onUpdateUser: (user: User) => void;
   onAddSector: (name: string, unit: string, sectorId: string, icon: string, color: string) => Promise<void>;
   onDeleteSector: (sectorId: string) => Promise<void>;
-  onEditSector: (sectorId: string, name: string, unit: string, status: string) => Promise<void>;
+  onEditSector: (sectorId: string, name: string, unit: string, icon: string, color: string) => Promise<void>;
 }
 
 export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, setDarkMode, loggedInUser, onUpdateUser, onAddSector, onDeleteSector, onEditSector }: AdminPageProps) {
@@ -35,7 +35,8 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
   const [sectorToEdit, setSectorToEdit] = useState<Sector | null>(null);
   const [editSectorName, setEditSectorName] = useState('');
   const [editSectorUnit, setEditSectorUnit] = useState('');
-  const [editSectorStatus, setEditSectorStatus] = useState('baik');
+  const [editSectorIcon, setEditSectorIcon] = useState('📋');
+  const [editSectorColor, setEditSectorColor] = useState('#059669');
   const [editSectorLoading, setEditSectorLoading] = useState(false);
   const [newSectorName, setNewSectorName] = useState('');
   const [newSectorUnit, setNewSectorUnit] = useState('');
@@ -596,7 +597,8 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
     setSectorToEdit(sector);
     setEditSectorName(sector.name);
     setEditSectorUnit(sector.unit);
-    setEditSectorStatus(sector.status);
+    setEditSectorIcon(sector.icon || '📋');
+    setEditSectorColor(sector.color || '#059669');
   };
 
   const handleEditSectorSubmit = async (e: React.FormEvent) => {
@@ -607,7 +609,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
       return;
     }
     setEditSectorLoading(true);
-    await onEditSector(String(sectorToEdit.id), editSectorName.trim(), editSectorUnit.trim(), editSectorStatus);
+    await onEditSector(String(sectorToEdit.id), editSectorName.trim(), editSectorUnit.trim(), editSectorIcon, editSectorColor);
     setEditSectorLoading(false);
     addActivity('Mengedit sektor', editSectorName.trim());
     setSectorToEdit(null);
@@ -632,7 +634,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
               <div style={{ width: 48, height: 48, borderRadius: '12px', background: sector.color ? `${sector.color}20` : '#05966920', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
                 {sector.icon || '📋'}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ flex: 1, minWidth: 0, paddingRight: '72px' }}>
                 <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sector.name}</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{sector.unit}</div>
               </div>
@@ -772,18 +774,21 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
                 <input required type="text" value={editSectorUnit} onChange={e => setEditSectorUnit(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', outline: 'none', fontSize: '14px' }} />
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-                  {(['baik', 'normal', 'peringatan', 'kritis'] as const).map(s => {
-                    const colors: Record<string, string> = { baik: '#059669', normal: '#1565C0', peringatan: '#f59e0b', kritis: '#ef4444' };
-                    const c = colors[s];
-                    return (
-                      <button key={s} type="button" onClick={() => setEditSectorStatus(s)}
-                        style={{ padding: '8px 4px', borderRadius: '8px', border: `2px solid ${editSectorStatus === s ? c : 'var(--border-color)'}`, background: editSectorStatus === s ? `${c}18` : 'var(--bg-base)', cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: editSectorStatus === s ? c : 'var(--text-secondary)', transition: 'all 0.15s' }}>
-                        {STATUS_MAP[s].label}
-                      </button>
-                    );
-                  })}
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Icon</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {['🐓','🐟','🌿','🌱','💧','☀️','📊','🌾'].map(ic => (
+                    <button key={ic} type="button" onClick={() => setEditSectorIcon(ic)} style={{ width: '40px', height: '40px', borderRadius: '10px', background: editSectorIcon === ic ? 'var(--bg-base)' : 'transparent', border: `2px solid ${editSectorIcon === ic ? 'var(--text-primary)' : 'transparent'}`, fontSize: '20px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                      {ic}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Warna</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {['#E65100','#1565C0','#2E7D32','#795548','#F59E0B','#059669','#6366f1','#8B5CF6'].map(c => (
+                    <button key={c} type="button" onClick={() => setEditSectorColor(c)} style={{ width: '32px', height: '32px', borderRadius: '50%', background: c, border: `3px solid ${editSectorColor === c ? 'var(--text-primary)' : 'transparent'}`, cursor: 'pointer', transition: 'all 0.2s', boxShadow: editSectorColor === c ? '0 0 0 2px var(--bg-surface)' : 'none' }} />
+                  ))}
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>

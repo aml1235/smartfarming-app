@@ -77,14 +77,16 @@ class SectorController extends Controller
         $sector = Sector::where('sector_id', $sector_id)->firstOrFail();
 
         $validated = $request->validate([
-            'name'   => 'sometimes|string|max:255',
-            'unit'   => 'sometimes|string|max:100',
-            'status' => 'sometimes|in:baik,normal,peringatan,kritis',
+            'name'    => 'sometimes|string|max:255',
+            'unit'    => 'sometimes|string|max:100',
+            'status'  => 'sometimes|in:baik,normal,peringatan,kritis',
+            'metrics' => 'sometimes|array',
         ]);
 
-        if (isset($validated['name']))   $sector->name   = $validated['name'];
-        if (isset($validated['unit']))   $sector->unit   = $validated['unit'];
-        if (isset($validated['status'])) $sector->status = $validated['status'];
+        if (isset($validated['name']))    $sector->name    = $validated['name'];
+        if (isset($validated['unit']))    $sector->unit    = $validated['unit'];
+        if (isset($validated['status']))  $sector->status  = $validated['status'];
+        if (isset($validated['metrics'])) $sector->metrics = array_merge((array)$sector->metrics, $validated['metrics']);
 
         $sector->save();
 
