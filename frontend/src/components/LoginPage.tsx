@@ -245,7 +245,7 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
                   style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', background: 'var(--bg-surface)', border: '1px solid #d1d5db', color: 'var(--text-primary)', outline: 'none', paddingRight: '40px' }}
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 0, display: 'flex', alignItems: 'center' }}>
-                  <IcEyeOff visible={showPassword} />
+                  {showPassword ? <IcEyeOff /> : <IcEye />}
                 </button>
               </div>
             </div>
@@ -260,7 +260,7 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
                   style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', background: 'var(--bg-surface)', border: '1px solid #d1d5db', color: 'var(--text-primary)', outline: 'none', paddingRight: '40px' }}
                 />
                 <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 0, display: 'flex', alignItems: 'center' }}>
-                  <IcEyeOff visible={showConfirmPassword} />
+                  {showConfirmPassword ? <IcEyeOff /> : <IcEye />}
                 </button>
               </div>
               {password && passwordConfirmation && password !== passwordConfirmation && (
