@@ -31,9 +31,7 @@ RUN apt-get install -y \
     php8.3-tokenizer \
     php8.3-ctype \
     php8.3-fileinfo \
-    php8.3-pcntl \
-    php8.3-posix \
-    php8.3-sockets \
+    php8.3-cli \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
