@@ -540,7 +540,7 @@ export default function App() {
                     .map(s => (
                     <SectorCard
                       key={s.id}
-                      sector={{ ...s, metrics: <OverviewMetrics id={['kandang','kolam','hidroponik','irigasi'].includes(s.id as any) ? s.id as SectorId : (String(s.id).split('_')[0] as SectorId)} /> }}
+                      sector={{ ...s, metrics: <OverviewMetrics sector={s} /> }}
                       onOpen={() => openDetail(s)}
                     />
                   ))}

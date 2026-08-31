@@ -6,12 +6,17 @@ import { IcCheck, IcChevronRight } from './Icons'
 
 import { API_URL } from '../constants'
 
-export function OverviewMetrics({ id }: { id: string | number }) {
+export function OverviewMetrics({ sector }: { sector: any }) {
   const [hydroData, setHydroData] = React.useState({ waterLevel: 0, temp: 0, humidity: 0, light: 0 })
   const [kandangData, setKandangData] = React.useState({ temp: 0, humidity: 0, waterLevel: 0, ammonia: 0 })
-  const effectiveId = String(id).toLowerCase().includes('sec-010') || String(id).toLowerCase().includes('hidro') ? 'hidroponik' 
-                    : String(id).toLowerCase().includes('sec-011') || String(id).toLowerCase().includes('kandang') ? 'kandang'
-                    : String(id).toLowerCase().includes('kolam') ? 'kolam'
+  
+  const id = sector.id || sector.sector_id;
+  const name = String(sector.name || '').toLowerCase();
+  const unit = String(sector.unit || '').toLowerCase();
+
+  const effectiveId = name.includes('hidro') || unit === 'tanaman' ? 'hidroponik' 
+                    : name.includes('kandang') || unit === 'peternakan' ? 'kandang'
+                    : name.includes('kolam') || unit === 'perikanan' ? 'kolam'
                     : 'irigasi';
 
   React.useEffect(() => {
