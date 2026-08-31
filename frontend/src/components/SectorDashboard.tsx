@@ -54,6 +54,24 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   const [aiLoading, setAiLoading]   = useState(false)
   const [aiResult, setAiResult]     = useState<any>(null)
   const [activeTab, setActiveTab]   = useState<'manual' | 'auto'>('manual')
+  
+  // States for sec-03 (Unhan)
+  const [aki, setAki] = useState('--')
+  const [soc, setSoc] = useState('--')
+  const [lvd, setLvd] = useState('--')
+  const [levelPakan, setLevelPakan] = useState('--')
+  const [statusPakan, setStatusPakan] = useState('--')
+  const [siklusPakan, setSiklusPakan] = useState('--')
+  const [tangki, setTangki] = useState('--')
+  const [statusPompa, setStatusPompa] = useState('--')
+  const [siklusPompa, setSiklusPompa] = useState('--')
+  const [rtcStatus, setRtcStatus] = useState('--')
+  const [bootCount, setBootCount] = useState('--')
+  const [i2cError, setI2cError] = useState('--')
+  const [lampuMode, setLampuMode] = useState('--')
+  const [kunciPompa, setKunciPompa] = useState(false)
+  const [kunciMotor, setKunciMotor] = useState(false)
+  
   const lastAction = useRef<number>(0)
   const sectorId = sector.sector_id || sector.id
 
@@ -87,6 +105,22 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         if (latest.humidity !== undefined) setLembap(Number(latest.humidity).toFixed(0))
         if (latest.ammonia !== undefined) setAmonia(Number(latest.ammonia).toFixed(0))
         if (latest.waterLevel !== undefined) setLevelAir(Math.min(100, Math.max(0, Number(latest.waterLevel))))
+        
+        if (latest.aki !== undefined) setAki(Number(latest.aki).toFixed(2))
+        if (latest.soc !== undefined) setSoc(String(latest.soc))
+        if (latest.lvd !== undefined) setLvd(latest.lvd)
+        if (latest.level !== undefined) setLevelPakan(String(latest.level))
+        if (latest.pakan !== undefined) setStatusPakan(latest.pakan)
+        if (latest.siklusPakan !== undefined) setSiklusPakan(String(latest.siklusPakan))
+        if (latest.tangki !== undefined) setTangki(latest.tangki)
+        if (latest.pompa !== undefined) setStatusPompa(latest.pompa)
+        if (latest.siklusPompa !== undefined) setSiklusPompa(String(latest.siklusPompa))
+        if (latest.rtc !== undefined) setRtcStatus(latest.rtc === 1 ? 'SEHAT' : 'ERROR')
+        if (latest.boot !== undefined) setBootCount(String(latest.boot))
+        if (latest.gagalI2C !== undefined) setI2cError(String(latest.gagalI2C))
+        if (latest.modeLampu !== undefined) setLampuMode(latest.modeLampu)
+        if (latest.kunciPompa !== undefined) setKunciPompa(latest.kunciPompa === 1)
+        if (latest.kunciMotor !== undefined) setKunciMotor(latest.kunciMotor === 1)
         
         
         // Prevent state revert if user recently toggled something (give hardware 15s to sync)
@@ -174,6 +208,78 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         </div>
 
       </div>
+
+      {/* Grid Khusus Unhan sec-03 */}
+      {sectorId === 'sec-03' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
+          <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>🔋 Daya (Baterai)</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Tegangan</span>
+              <strong style={{ fontSize: 13 }}>{aki} V</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Kapasitas (SoC)</span>
+              <strong style={{ fontSize: 13, color: Number(soc) > 30 ? '#059669' : '#ef4444' }}>{soc}%</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Status LVD</span>
+              <strong style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{lvd}</strong>
+            </div>
+          </div>
+
+          <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>🌾 Sistem Pakan</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Sisa Silo</span>
+              <strong style={{ fontSize: 13, color: Number(levelPakan) > 20 ? '#d97706' : '#ef4444' }}>{levelPakan}%</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Fase Mesin</span>
+              <strong style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{statusPakan}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Siklus Total</span>
+              <strong style={{ fontSize: 13 }}>{siklusPakan}x</strong>
+            </div>
+            {kunciMotor && <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginTop: 4 }}>⚠️ MESIN TERKUNCI</div>}
+          </div>
+
+          <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>💧 Pompa & Tangki</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Status Tangki</span>
+              <strong style={{ fontSize: 11, background: '#e0f2fe', color: '#0369a1', padding: '2px 6px', borderRadius: 4 }}>{tangki}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Pompa</span>
+              <strong style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{statusPompa}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Siklus Total</span>
+              <strong style={{ fontSize: 13 }}>{siklusPompa}x</strong>
+            </div>
+            {kunciPompa && <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginTop: 4 }}>⚠️ POMPA TERKUNCI</div>}
+          </div>
+
+          <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>🛠️ Diagnostik</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Status Jam (RTC)</span>
+              <strong style={{ fontSize: 11, color: rtcStatus === 'SEHAT' ? '#059669' : '#ef4444' }}>{rtcStatus}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Lampu Kandang</span>
+              <strong style={{ fontSize: 11, background: '#fef9c3', color: '#a16207', padding: '2px 6px', borderRadius: 4 }}>{lampuMode}</strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Total Boot</span>
+              <strong style={{ fontSize: 13 }}>{bootCount}x</strong>
+            </div>
+            {Number(i2cError) > 0 && <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginTop: 4 }}>⚠️ {i2cError} Error I2C</div>}
+          </div>
+        </div>
+      )}
 
       {/* Chart + Control Panel */}
       <div className="kandang-content-grid">

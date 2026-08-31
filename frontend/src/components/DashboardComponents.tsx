@@ -8,7 +8,7 @@ import { API_URL } from '../constants'
 
 export function OverviewMetrics({ sector }: { sector: any }) {
   const [hydroData, setHydroData] = React.useState({ waterLevel: 0, temp: 0, humidity: 0, light: 0 })
-  const [kandangData, setKandangData] = React.useState({ temp: 0, humidity: 0, waterLevel: 0, ammonia: 0 })
+  const [kandangData, setKandangData] = React.useState({ temp: 0, humidity: 0, waterLevel: 0, ammonia: 0, aki: 0, soc: 0, lvd: '', pakan: 0, tangki: '' })
   
   const id = sector.id || sector.sector_id;
   const name = String(sector.name || '').toLowerCase();
@@ -56,7 +56,17 @@ export function OverviewMetrics({ sector }: { sector: any }) {
             if (effectiveId === 'hidroponik') {
               setHydroData({ waterLevel, temp, humidity: hum, light: lightLevel })
             } else if (effectiveId === 'kandang') {
-              setKandangData({ temp, humidity: hum, waterLevel, ammonia })
+              setKandangData({ 
+                temp, 
+                humidity: hum, 
+                waterLevel, 
+                ammonia,
+                aki: latest.aki || 0,
+                soc: latest.soc || 0,
+                lvd: latest.lvd || '',
+                pakan: latest.level || 0,
+                tangki: latest.tangki || ''
+              })
             }
           }
         } catch (err) {
@@ -82,18 +92,40 @@ export function OverviewMetrics({ sector }: { sector: any }) {
             <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>{kandangData.humidity}%</div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
-            <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Amonia</div>
-            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#059669', marginTop: 1 }}>{kandangData.ammonia}</div>
-          </div>
-        </div>
-        <div>
-          <div className="metric-row-label" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
-            <span>💧 Level Air</span><span style={{ fontWeight: 600, color: '#1565C0' }}>{kandangData.waterLevel}%</span>
-          </div>
-          <ProgressBar value={kandangData.waterLevel} color="#1565C0" />
-        </div>
+        
+        {id === 'sec-03' ? (
+          <>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
+                <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>🔋 Daya (Aki)</div>
+                <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 14, color: kandangData.soc > 30 ? '#059669' : '#ef4444', marginTop: 1 }}>{kandangData.aki}V ({kandangData.soc}%)</div>
+              </div>
+              <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
+                <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>🌾 Sisa Pakan</div>
+                <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 14, color: kandangData.pakan > 20 ? '#d97706' : '#ef4444', marginTop: 1 }}>{kandangData.pakan}%</div>
+              </div>
+              <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
+                <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>💧 Tangki</div>
+                <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 14, color: '#1565C0', marginTop: 1 }}>{kandangData.tangki || 'SEDANG'}</div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
+                <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Amonia</div>
+                <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#059669', marginTop: 1 }}>{kandangData.ammonia}</div>
+              </div>
+            </div>
+            <div>
+              <div className="metric-row-label" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
+                <span>💧 Level Air</span><span style={{ fontWeight: 600, color: '#1565C0' }}>{kandangData.waterLevel}%</span>
+              </div>
+              <ProgressBar value={kandangData.waterLevel} color="#1565C0" />
+            </div>
+          </>
+        )}
       </div>
     ),
     kolam: (
