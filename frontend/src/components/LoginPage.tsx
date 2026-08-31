@@ -15,6 +15,7 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [countdown, setCountdown] = useState(() => {
@@ -235,23 +236,36 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
             </div>
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '8px', color: 'var(--text-secondary)' }}>Password Baru</label>
-              <input 
-                type="password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', background: 'var(--bg-surface)', border: '1px solid #d1d5db', color: 'var(--text-primary)', outline: 'none' }}
-              />
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type={showPassword ? "text" : "password"} 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', background: 'var(--bg-surface)', border: '1px solid #d1d5db', color: 'var(--text-primary)', outline: 'none', paddingRight: '40px' }}
+                />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 0, display: 'flex', alignItems: 'center' }}>
+                  <IcEyeOff visible={showPassword} />
+                </button>
+              </div>
             </div>
             <div style={{ marginBottom: '24px' }}>
               <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '8px', color: 'var(--text-secondary)' }}>Konfirmasi Password</label>
-              <input 
-                type="password" 
-                value={passwordConfirmation}
-                onChange={(e) => setPasswordConfirmation(e.target.value)}
-                required
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', background: 'var(--bg-surface)', border: '1px solid #d1d5db', color: 'var(--text-primary)', outline: 'none' }}
-              />
+              <div style={{ position: 'relative' }}>
+                <input 
+                  type={showConfirmPassword ? "text" : "password"} 
+                  value={passwordConfirmation}
+                  onChange={(e) => setPasswordConfirmation(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '12px 16px', borderRadius: '8px', background: 'var(--bg-surface)', border: '1px solid #d1d5db', color: 'var(--text-primary)', outline: 'none', paddingRight: '40px' }}
+                />
+                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: 0, display: 'flex', alignItems: 'center' }}>
+                  <IcEyeOff visible={showConfirmPassword} />
+                </button>
+              </div>
+              {password && passwordConfirmation && password !== passwordConfirmation && (
+                <div style={{ color: '#ef4444', fontSize: '12px', marginTop: '6px' }}>Konfirmasi password tidak cocok dengan password baru.</div>
+              )}
             </div>
             <button type="submit" style={{ width: '100%', padding: '12px', borderRadius: '8px', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', border: 'none', fontWeight: 600, cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.7 : 1, marginBottom: '12px' }} disabled={isLoading}>
               {isLoading ? 'Memproses...' : 'Ubah Password'}
