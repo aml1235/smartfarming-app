@@ -213,59 +213,59 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
       {sectorId === 'sec-03' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
           <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>🔋 Daya (Baterai)</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>🔋 Info Baterai</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Tegangan</span>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Kekuatan Listrik</span>
               <strong style={{ fontSize: 13 }}>{aki} V</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Kapasitas (SoC)</span>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Sisa Baterai</span>
               <strong style={{ fontSize: 13, color: Number(soc) > 30 ? '#059669' : '#ef4444' }}>{soc}%</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Status LVD</span>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Sistem Keamanan</span>
               <strong style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{lvd}</strong>
             </div>
           </div>
 
           <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>🌾 Sistem Pakan</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>🌾 Info Pakan</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Sisa Silo</span>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Stok di Penampung</span>
               <strong style={{ fontSize: 13, color: Number(levelPakan) > 20 ? '#d97706' : '#ef4444' }}>{levelPakan}%</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Fase Mesin</span>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Kondisi Mesin</span>
               <strong style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{statusPakan}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Siklus Total</span>
-              <strong style={{ fontSize: 13 }}>{siklusPakan}x</strong>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Total Diberi Pakan</span>
+              <strong style={{ fontSize: 13 }}>{siklusPakan} kali</strong>
             </div>
-            {kunciMotor && <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginTop: 4 }}>⚠️ MESIN TERKUNCI</div>}
+            {kunciMotor && <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginTop: 4 }}>⚠️ MESIN MACET</div>}
           </div>
 
           <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>💧 Pompa & Tangki</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>💧 Info Air</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Status Tangki</span>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Isi Tangki Air</span>
               <strong style={{ fontSize: 11, background: '#e0f2fe', color: '#0369a1', padding: '2px 6px', borderRadius: 4 }}>{tangki}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Pompa</span>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Mesin Pompa</span>
               <strong style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{statusPompa}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Siklus Total</span>
-              <strong style={{ fontSize: 13 }}>{siklusPompa}x</strong>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Total Pompa Nyala</span>
+              <strong style={{ fontSize: 13 }}>{siklusPompa} kali</strong>
             </div>
-            {kunciPompa && <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginTop: 4 }}>⚠️ POMPA TERKUNCI</div>}
+            {kunciPompa && <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginTop: 4 }}>⚠️ AIR SUMBER HABIS</div>}
           </div>
 
           <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>🛠️ Diagnostik</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>🛠️ Info Perangkat</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Status Jam (RTC)</span>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Waktu Sistem</span>
               <strong style={{ fontSize: 11, color: rtcStatus === 'SEHAT' ? '#059669' : '#ef4444' }}>{rtcStatus}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -273,10 +273,10 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
               <strong style={{ fontSize: 11, background: '#fef9c3', color: '#a16207', padding: '2px 6px', borderRadius: 4 }}>{lampuMode}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Total Boot</span>
-              <strong style={{ fontSize: 13 }}>{bootCount}x</strong>
+              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Alat Restart Ulang</span>
+              <strong style={{ fontSize: 13 }}>{bootCount} kali</strong>
             </div>
-            {Number(i2cError) > 0 && <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginTop: 4 }}>⚠️ {i2cError} Error I2C</div>}
+            {Number(i2cError) > 0 && <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginTop: 4 }}>⚠️ {i2cError} Kerusakan Kabel</div>}
           </div>
         </div>
       )}
