@@ -36,7 +36,7 @@ class DatabaseSeeder extends Seeder
 
         // 2. Setup Sectors — hanya Kandang Ayam & Hidroponik
         \App\Models\Sector::updateOrCreate(
-            ['sector_id' => 'SEC-011'],
+            ['sector_id' => 'sec01'],
             [
                 'name'    => 'Kandang Ayam',
                 'unit'    => 'Peternakan',

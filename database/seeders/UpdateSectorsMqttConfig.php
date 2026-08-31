@@ -98,7 +98,7 @@ class UpdateSectorsMqttConfig extends Seeder
                 'mqtt_control_topic' => 'smartcoop/control',
             ]);
 
-        $this->command->info('✅ sec-011 (Kandang Ayam): MQTT config updated (broker kustom)');
+        $this->command->info('✅ sec01 (Kandang Ayam): MQTT config updated (broker kustom)');
 
         $this->command->line('');
         $this->command->info('🎉 Seeder selesai! Sektor baru dapat ditambah melalui UI tanpa mengubah code.');

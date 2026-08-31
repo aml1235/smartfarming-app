@@ -23,7 +23,7 @@ const getMetricUI = (key: string) => {
 
 // ─── ROOT EXPORT ──────────────────────────────────────────────────────────────
 export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) {
-  const isKandang = sector.id.toString().toLowerCase().includes('kandang') || sector.id === 'SEC-011' || sector.name.toLowerCase().includes('kandang')
+  const isKandang = sector.id.toString().toLowerCase().includes('kandang') || sector.id === 'sec01' || sector.name.toLowerCase().includes('kandang')
   const [tempData, setTempData] = useState<any[]>([])
   const [lastRefresh, setLastRefresh] = useState(new Date())
   if (isKandang) return <KandangDashboard sector={sector} loggedInUser={loggedInUser} tempData={tempData} setTempData={setTempData} lastRefresh={lastRefresh} setLastRefresh={setLastRefresh} />
