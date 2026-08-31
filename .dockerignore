@@ -6,8 +6,6 @@ vendor
 .git
 .env
 *.log
-docker/
-
 # Laravel storage (akan dibuat ulang)
 storage/logs/*.log
 storage/framework/cache/data/*
