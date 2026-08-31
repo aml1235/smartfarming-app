@@ -19,6 +19,11 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
+# Update Nginx listen port if PORT environment variable is set by Railway
+if [ -n "$PORT" ]; then
+    sed -i "s/listen 8080;/listen ${PORT};/g" /etc/nginx/sites-available/default
+fi
+
 # Create PHP-FPM run directory
 mkdir -p /run/php
 
