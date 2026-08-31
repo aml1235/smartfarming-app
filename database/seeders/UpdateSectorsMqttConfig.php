@@ -19,12 +19,12 @@ class UpdateSectorsMqttConfig extends Seeder
     public function run(): void
     {
         // -------------------------------------------------------
-        // SEKTOR HIDROPONIK (sec-010)
+        // SEKTOR HIDROPONIK (SEC-010)
         // Broker: utama (dari .env MQTT_HOST)
-        // Topic : smartfarming/+/sensor/sec-010 (disubscribe via wildcard)
+        // Topic : smartfarming/+/sensor/SEC-010 (disubscribe via wildcard)
         // -------------------------------------------------------
         DB::table('sectors')
-            ->where('sector_id', 'sec-010')
+            ->where('sector_id', 'SEC-010')
             ->update([
                 'mqtt_topic_pattern' => 'smartfarming/+/sensor/+',
                 'mqtt_broker_config' => null, // pakai broker utama dari .env
@@ -32,7 +32,7 @@ class UpdateSectorsMqttConfig extends Seeder
                 'mqtt_control_topic' => 'smartfarming/hydroponic/cmd',
             ]);
 
-        $this->command->info('✅ sec-010 (Hidroponik): MQTT config updated (broker utama)');
+        $this->command->info('✅ SEC-010 (Hidroponik): MQTT config updated (broker utama)');
 
         // -------------------------------------------------------
         // SEKTOR KANDANG AYAM (sec-011)

@@ -2,7 +2,7 @@ import { Sector, StatusLevel, User, AppNotification, ActivityLog } from './types
 
 export const SECTORS: Sector[] = [
   { id: 'SEC-011', name: 'Kandang Ayam', unit: 'Peternakan', icon: '🐓', color: '#E65100', colorLight: 'var(--kandang-light)', status: 'baik', lastUpdate: '2 mnt lalu' },
-  { id: 'hidroponik', name: 'Hidroponik', unit: 'Tanaman', icon: '🌿', color: '#2E7D32', colorLight: 'var(--hidroponik-light)', status: 'baik', lastUpdate: '3 mnt lalu' },
+  { id: 'SEC-010', name: 'Hidroponik', unit: 'Tanaman', icon: '🌿', color: '#2E7D32', colorLight: 'var(--hidroponik-light)', status: 'baik', lastUpdate: '3 mnt lalu' },
 ]
 
 export const STATUS_MAP: Record<StatusLevel, { label: string; cls: string }> = {
