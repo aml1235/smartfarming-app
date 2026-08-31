@@ -46,10 +46,14 @@ export default function App() {
   };
   
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const isResetPassword = params.has('token') && params.has('email');
     const token = localStorage.getItem('token');
     
-    // Check auth first
-    if (token) {
+    if (isResetPassword) {
+      setAppView('login');
+      setIsInitializing(false);
+    } else if (token) {
       fetch(`${API_URL}/api/user`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
