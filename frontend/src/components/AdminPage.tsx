@@ -842,12 +842,12 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
                 {editSectorShowMqtt && (
                   <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px', background: 'var(--bg-base)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: 'var(--text-secondary)' }}>Topic Pattern (Subscribe)</label>
-                      <input type="text" value={editSectorMqttTopic} onChange={e => setEditSectorMqttTopic(e.target.value)} placeholder="smartcoop/sensor/+" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} />
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: 'var(--text-secondary)' }}>Alamat Terima Data (Subscribe Topic)</label>
+                      <input type="text" value={editSectorMqttTopic} onChange={e => setEditSectorMqttTopic(e.target.value)} placeholder="Contoh: kandang1/#" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: 'var(--text-secondary)' }}>Control Topic (Publish)</label>
-                      <input type="text" value={editSectorMqttControlTopic} onChange={e => setEditSectorMqttControlTopic(e.target.value)} placeholder="smartcoop/control" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} />
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: 'var(--text-secondary)' }}>Alamat Kirim Perintah (Publish Topic)</label>
+                      <input type="text" value={editSectorMqttControlTopic} onChange={e => setEditSectorMqttControlTopic(e.target.value)} placeholder="Contoh: kandang1/control" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} />
                     </div>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '8px' }}>
                       <input type="checkbox" checked={editSectorUseCustomBroker} onChange={e => setEditSectorUseCustomBroker(e.target.checked)} />
