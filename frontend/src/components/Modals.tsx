@@ -5,9 +5,18 @@ import { Sector, SectorId } from '../types'
 import { Toggle, ProgressBar, TempGauge, StatCard, ChartTooltip } from './UIComponents'
 import { IcArrowLeft, IcRefresh, IcCheck, IcDroplets, IcThermometer, IcActivity, IcX, IcPlus } from './Icons'
 
-export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name: string, type: string) => void }) {
+export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd: (name: string, type: string, mqttConfig?: any) => void }) {
   const [name, setName] = useState('')
   const [type, setType] = useState('kandang')
+  const [showMqtt, setShowMqtt] = useState(false)
+  const [mqttTopic, setMqttTopic] = useState('')
+  const [mqttControlTopic, setMqttControlTopic] = useState('')
+  const [useCustomBroker, setUseCustomBroker] = useState(false)
+  const [brokerHost, setBrokerHost] = useState('')
+  const [brokerPort, setBrokerPort] = useState('8883')
+  const [brokerUser, setBrokerUser] = useState('')
+  const [brokerPass, setBrokerPass] = useState('')
+  const [brokerTls, setBrokerTls] = useState(true)
 
   const types = [
     { value: 'kandang', label: 'Kandang Ayam', icon: '🐓' },
@@ -16,9 +25,33 @@ export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd:
     { value: 'irigasi', label: 'Irigasi Tanah', icon: '🌱' },
   ]
 
+  const handleAdd = () => {
+    if (!name.trim()) return
+    const mqttConfig = showMqtt ? {
+      mqtt_topic_pattern: mqttTopic || null,
+      mqtt_control_topic: mqttControlTopic || null,
+      mqtt_broker_config: useCustomBroker && brokerHost ? {
+        host: brokerHost,
+        port: parseInt(brokerPort) || 8883,
+        tls: brokerTls,
+        username: brokerUser,
+        password: brokerPass,
+      } : null,
+    } : {}
+    onAdd(name.trim(), type, mqttConfig)
+    onClose()
+  }
+
+  const inputStyle = {
+    width: '100%', padding: '9px 12px', border: '1px solid var(--border-color, #d1d5db)',
+    borderRadius: 7, fontSize: 13, color: 'var(--text-primary)', outline: 'none',
+    background: 'var(--bg-base, #f9fafb)', boxSizing: 'border-box' as const,
+  }
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-sheet" style={{ maxWidth: 480, marginTop: 80 }} onClick={e => e.stopPropagation()}>
+      <div className="modal-sheet" style={{ maxWidth: 500, marginTop: 60 }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
         <div style={{ background: '#2E7D32', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>Tambah Unit Baru</div>
@@ -28,24 +61,104 @@ export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd:
             <IcX />
           </button>
         </div>
-        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+        {/* Body */}
+        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 18, maxHeight: 'calc(85vh - 80px)', overflowY: 'auto' }}>
+
+          {/* Nama */}
           <div>
             <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nama Sektor</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="contoh: Kandang Ayam Unit 2" style={{ width: '100%', padding: '10px 14px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' }} />
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="contoh: Kandang Ayam Unit 2" style={inputStyle} />
           </div>
+
+          {/* Tipe */}
           <div>
             <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Tipe Sektor</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               {types.map(t => (
-                <button key={t.value} onClick={() => setType(t.value)} style={{ padding: '10px 14px', borderRadius: 8, border: `2px solid ${type === t.value ? '#2E7D32' : '#e4e7ec'}`, background: type === t.value ? '#dcf0de' : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: type === t.value ? '#2E7D32' : '#374151' }}>
+                <button key={t.value} onClick={() => setType(t.value)} style={{ padding: '10px 14px', borderRadius: 8, border: `2px solid ${type === t.value ? '#2E7D32' : '#e4e7ec'}`, background: type === t.value ? '#dcf0de' : 'var(--bg-surface)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 500, color: type === t.value ? '#2E7D32' : 'var(--text-primary)' }}>
                   <span>{t.icon}</span>{t.label}
                 </button>
               ))}
             </div>
           </div>
+
+          {/* Toggle MQTT Config */}
+          <div>
+            <button
+              onClick={() => setShowMqtt(v => !v)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#2E7D32', fontWeight: 600, fontSize: 13, padding: 0 }}
+            >
+              <span style={{ fontSize: 16 }}>{showMqtt ? '▼' : '▶'}</span>
+              Konfigurasi MQTT {showMqtt ? '' : '(opsional)'}
+            </button>
+          </div>
+
+          {showMqtt && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '16px', background: 'var(--bg-base, #f9fafb)', borderRadius: 10, border: '1px solid var(--border-color, #e4e7ec)' }}>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                💡 Isi konfigurasi ini agar sektor bisa menerima data dari MQTT secara otomatis. Kosongkan jika belum ada perangkat.
+              </p>
+
+              {/* Topic Pattern */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                  Topic Subscribe <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(misal: <code>smartpond/#</code>)</span>
+                </label>
+                <input value={mqttTopic} onChange={e => setMqttTopic(e.target.value)} placeholder="smartpond/#" style={inputStyle} />
+              </div>
+
+              {/* Control Topic */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>
+                  Topic Kontrol <span style={{ color: '#9CA3AF', fontWeight: 400 }}>(misal: <code>smartpond/control</code>)</span>
+                </label>
+                <input value={mqttControlTopic} onChange={e => setMqttControlTopic(e.target.value)} placeholder="smartpond/control" style={inputStyle} />
+              </div>
+
+              {/* Custom Broker Toggle */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <input id="custom-broker-toggle" type="checkbox" checked={useCustomBroker} onChange={e => setUseCustomBroker(e.target.checked)} style={{ cursor: 'pointer', accentColor: '#2E7D32', width: 15, height: 15 }} />
+                <label htmlFor="custom-broker-toggle" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
+                  Gunakan broker HiveMQ berbeda
+                </label>
+              </div>
+
+              {useCustomBroker && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingLeft: 4, borderLeft: '3px solid #2E7D32', paddingLeft: 12 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8 }}>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 3 }}>Host</label>
+                      <input value={brokerHost} onChange={e => setBrokerHost(e.target.value)} placeholder="xxx.hivemq.cloud" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 3 }}>Port</label>
+                      <input value={brokerPort} onChange={e => setBrokerPort(e.target.value)} placeholder="8883" type="number" style={inputStyle} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 3 }}>Username</label>
+                      <input value={brokerUser} onChange={e => setBrokerUser(e.target.value)} placeholder="username" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 3 }}>Password</label>
+                      <input value={brokerPass} onChange={e => setBrokerPass(e.target.value)} placeholder="password" type="password" style={inputStyle} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input id="tls-toggle" type="checkbox" checked={brokerTls} onChange={e => setBrokerTls(e.target.checked)} style={{ cursor: 'pointer', accentColor: '#2E7D32' }} />
+                    <label htmlFor="tls-toggle" style={{ fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>Gunakan TLS/SSL (direkomendasikan untuk HiveMQ Cloud)</label>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Actions */}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', paddingTop: 4 }}>
             <button onClick={onClose} style={{ padding: '10px 20px', borderRadius: 8, border: '1px solid #d1d5db', background: 'var(--bg-surface)', fontSize: 14, fontWeight: 500, cursor: 'pointer', color: 'var(--text-secondary)' }}>Batal</button>
-            <button onClick={() => { if (name.trim()) { onAdd(name.trim(), type); onClose() } }} disabled={!name.trim()} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: name.trim() ? '#2E7D32' : '#9CA3AF', fontSize: 14, fontWeight: 600, cursor: name.trim() ? 'pointer' : 'not-allowed', color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={handleAdd} disabled={!name.trim()} style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: name.trim() ? '#2E7D32' : '#9CA3AF', fontSize: 14, fontWeight: 600, cursor: name.trim() ? 'pointer' : 'not-allowed', color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
               <IcPlus /> Tambah Sektor
             </button>
           </div>
@@ -54,6 +167,7 @@ export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd:
     </div>
   )
 }
+
 
 
 import { SectorDashboard, AiModal } from './SectorDashboard'

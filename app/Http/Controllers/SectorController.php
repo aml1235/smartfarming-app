@@ -21,19 +21,27 @@ class SectorController extends Controller
         }
 
         $validated = $request->validate([
-            'sector_id' => 'required|string|max:50|unique:sectors,sector_id',
-            'name'      => 'required|string|max:255',
-            'unit'      => 'required|string|max:100',
-            'status'    => 'sometimes|in:baik,normal,peringatan,kritis',
-            'metrics'   => 'sometimes|array',
+            'sector_id'           => 'required|string|max:50|unique:sectors,sector_id',
+            'name'                => 'required|string|max:255',
+            'unit'                => 'required|string|max:100',
+            'status'              => 'sometimes|in:baik,normal,peringatan,kritis',
+            'metrics'             => 'sometimes|array',
+            'mqtt_topic_pattern'  => 'sometimes|nullable|string|max:255',
+            'mqtt_broker_config'  => 'sometimes|nullable|array',
+            'mqtt_metric_map'     => 'sometimes|nullable|array',
+            'mqtt_control_topic'  => 'sometimes|nullable|string|max:255',
         ]);
 
         $sector = Sector::create([
-            'sector_id' => $validated['sector_id'],
-            'name'      => $validated['name'],
-            'unit'      => $validated['unit'],
-            'status'    => $validated['status'] ?? 'normal',
-            'metrics'   => $validated['metrics'] ?? [],
+            'sector_id'           => $validated['sector_id'],
+            'name'                => $validated['name'],
+            'unit'                => $validated['unit'],
+            'status'              => $validated['status'] ?? 'normal',
+            'metrics'             => $validated['metrics'] ?? [],
+            'mqtt_topic_pattern'  => $validated['mqtt_topic_pattern'] ?? null,
+            'mqtt_broker_config'  => $validated['mqtt_broker_config'] ?? null,
+            'mqtt_metric_map'     => $validated['mqtt_metric_map']    ?? null,
+            'mqtt_control_topic'  => $validated['mqtt_control_topic'] ?? null,
         ]);
 
         // Catat aktivitas
@@ -77,16 +85,24 @@ class SectorController extends Controller
         $sector = Sector::where('sector_id', $sector_id)->firstOrFail();
 
         $validated = $request->validate([
-            'name'    => 'sometimes|string|max:255',
-            'unit'    => 'sometimes|string|max:100',
-            'status'  => 'sometimes|in:baik,normal,peringatan,kritis',
-            'metrics' => 'sometimes|array',
+            'name'               => 'sometimes|string|max:255',
+            'unit'               => 'sometimes|string|max:100',
+            'status'             => 'sometimes|in:baik,normal,perigatan,kritis',
+            'metrics'            => 'sometimes|array',
+            'mqtt_topic_pattern' => 'sometimes|nullable|string|max:255',
+            'mqtt_broker_config' => 'sometimes|nullable|array',
+            'mqtt_metric_map'    => 'sometimes|nullable|array',
+            'mqtt_control_topic' => 'sometimes|nullable|string|max:255',
         ]);
 
-        if (isset($validated['name']))    $sector->name    = $validated['name'];
-        if (isset($validated['unit']))    $sector->unit    = $validated['unit'];
-        if (isset($validated['status']))  $sector->status  = $validated['status'];
-        if (isset($validated['metrics'])) $sector->metrics = array_merge((array)$sector->metrics, $validated['metrics']);
+        if (isset($validated['name']))               $sector->name               = $validated['name'];
+        if (isset($validated['unit']))               $sector->unit               = $validated['unit'];
+        if (isset($validated['status']))             $sector->status             = $validated['status'];
+        if (isset($validated['metrics']))            $sector->metrics            = array_merge((array)$sector->metrics, $validated['metrics']);
+        if (array_key_exists('mqtt_topic_pattern', $validated)) $sector->mqtt_topic_pattern = $validated['mqtt_topic_pattern'];
+        if (array_key_exists('mqtt_broker_config', $validated)) $sector->mqtt_broker_config = $validated['mqtt_broker_config'];
+        if (array_key_exists('mqtt_metric_map',    $validated)) $sector->mqtt_metric_map    = $validated['mqtt_metric_map'];
+        if (array_key_exists('mqtt_control_topic', $validated)) $sector->mqtt_control_topic = $validated['mqtt_control_topic'];
 
         $sector->save();
 
@@ -373,71 +389,74 @@ class SectorController extends Controller
             'target'    => "Sektor $sector_id / $target"
         ]);
 
-        // Publish to MQTT
+        // Publish to MQTT — config broker dibaca dinamis dari DB
         try {
-            $isKandang = ($sector_id === 'SEC-011' || $sector_id === 'kandang');
-            $prefix    = $isKandang ? 'MQTT_COOP_' : 'MQTT_';
+            $sectorModel = \App\Models\Sector::where('sector_id', $sector_id)->first();
+            $mqttCfg = $sectorModel
+                ? $sectorModel->getMqttConnectionConfig()
+                : [
+                    'host'     => env('MQTT_HOST', 'broker.hivemq.com'),
+                    'port'     => (int) env('MQTT_PORT', 1883),
+                    'tls'      => (bool) env('MQTT_TLS', false),
+                    'username' => env('MQTT_USERNAME'),
+                    'password' => env('MQTT_PASSWORD'),
+                ];
 
-            $server   = env($prefix . 'HOST', env('MQTT_HOST', 'broker.hivemq.com'));
-            $port     = env($prefix . 'PORT', env('MQTT_PORT', 1883));
-            $clientId = env($prefix . 'CLIENT_ID', env('MQTT_CLIENT_ID', 'laravel_pub_' . uniqid())) . '_' . uniqid();
-            $username = env($prefix . 'USERNAME', env('MQTT_USERNAME'));
-            $password = env($prefix . 'PASSWORD', env('MQTT_PASSWORD'));
+            $clientId = 'laravel_pub_' . md5($mqttCfg['host']) . '_' . uniqid();
 
             $connectionSettings = (new \PhpMqtt\Client\ConnectionSettings)
-                ->setUsername($username)
-                ->setPassword($password)
-                ->setUseTls(env($prefix . 'TLS', env('MQTT_TLS', false)));
+                ->setUsername($mqttCfg['username'])
+                ->setPassword($mqttCfg['password'])
+                ->setUseTls($mqttCfg['tls']);
 
-            $mqtt = new \PhpMqtt\Client\MqttClient($server, $port, $clientId);
+            $mqtt = new \PhpMqtt\Client\MqttClient($mqttCfg['host'], $mqttCfg['port'], $clientId);
             $mqtt->connect($connectionSettings, true);
-            
-            if ($isKandang) {
-                // Kandang Ayam (smartcoop) — semua kontrol pakai format "1"/"0" atau string khusus
 
+            // Gunakan mqtt_control_topic dari DB, fallback ke format lama
+            $controlBaseTopic = $sectorModel?->mqtt_control_topic
+                ?? "smartfarming/hydroponic/cmd";
+
+            // Deteksi apakah ini broker smartcoop (berdasarkan control topic)
+            $isSmartcoop = str_starts_with($controlBaseTopic, 'smartcoop');
+
+            if ($isSmartcoop) {
+                // Format kontrol smartcoop: 1/0 atau string khusus
                 if ($target === 'convjog') {
-                    // Jog manual motor konveyor: command = "fwd", "rev", atau "stop"
-                    $mqtt->publish('smartcoop/control/convjog', $command, 1);
+                    $mqtt->publish("{$controlBaseTopic}/convjog", $command, 1);
 
                 } elseif ($target === 'pompaauto') {
-                    // Toggle mode auto/manual pompa
                     $payload = (strtoupper($command) === 'ON' || $command === '1') ? '1' : '0';
-                    $mqtt->publish('smartcoop/control/pompaauto', $payload, 1);
+                    $mqtt->publish("{$controlBaseTopic}/pompaauto", $payload, 1);
 
                     // Update optimistis di DB
-                    $sector = \App\Models\Sector::where('sector_id', $sector_id)
-                        ->orWhere('name', 'ILIKE', '%kandang%')->first();
-                    if ($sector) {
-                        $metrics = is_string($sector->metrics)
-                            ? json_decode($sector->metrics, true)
-                            : ($sector->metrics ?? []);
+                    if ($sectorModel) {
+                        $metrics = is_string($sectorModel->metrics)
+                            ? json_decode($sectorModel->metrics, true)
+                            : ($sectorModel->metrics ?? []);
                         $metrics['pompaAutoMode'] = $payload;
-                        $sector->metrics = $metrics;
-                        $sector->save();
+                        $sectorModel->metrics = $metrics;
+                        $sectorModel->save();
                     }
 
                 } else {
-                    // Kontrol biasa: lamp, conveyor, pompa, lampauto
-                    // V4 format
-                    $topic   = "smartcoop/control/{$target}";
+                    $topic   = "{$controlBaseTopic}/{$target}";
                     $payload = (strtoupper($command) === 'ON' || $command === '1') ? '1' : '0';
                     $mqtt->publish($topic, $payload, 1);
-                    
-                    // V3 fallback (JSON on unified topic)
-                    $v3Topic = "smartfarming/poultry/cmd/{$sector_id}";
+
+                    // V3 fallback
+                    $v3Topic  = "smartfarming/poultry/cmd/{$sector_id}";
                     $v3Target = $target;
                     if ($target === 'conveyor') $v3Target = 'motor';
                     if ($target === 'lampauto') $v3Target = 'lampAutoMode';
-                    $v3Payload = json_encode([$v3Target => strtoupper($command) === 'ON' ? 'ON' : 'OFF']);
-                    $mqtt->publish($v3Topic, $v3Payload, 0);
+                    $mqtt->publish($v3Topic, json_encode([$v3Target => strtoupper($command) === 'ON' ? 'ON' : 'OFF']), 0);
                 }
             } else {
-                // Sektor lain (hidroponik, dll) — format JSON
-                $topic   = "smartfarming/hydroponic/cmd/{$sector_id}";
+                // Format kontrol umum — JSON
+                $topic   = "{$controlBaseTopic}/{$sector_id}";
                 $payload = json_encode(['status' => $command]);
                 $mqtt->publish($topic, $payload, 0);
             }
-            
+
             $mqtt->disconnect();
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('MQTT Publish Error: ' . $e->getMessage());
@@ -469,65 +488,57 @@ class SectorController extends Controller
         ]);
 
         try {
-            $isKandang = ($sector_id === 'SEC-011' || $sector_id === 'kandang');
-            if (!$isKandang) {
-                return response()->json(['message' => 'Konfigurasi jadwal hanya untuk Kandang Ayam'], 400);
+            $sectorModel = \App\Models\Sector::where('sector_id', $sector_id)->first();
+            if (!$sectorModel) {
+                return response()->json(['message' => 'Sektor tidak ditemukan'], 404);
             }
 
-            $prefix   = 'MQTT_COOP_';
-            $server   = env($prefix . 'HOST', env('MQTT_HOST', 'broker.hivemq.com'));
-            $port     = env($prefix . 'PORT', env('MQTT_PORT', 1883));
-            $clientId = env($prefix . 'CLIENT_ID', env('MQTT_CLIENT_ID', 'laravel_pub_' . uniqid())) . '_' . uniqid();
-            $username = env($prefix . 'USERNAME', env('MQTT_USERNAME'));
-            $password = env($prefix . 'PASSWORD', env('MQTT_PASSWORD'));
+            $mqttCfg = $sectorModel->getMqttConnectionConfig();
+            $clientId = 'laravel_cfg_' . md5($mqttCfg['host']) . '_' . uniqid();
 
             $connectionSettings = (new \PhpMqtt\Client\ConnectionSettings)
-                ->setUsername($username)
-                ->setPassword($password)
-                ->setUseTls(env($prefix . 'TLS', env('MQTT_TLS', false)));
+                ->setUsername($mqttCfg['username'])
+                ->setPassword($mqttCfg['password'])
+                ->setUseTls($mqttCfg['tls']);
 
-            $mqtt = new \PhpMqtt\Client\MqttClient($server, $port, $clientId);
+            $mqtt = new \PhpMqtt\Client\MqttClient($mqttCfg['host'], $mqttCfg['port'], $clientId);
             $mqtt->connect($connectionSettings, true);
-            
-            $topic = "smartcoop/config/{$target}";
+
+            // Derive config topic dari control topic (ganti 'control' → 'config')
+            $controlBase  = $sectorModel->mqtt_control_topic ?? 'smartcoop/control';
+            $configBase   = str_replace('/control', '/config', $controlBase);
+            $topic        = "{$configBase}/{$target}";
             $mqtt->publish($topic, $value, 1);
-            
             $mqtt->disconnect();
 
-            // Optimistic update to DB so UI updates instantly
-            // Map config target -> key di JSON metrics
-            $metricMap = [
-                'lampon'        => 'lampOn',
-                'lampoff'       => 'lampOff',
-                'conveyoron'    => 'cv1On',
-                'conveyor2on'   => 'cv2On',
-                'conveyor2en'   => 'cv2En',
-                // BARU v4: parameter siklus konveyor
-                'convrun'       => 'convRun',
-                'convpause'     => 'convPause',
-                'convspeed'     => 'convSpeed',
-                // Feeder
-                'feedtime1'     => 'feedTime1',
-                'feedtime2'     => 'feedTime2',
-                'feedtime2en'   => 'feedTime2En',
-                'feedduration'  => 'feedDuration',
+            // Optimistic update ke DB — gunakan metric_map dari sektor jika ada
+            $metricMap = $sectorModel->mqtt_metric_map ?? [
+                'lampon'      => 'lampOn',
+                'lampoff'     => 'lampOff',
+                'conveyoron'  => 'cv1On',
+                'conveyor2on' => 'cv2On',
+                'conveyor2en' => 'cv2En',
+                'convrun'     => 'convRun',
+                'convpause'   => 'convPause',
+                'convspeed'   => 'convSpeed',
+                'feedtime1'   => 'feedTime1',
+                'feedtime2'   => 'feedTime2',
+                'feedtime2en' => 'feedTime2En',
+                'feedduration'=> 'feedDuration',
             ];
-            $dbKey  = $metricMap[$target] ?? $target;
-            $sector = \App\Models\Sector::where('sector_id', $sector_id)
-                ->orWhere('name', 'ILIKE', '%kandang%')->first();
-            if ($sector) {
-                $metrics        = is_string($sector->metrics)
-                    ? json_decode($sector->metrics, true)
-                    : ($sector->metrics ?? []);
-                $metrics[$dbKey] = $value;
-                $sector->metrics = $metrics;
-                $sector->save();
-            }
+            $dbKey   = $metricMap[$target] ?? $target;
+            $metrics = is_string($sectorModel->metrics)
+                ? json_decode($sectorModel->metrics, true)
+                : ($sectorModel->metrics ?? []);
+            $metrics[$dbKey]  = $value;
+            $sectorModel->metrics = $metrics;
+            $sectorModel->save();
+
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('MQTT Publish Error (Config): ' . $e->getMessage());
             return response()->json([
                 'message' => "Gagal mengirim konfigurasi ke sektor $sector_id via MQTT",
-                'error' => $e->getMessage()
+                'error'   => $e->getMessage()
             ], 500);
         }
 

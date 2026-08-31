@@ -9,296 +9,350 @@ use App\Models\SensorLog;
 use App\Models\Sector;
 use Exception;
 
+/**
+ * MqttListen — Config-Driven MQTT Listener
+ *
+ * Semua konfigurasi broker, topic, dan metric mapping dibaca dari tabel `sectors`.
+ * Untuk menambah sektor baru (bahkan dari broker berbeda), cukup:
+ *   1. Tambah sektor melalui UI (atau DB langsung)
+ *   2. Isi kolom: mqtt_topic_pattern, mqtt_broker_config, mqtt_metric_map
+ *   3. Restart process ini — TIDAK perlu ubah code sama sekali.
+ *
+ * Cara jalankan:
+ *   php artisan mqtt:listen                    → connect ke semua broker
+ *   php artisan mqtt:listen --broker-host=xxx  → hanya untuk broker tertentu (untuk multi-process)
+ */
 class MqttListen extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
-    protected $signature = 'mqtt:listen {--broker=default : Which broker to connect to (default, coop)}';
+    protected $signature = 'mqtt:listen
+                            {--broker-host= : Hanya listen broker dengan host ini (untuk multi-process per broker)}';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Listen to MQTT Broker for Sensor Data';
+    protected $description = 'Listen ke semua MQTT broker yang dikonfigurasi di tabel sectors';
 
-    /**
-     * Execute the console command.
-     */
+    // Default validTypes untuk sektor yang tidak punya mqtt_metric_map
+    private const DEFAULT_VALID_TYPES = [
+        'temperature', 'humidity', 'waterLevel', 'lightLevel',
+        'water_level', 'light_level', 'pumpStatus', 'pump_status',
+        'lampStatus', 'exhaustStatus', 'motorStatus', 'lampAutoMode',
+    ];
+
+    // Tipe yang TIDAK disimpan ke sensor_logs (hanya ke metrics)
+    private const NON_LOG_TYPES = [
+        'lastSync', 'systemStatus',
+        'lampStatus', 'conveyorStatus', 'conveyorPhase', 'pumpStatus',
+        'lampAutoMode', 'pompaAutoMode',
+        'mq135Voltage', 'waterVoltage', 'waterAdc',
+        'lampOn', 'lampOff',
+        'cv1On', 'cv2On', 'cv2En',
+        'convRun', 'convPause', 'convSpeed',
+        'feederStatus', 'lastFeed', 'feederSystemStatus',
+        'feedTime1', 'feedTime2', 'feedTime2En', 'feedDuration',
+        'feedAngleOpen', 'feedAngleClose', 'feedAngleOpen2', 'feedAngleClose2',
+        'feedDistFull', 'feedDistEmpty',
+    ];
+
     public function handle()
     {
         date_default_timezone_set('Asia/Jakarta');
         config(['app.timezone' => 'Asia/Jakarta']);
-        
-        $brokerType = $this->option('broker');
-        $prefix = $brokerType === 'coop' ? 'MQTT_COOP_' : 'MQTT_';
-        
-        $server   = env($prefix . 'HOST', env('MQTT_HOST', 'broker.hivemq.com'));
-        $port     = env($prefix . 'PORT', env('MQTT_PORT', 1883));
-        $clientId = env($prefix . 'CLIENT_ID', env('MQTT_CLIENT_ID', 'laravel_listener')) . '_' . uniqid();
-        $username = env($prefix . 'USERNAME', env('MQTT_USERNAME'));
-        $password = env($prefix . 'PASSWORD', env('MQTT_PASSWORD'));
-        
-        $clean_session = false;
+
+        $filterHost = $this->option('broker-host');
+
+        // ── 1. Baca semua sektor yang sudah dikonfigurasi MQTT ──────────────
+        $sectors = Sector::whereNotNull('mqtt_topic_pattern')->get();
+
+        if ($sectors->isEmpty()) {
+            $this->error('Tidak ada sektor dengan mqtt_topic_pattern di database.');
+            $this->info('Tambahkan sektor melalui UI atau jalankan seeder: php artisan db:seed --class=UpdateSectorsMqttConfig');
+            return;
+        }
+
+        // ── 2. Group sektor berdasarkan fingerprint broker ──────────────────
+        // Sektor dengan broker yang sama digroup ke 1 koneksi MQTT.
+        $brokerGroups = [];
+        foreach ($sectors as $sector) {
+            $fingerprint = $sector->getBrokerFingerprint();
+
+            // Jika mode filter aktif, skip broker yang tidak cocok
+            if ($filterHost && !str_contains($fingerprint, $filterHost)) {
+                continue;
+            }
+
+            $brokerGroups[$fingerprint]['config']    = $sector->getMqttConnectionConfig();
+            $brokerGroups[$fingerprint]['sectors'][] = $sector;
+        }
+
+        if (empty($brokerGroups)) {
+            $this->error("Tidak ada broker yang cocok" . ($filterHost ? " dengan host '{$filterHost}'" : '') . ".");
+            return;
+        }
+
+        $this->info('📡 Ditemukan ' . count($brokerGroups) . ' broker grup:');
+        foreach ($brokerGroups as $fp => $group) {
+            $topicList = collect($group['sectors'])->pluck('mqtt_topic_pattern')->join(', ');
+            $this->info("   • {$fp} → [{$topicList}]");
+        }
+
+        // ── 3. Jika lebih dari 1 broker & tidak ada filter, hanya proses broker pertama ──
+        // Untuk menjalankan semua broker secara paralel, jalankan:
+        //   php artisan mqtt:listen --broker-host=<host1>
+        //   php artisan mqtt:listen --broker-host=<host2>
+        if (count($brokerGroups) > 1 && !$filterHost) {
+            $this->warn('⚠️  Ada lebih dari 1 broker. Process ini akan menangani SEMUA broker secara bergantian (round-robin non-blocking).');
+            $this->warn('   Untuk isolasi penuh, jalankan satu process per broker dengan --broker-host=<host>');
+        }
+
+        // ── 4. Jalankan listener untuk setiap broker grup ───────────────────
+        foreach ($brokerGroups as $fingerprint => $group) {
+            $this->runBrokerListener($fingerprint, $group['config'], $group['sectors']);
+        }
+    }
+
+    /**
+     * Jalankan koneksi + subscribe loop untuk satu broker.
+     * Reconnect otomatis jika koneksi putus.
+     */
+    private function runBrokerListener(string $fingerprint, array $config, array $sectors)
+    {
+        $clientId = 'laravel_sf_' . md5($fingerprint) . '_' . uniqid();
 
         $connectionSettings = (new ConnectionSettings)
-            ->setUsername($username)
-            ->setPassword($password)
+            ->setUsername($config['username'])
+            ->setPassword($config['password'])
             ->setKeepAliveInterval(60)
-            ->setConnectTimeout(3)
-            ->setUseTls(env($prefix . 'TLS', env('MQTT_TLS', false)));
+            ->setConnectTimeout(5)
+            ->setUseTls($config['tls']);
 
         while (true) {
             try {
-                $this->info("Connecting to MQTT Broker at {$server}:{$port}...");
-                $mqtt = new MqttClient($server, $port, $clientId);
-                $mqtt->connect($connectionSettings, $clean_session);
-                $this->info("Connected successfully!");
+                $this->info("🔌 Connecting to {$fingerprint}...");
+                $mqtt = new MqttClient($config['host'], $config['port'], $clientId);
+                $mqtt->connect($connectionSettings, false);
+                $this->info("✅ Connected to {$fingerprint}");
 
-                $this->info("Subscribing to smartfarming and smartcoop topics...");
+                // Subscribe semua topic yang dikonfigurasi di sektor ini
+                foreach ($sectors as $sector) {
+                    $topic = $sector->mqtt_topic_pattern;
+                    $this->info("   ↳ Subscribing [{$sector->name}] → {$topic}");
 
-                $mqtt->subscribe('smartfarming/+/sensor/+', function (string $topic, string $message) {
-                    $this->info(sprintf("Received message on topic [%s]: %s", $topic, $message));
-                    
-                    // Topik format: smartfarming/{tipe}/sensor/{sector_id}
-                    $topicParts = explode('/', $topic);
-                    $sectorId = end($topicParts);
-                    
-                    $this->processSensorData($sectorId, $message);
-                }, 0);
-
-                // Subscribe untuk Kandang Ayam (smartcoop/#)
-                $mqtt->subscribe('smartcoop/#', function (string $topic, string $message) {
-                    $this->info(sprintf("Received smartcoop message [%s]: %s", $topic, $message));
-                    $this->processSmartcoopData($topic, $message);
-                }, 0);
+                    $mqtt->subscribe($topic, function (string $incomingTopic, string $message) use ($sectors, $fingerprint) {
+                        $this->info(sprintf('📥 [%s] %s: %s', $fingerprint, $incomingTopic, substr($message, 0, 100)));
+                        $this->routeMessage($incomingTopic, $message, $sectors);
+                    }, 0);
+                }
 
                 $mqtt->loop(true);
                 $mqtt->disconnect();
+
             } catch (Exception $e) {
-                $this->error('MQTT Error: ' . $e->getMessage());
-                $this->info('Reconnecting in 5 seconds...');
+                $this->error("❌ MQTT Error [{$fingerprint}]: " . $e->getMessage());
+                $this->info('🔄 Reconnecting in 5 seconds...');
                 sleep(5);
             }
         }
     }
 
-    private function processSmartcoopData($topic, $message)
+    /**
+     * Route pesan masuk ke sektor yang tepat berdasarkan topic pattern matching.
+     *
+     * @param string  $incomingTopic Topic aktual yang diterima, misal "smartcoop/sensor/temp"
+     * @param string  $message       Payload pesan
+     * @param Sector[] $sectors      Daftar sektor yang dimonitor oleh broker ini
+     */
+    private function routeMessage(string $incomingTopic, string $message, array $sectors)
     {
-        try {
-            // Find Kandang Ayam sector
-            $sector = Sector::where('name', 'ILIKE', '%kandang%')
-                ->orWhere('sector_id', 'LIKE', '%kandang%')
-                ->orWhere('name', 'ILIKE', '%sec-011%')
-                ->orWhere('sector_id', 'LIKE', '%sec-011%')
-                ->first();
-            if (!$sector) {
-                $this->error("Sector Kandang Ayam not found di Database.");
+        foreach ($sectors as $sector) {
+            if ($this->topicMatches($sector->mqtt_topic_pattern, $incomingTopic)) {
+                $this->processSectorMessage($sector, $incomingTopic, $message);
                 return;
             }
+        }
 
-            $topicParts = explode('/', $topic);
-            $metricType = end($topicParts); // e.g. temp, humidity, waterlevel, dll
+        $this->warn("⚠️  Topic tidak dikenali oleh sektor manapun: {$incomingTopic}");
+    }
 
-            // Map MQTT topic ke tipe metrics di DB
-            // v4: topik sudah individual (bukan JSON), mapping diperluas
-            $metricMap = [
-                // --- Sensor data ---
-                'temp'          => 'temperature',
-                'humidity'      => 'humidity',
-                'mq135'         => 'ammonia',
-                'mq135volt'     => 'mq135Voltage',
-                'wateradc'      => 'waterAdc',
-                'watervoltage'  => 'waterVoltage',
-                'waterlevel'    => 'waterLevel',
-                // --- Status aktuator ---
-                'lamp'          => 'lampStatus',
-                'conveyor'      => 'conveyorStatus',
-                'conveyorphase' => 'conveyorPhase',   // BARU v4: fase konveyor (Maju/Diam/dll)
-                'pompa'         => 'pumpStatus',
-                'lampauto'      => 'lampAutoMode',
-                'pompaauto'     => 'pompaAutoMode',   // BARU v4: mode auto pompa
-                'time'          => 'lastSync',
-                'system'        => 'systemStatus',
-                // --- Jadwal (retained, dari ESP32 ke dashboard) ---
-                'lampon'        => 'lampOn',
-                'lampoff'       => 'lampOff',
-                'conveyoron'    => 'cv1On',
-                'conveyor2on'   => 'cv2On',
-                'conveyor2en'   => 'cv2En',
-                'convrun'       => 'convRun',          // BARU v4: durasi maju/mundur (detik)
-                'convpause'     => 'convPause',        // BARU v4: jeda antar arah (detik)
-                'convspeed'     => 'convSpeed',        // BARU v4: kecepatan motor (%)
-                // --- Unit pakan (feeder) ---
-                'feeddistance'  => 'feedDistance',
-                'feedlevel'     => 'feedLevel',
-                'feeder'        => 'feederStatus',
-                'lastfeed'      => 'lastFeed',
-                'feedersystem'  => 'feederSystemStatus',
-                'feedtime1'     => 'feedTime1',
-                'feedtime2'     => 'feedTime2',
-                'feedtime2en'   => 'feedTime2En',
-                'feedduration'  => 'feedDuration',
-                'feedangleopen'  => 'feedAngleOpen',
-                'feedangleclose' => 'feedAngleClose',
-                'feedangleopen2'  => 'feedAngleOpen2',
-                'feedangleclose2' => 'feedAngleClose2',
-                'feeddistfull'  => 'feedDistFull',
-                'feeddistempty' => 'feedDistEmpty',
-            ];
+    /**
+     * Proses pesan untuk satu sektor.
+     * Mendukung dua format payload:
+     *   - JSON (untuk sektor hidroponik, dll): {"temperature": 28, "humidity": 65}
+     *   - Scalar string (untuk smartcoop): satu nilai per topic, misal "28.5"
+     */
+    private function processSectorMessage(Sector $sector, string $topic, string $message)
+    {
+        try {
+            $metricMap = $sector->mqtt_metric_map; // null jika tidak dikonfigurasi
 
-            $type = $metricMap[$metricType] ?? $metricType;
-            
-            $logValue = $message;
-            if (strtoupper((string)$message) === 'ON') $logValue = 1;
-            if (strtoupper((string)$message) === 'OFF') $logValue = 0;
-            if (strtoupper((string)$message) === 'TRUE') $logValue = 1;
-            if (strtoupper((string)$message) === 'FALSE') $logValue = 0;
+            // ── Deteksi format payload ──────────────────────────────────────
+            $payload = json_decode($message, true);
 
-            // Tipe yang HANYA disimpan ke metrics (tidak ke sensor_logs historis)
-            // karena nilainya adalah status/string/konfigurasi, bukan angka sensor.
-            $nonLogTypes = [
-                // Status on/off
-                'lastSync', 'systemStatus',
-                'lampStatus', 'conveyorStatus', 'conveyorPhase', 'pumpStatus',
-                'lampAutoMode', 'pompaAutoMode',
-                // Tegangan/ADC mentah (tidak perlu di chart)
-                'mq135Voltage', 'waterVoltage', 'waterAdc',
-                // Jadwal lampu
-                'lampOn', 'lampOff',
-                // Jadwal & parameter konveyor
-                'cv1On', 'cv2On', 'cv2En',
-                'convRun', 'convPause', 'convSpeed',
-                // Feeder
-                'feederStatus', 'lastFeed', 'feederSystemStatus',
-                'feedTime1', 'feedTime2', 'feedTime2En', 'feedDuration',
-                'feedAngleOpen', 'feedAngleClose', 'feedAngleOpen2', 'feedAngleClose2',
-                'feedDistFull', 'feedDistEmpty',
-            ];
+            if (is_array($payload)) {
+                // Format JSON — satu pesan berisi banyak metric
+                $this->processJsonPayload($sector, $payload);
+            } else {
+                // Format scalar — satu pesan, satu metric, topic menentukan tipe
+                $topicParts = explode('/', $topic);
+                $topicSuffix = end($topicParts); // suffix terakhir = nama metric
 
-            // Simpan ke sensor_logs jika berupa angka sensor yang relevan
-            if (is_numeric($logValue) && !in_array($type, $nonLogTypes)) {
+                // Cari nama field DB: cek metric map dulu, fallback ke suffix langsung
+                $fieldName = $metricMap[$topicSuffix] ?? $topicSuffix;
+
+                $this->processScalarPayload($sector, $fieldName, $message);
+            }
+
+        } catch (Exception $e) {
+            $this->error("❌ Gagal memproses pesan untuk sektor {$sector->sector_id}: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Proses payload JSON (multi-metric dalam satu pesan).
+     * Dipakai oleh sektor hidroponik dan sejenisnya.
+     */
+    private function processJsonPayload(Sector $sector, array $payload)
+    {
+        $validTypes = self::DEFAULT_VALID_TYPES;
+
+        // Jika sektor punya metric map sendiri, expand valid types dari map values
+        if ($sector->mqtt_metric_map) {
+            $validTypes = array_merge($validTypes, array_values($sector->mqtt_metric_map));
+        }
+
+        $metrics = is_string($sector->metrics) ? json_decode($sector->metrics, true) : ($sector->metrics ?? []);
+
+        foreach ($payload as $key => $value) {
+            // Normalisasi key (snake_case → camelCase)
+            $normalizedKey = match($key) {
+                'water_level'  => 'waterLevel',
+                'light_level'  => 'lightLevel',
+                'pump_status'  => 'pumpStatus',
+                default        => $sector->mqtt_metric_map[$key] ?? $key,
+            };
+
+            if (!in_array($normalizedKey, $validTypes) && !in_array($key, $validTypes)) {
+                continue; // skip key yang tidak dikenal
+            }
+
+            $logValue = $this->normalizeValue($value);
+
+            if (is_numeric($logValue) && !in_array($normalizedKey, self::NON_LOG_TYPES)) {
                 SensorLog::create([
                     'sector_id' => $sector->sector_id,
-                    'type'      => $type,
-                    'value'     => (float) $logValue
+                    'type'      => $normalizedKey,
+                    'value'     => (float) $logValue,
                 ]);
-
-                $this->checkAlerts($sector->sector_id, $type, (float) $logValue);
+                $this->checkAlerts($sector->sector_id, $normalizedKey, (float) $logValue);
             }
 
-            // Update state metrics di sektor
-            $metrics = is_string($sector->metrics) ? json_decode($sector->metrics, true) : ($sector->metrics ?? []);
-            $metrics[$type] = $logValue;
-            $sector->metrics = $metrics;
-            $sector->save();
-            $this->info("✅ Data saved for smartcoop metric {$type} (Sector: {$sector->sector_id})");
+            $metrics[$normalizedKey] = $logValue;
 
-        } catch (\Exception $e) {
-            $this->error("❌ Gagal menyimpan ke Database smartcoop: " . $e->getMessage());
+            // Hapus key lama (snake_case) jika ada
+            if ($normalizedKey !== $key && isset($metrics[$key])) {
+                unset($metrics[$key]);
+            }
         }
+
+        $sector->metrics = $metrics;
+        $sector->save();
+        $this->info("✅ JSON payload saved → sector {$sector->sector_id}");
     }
 
-    private function processSensorData($sectorId, $message)
+    /**
+     * Proses payload scalar (satu nilai, satu topic).
+     * Dipakai oleh sektor kandang ayam (smartcoop/#) dan format sejenis.
+     */
+    private function processScalarPayload(Sector $sector, string $fieldName, string $rawValue)
     {
-        try {
-            $payload = json_decode($message, true);
-            if (!$payload) {
-                $this->error("Invalid JSON payload.");
-                return;
-            }
+        $logValue = $this->normalizeValue($rawValue);
 
-            $sector = Sector::where('sector_id', $sectorId)->first();
-            if (!$sector) {
-                $this->error("Sector {$sectorId} not found di Database Lokal. Pastikan database Anda hidup dan ID-nya cocok.");
-                return;
-            }
-
-            $metrics = is_string($sector->metrics) ? json_decode($sector->metrics, true) : ($sector->metrics ?? []);
-            $validTypes = ['temperature', 'humidity', 'waterLevel', 'lightLevel', 'water_level', 'light_level', 'pumpStatus', 'pump_status', 'lampStatus', 'exhaustStatus', 'motorStatus', 'lampAutoMode'];
-
-            foreach ($payload as $key => $value) {
-                if (in_array($key, $validTypes)) {
-                    // Normalisasi key
-                    $normalizedKey = $key;
-                    if ($key === 'water_level') $normalizedKey = 'waterLevel';
-                    if ($key === 'light_level') $normalizedKey = 'lightLevel';
-                    if ($key === 'pump_status') $normalizedKey = 'pumpStatus';
-
-                    $logValue = $value;
-                    if (strtoupper((string)$value) === 'ON') $logValue = 1;
-                    if (strtoupper((string)$value) === 'OFF') $logValue = 0;
-
-                    if (is_numeric($logValue)) {
-                        SensorLog::create([
-                            'sector_id' => $sectorId,
-                            'type' => $normalizedKey,
-                            'value' => (float) $logValue
-                        ]);
-                        $this->checkAlerts($sectorId, $normalizedKey, (float) $logValue);
-                    }
-                    $metrics[$normalizedKey] = $logValue;
-                    
-                    // Hapus key lama jika ada untuk membersihkan DB
-                    if ($normalizedKey !== $key && isset($metrics[$key])) {
-                        unset($metrics[$key]);
-                    }
-                }
-            }
-
-            $sector->metrics = $metrics;
-            $sector->save();
-            $this->info("✅ Data saved for sector {$sectorId}");
-        } catch (\Exception $e) {
-            $this->error("❌ Gagal menyimpan ke Database: " . $e->getMessage());
+        if (is_numeric($logValue) && !in_array($fieldName, self::NON_LOG_TYPES)) {
+            SensorLog::create([
+                'sector_id' => $sector->sector_id,
+                'type'      => $fieldName,
+                'value'     => (float) $logValue,
+            ]);
+            $this->checkAlerts($sector->sector_id, $fieldName, (float) $logValue);
         }
+
+        $metrics = is_string($sector->metrics) ? json_decode($sector->metrics, true) : ($sector->metrics ?? []);
+        $metrics[$fieldName] = $logValue;
+        $sector->metrics = $metrics;
+        $sector->save();
+
+        $this->info("✅ Scalar saved → {$sector->sector_id}.{$fieldName} = {$logValue}");
     }
 
-    private function checkAlerts($sectorId, $type, $value)
+    /**
+     * Normalisasi nilai: ON→1, OFF→0, TRUE→1, FALSE→0, string lain tetap.
+     */
+    private function normalizeValue(mixed $value): mixed
     {
-        $title = null;
+        $upper = strtoupper((string) $value);
+        if ($upper === 'ON'  || $upper === 'TRUE')  return 1;
+        if ($upper === 'OFF' || $upper === 'FALSE') return 0;
+        return $value;
+    }
+
+    /**
+     * Cocokkan topic MQTT dengan pattern (mendukung wildcard # dan +).
+     *
+     * Contoh:
+     *   topicMatches('smartcoop/#', 'smartcoop/sensor/temp') → true
+     *   topicMatches('smartfarming/+/sensor/+', 'smartfarming/hydro/sensor/sec-010') → true
+     */
+    private function topicMatches(string $pattern, string $topic): bool
+    {
+        // Escape karakter regex, lalu ganti wildcard MQTT
+        $regex = preg_quote($pattern, '/');
+        $regex = str_replace('\#', '.*', $regex);  // # = multi-level wildcard
+        $regex = str_replace('\+', '[^/]+', $regex); // + = single-level wildcard
+        return (bool) preg_match('/^' . $regex . '$/', $topic);
+    }
+
+    /**
+     * Cek ambang batas dan kirim notifikasi jika perlu.
+     * Notifikasi tidak dikirim jika sudah ada notifikasi serupa dalam 30 menit terakhir.
+     */
+    private function checkAlerts(string $sectorId, string $type, float $value)
+    {
+        $title   = null;
         $message = null;
         $notifType = 'alert';
 
         if ($type === 'temperature' && $value > 35) {
-            $title = 'Suhu Kritis';
-            $message = "Suhu di sektor {$sectorId} mencapai {$value}°C. Harap segera periksa pendingin/kipas.";
+            $title     = 'Suhu Kritis';
+            $message   = "Suhu di sektor {$sectorId} mencapai {$value}°C. Harap segera periksa pendingin/kipas.";
             $notifType = 'alert';
         } elseif ($type === 'temperature' && $value > 0 && $value < 20) {
-            $title = 'Suhu Terlalu Dingin';
-            $message = "Suhu di sektor {$sectorId} turun menjadi {$value}°C. Harap periksa pemanas.";
+            $title     = 'Suhu Terlalu Dingin';
+            $message   = "Suhu di sektor {$sectorId} turun menjadi {$value}°C. Harap periksa pemanas.";
             $notifType = 'warning';
         } elseif ($type === 'waterLevel' && $value > 0 && $value < 20) {
-            $title = 'Air Habis';
-            $message = "Level air di sektor {$sectorId} tersisa {$value}%. Segera isi tangki.";
+            $title     = 'Air Habis';
+            $message   = "Level air di sektor {$sectorId} tersisa {$value}%. Segera isi tangki.";
             $notifType = 'warning';
         } elseif ($type === 'ammonia' && $value > 200) {
-            $title = 'Amonia Tinggi';
-            $message = "Kadar amonia di sektor {$sectorId} terlalu tinggi ({$value}). Kualitas udara memburuk.";
+            $title     = 'Amonia Tinggi';
+            $message   = "Kadar amonia di sektor {$sectorId} terlalu tinggi ({$value}). Kualitas udara memburuk.";
             $notifType = 'alert';
         } elseif ($type === 'feedLevel' && $value > 0 && $value < 20) {
-            $title = 'Pakan Hampir Habis';
-            $message = "Sisa pakan di sektor {$sectorId} tersisa {$value}%. Segera isi ulang wadah pakan.";
+            $title     = 'Pakan Hampir Habis';
+            $message   = "Sisa pakan di sektor {$sectorId} tersisa {$value}%. Segera isi ulang wadah pakan.";
             $notifType = 'warning';
         }
 
         if ($title) {
-            // Check if similar notification was sent in the last 30 minutes
             $recent = \App\Models\Notification::where('title', $title)
                 ->where('created_at', '>=', now()->subMinutes(30))
                 ->first();
-                
+
             if (!$recent) {
                 \App\Models\Notification::create([
-                    'title' => $title,
+                    'title'   => $title,
                     'message' => $message,
-                    'type' => $notifType,
-                    'is_read' => false
+                    'type'    => $notifType,
+                    'is_read' => false,
                 ]);
-                $this->info("🔔 Alert sent: $title");
+                $this->info("🔔 Alert sent: {$title}");
             }
         }
     }

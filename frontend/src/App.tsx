@@ -184,7 +184,7 @@ export default function App() {
     return () => clearInterval(t)
   }, [])
 
-  const handleAddSector = useCallback(async (name: string, unit: string, sectorId: string, icon: string, color: string) => {
+  const handleAddSector = useCallback(async (name: string, unit: string, sectorId: string, icon: string, color: string, mqttConfig?: any) => {
     const token = localStorage.getItem('token');
     try {
       const res = await fetch(`${API_URL}/api/sectors`, {
@@ -193,7 +193,14 @@ export default function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ sector_id: sectorId, name, unit, status: 'baik', metrics: { icon, color } }),
+        body: JSON.stringify({
+          sector_id: sectorId,
+          name,
+          unit,
+          status: 'baik',
+          metrics: { icon, color },
+          ...(mqttConfig || {}),
+        }),
       });
       if (res.ok) {
         const newSectorData = await res.json();
@@ -547,10 +554,10 @@ export default function App() {
       {/* Modals */}
       {detailSector && (String(detailSector.id).startsWith('kandang') || String(detailSector.id) === 'SEC-011') && <KandangDetail sector={detailSector} onBack={closeDetail} />}
       {detailSector && !(String(detailSector.id).startsWith('kandang') || String(detailSector.id) === 'SEC-011') && <GenericDetail sector={detailSector} onBack={closeDetail} />}
-      {showAddModal && <AddSectorModal onClose={() => setShowAddModal(false)} onAdd={(name: string, type: string) => {
+      {showAddModal && <AddSectorModal onClose={() => setShowAddModal(false)} onAdd={(name: string, type: string, mqttConfig?: any) => {
         const iconMap: Record<string, string> = { kandang: '🐓', kolam: '🐟', hidroponik: '🌿', irigasi: '🌱' }
         const colorMap: Record<string, string> = { kandang: '#E65100', kolam: '#1565C0', hidroponik: '#2E7D32', irigasi: '#795548' }
-        handleAddSector(name, type, `${type}_${Date.now()}`, iconMap[type] || '📋', colorMap[type] || '#059669')
+        handleAddSector(name, type, `${type}_${Date.now()}`, iconMap[type] || '📋', colorMap[type] || '#059669', mqttConfig)
       }} />}
 
       {renderLogoutModal()}
