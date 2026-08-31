@@ -35,13 +35,13 @@ class UpdateSectorsMqttConfig extends Seeder
         $this->command->info('✅ hidroponik (Hidroponik): MQTT config updated (broker utama)');
 
         // -------------------------------------------------------
-        // SEKTOR KANDANG AYAM (sec-011)
+        // SEKTOR KANDANG AYAM (sec-01)
         // Broker: broker rekan (HiveMQ Cloud berbeda)
         // Topic : smartcoop/#
         // Metric map: mapping lengkap dari topic-suffix ke field DB
         // -------------------------------------------------------
         DB::table('sectors')
-            ->where('sector_id', 'sec-011')
+            ->where('sector_id', 'sec-01')
             ->update([
                 'mqtt_topic_pattern' => 'smartcoop/#',
                 'mqtt_broker_config' => json_encode([

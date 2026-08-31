@@ -552,8 +552,8 @@ export default function App() {
       </div>
 
       {/* Modals */}
-      {detailSector && (String(detailSector.id).startsWith('kandang') || String(detailSector.id) === 'sec01') && <KandangDetail sector={detailSector} onBack={closeDetail} />}
-      {detailSector && !(String(detailSector.id).startsWith('kandang') || String(detailSector.id) === 'sec01') && <GenericDetail sector={detailSector} onBack={closeDetail} />}
+      {detailSector && (String(detailSector.id).startsWith('kandang') || String(detailSector.id).startsWith('sec-')) && <KandangDetail sector={detailSector} onBack={closeDetail} />}
+      {detailSector && !(String(detailSector.id).startsWith('kandang') || String(detailSector.id).startsWith('sec-')) && <GenericDetail sector={detailSector} onBack={closeDetail} />}
       {showAddModal && <AddSectorModal onClose={() => setShowAddModal(false)} onAdd={(name: string, type: string, mqttConfig?: any) => {
         const iconMap: Record<string, string> = { kandang: '🐓', kolam: '🐟', hidroponik: '🌿', irigasi: '🌱' }
         const colorMap: Record<string, string> = { kandang: '#E65100', kolam: '#1565C0', hidroponik: '#2E7D32', irigasi: '#795548' }
