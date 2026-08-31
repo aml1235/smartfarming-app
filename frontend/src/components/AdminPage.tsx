@@ -22,7 +22,7 @@ interface AdminPageProps {
   onUpdateUser: (user: User) => void;
   onAddSector: (name: string, unit: string, sectorId: string, icon: string, color: string) => Promise<void>;
   onDeleteSector: (sectorId: string) => Promise<void>;
-  onEditSector: (sectorId: string, name: string, unit: string, icon: string, color: string) => Promise<void>;
+  onEditSector: (sectorId: string, name: string, unit: string, icon: string, color: string, mqttConfig?: any) => Promise<void>;
 }
 
 export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, setDarkMode, loggedInUser, onUpdateUser, onAddSector, onDeleteSector, onEditSector }: AdminPageProps) {
@@ -38,6 +38,15 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
   const [editSectorIcon, setEditSectorIcon] = useState('📋');
   const [editSectorColor, setEditSectorColor] = useState('#059669');
   const [editSectorLoading, setEditSectorLoading] = useState(false);
+  const [editSectorShowMqtt, setEditSectorShowMqtt] = useState(false);
+  const [editSectorMqttTopic, setEditSectorMqttTopic] = useState('');
+  const [editSectorMqttControlTopic, setEditSectorMqttControlTopic] = useState('');
+  const [editSectorUseCustomBroker, setEditSectorUseCustomBroker] = useState(false);
+  const [editSectorBrokerHost, setEditSectorBrokerHost] = useState('');
+  const [editSectorBrokerPort, setEditSectorBrokerPort] = useState('8883');
+  const [editSectorBrokerUser, setEditSectorBrokerUser] = useState('');
+  const [editSectorBrokerPass, setEditSectorBrokerPass] = useState('');
+  const [editSectorBrokerTls, setEditSectorBrokerTls] = useState(true);
   const [newSectorName, setNewSectorName] = useState('');
   const [newSectorUnit, setNewSectorUnit] = useState('');
   const [newSectorId, setNewSectorId] = useState('');
@@ -599,6 +608,20 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
     setEditSectorUnit(sector.unit);
     setEditSectorIcon(sector.icon || '📋');
     setEditSectorColor(sector.color || '#059669');
+    setEditSectorShowMqtt(false);
+    const mq = (sector as any).mqtt_broker_config;
+    setEditSectorMqttTopic((sector as any).mqtt_topic_pattern || '');
+    setEditSectorMqttControlTopic((sector as any).mqtt_control_topic || '');
+    if (mq) {
+      setEditSectorUseCustomBroker(true);
+      setEditSectorBrokerHost(mq.host || '');
+      setEditSectorBrokerPort(mq.port ? String(mq.port) : '8883');
+      setEditSectorBrokerUser(mq.username || '');
+      setEditSectorBrokerPass(mq.password || '');
+      setEditSectorBrokerTls(mq.tls !== false);
+    } else {
+      setEditSectorUseCustomBroker(false);
+    }
   };
 
   const handleEditSectorSubmit = async (e: React.FormEvent) => {
@@ -608,8 +631,20 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
       alert('Nama dan Unit tidak boleh kosong!');
       return;
     }
+    const mqttConfig = editSectorShowMqtt ? {
+      mqtt_topic_pattern: editSectorMqttTopic || null,
+      mqtt_control_topic: editSectorMqttControlTopic || null,
+      mqtt_broker_config: editSectorUseCustomBroker && editSectorBrokerHost ? {
+        host: editSectorBrokerHost,
+        port: parseInt(editSectorBrokerPort) || 8883,
+        tls: editSectorBrokerTls,
+        username: editSectorBrokerUser,
+        password: editSectorBrokerPass,
+      } : null,
+    } : {};
+    
     setEditSectorLoading(true);
-    await onEditSector(String(sectorToEdit.id), editSectorName.trim(), editSectorUnit.trim(), editSectorIcon, editSectorColor);
+    await onEditSector(String(sectorToEdit.id), editSectorName.trim(), editSectorUnit.trim(), editSectorIcon, editSectorColor, mqttConfig);
     setEditSectorLoading(false);
     addActivity('Mengedit sektor', editSectorName.trim());
     setSectorToEdit(null);
@@ -791,6 +826,39 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
                   ))}
                 </div>
               </div>
+
+              {/* Edit MQTT CONFIG */}
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px', marginTop: '8px' }}>
+                <button type="button" onClick={() => setEditSectorShowMqtt(!editSectorShowMqtt)} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, cursor: 'pointer', fontSize: '14px' }}>
+                  <div style={{ transform: editSectorShowMqtt ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>▶</div>
+                  Konfigurasi MQTT (opsional)
+                </button>
+                {editSectorShowMqtt && (
+                  <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px', background: 'var(--bg-base)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: 'var(--text-secondary)' }}>Topic Pattern (Subscribe)</label>
+                      <input type="text" value={editSectorMqttTopic} onChange={e => setEditSectorMqttTopic(e.target.value)} placeholder="smartcoop/sensor/+" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '4px', fontSize: '13px', color: 'var(--text-secondary)' }}>Control Topic (Publish)</label>
+                      <input type="text" value={editSectorMqttControlTopic} onChange={e => setEditSectorMqttControlTopic(e.target.value)} placeholder="smartcoop/control" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} />
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '8px' }}>
+                      <input type="checkbox" checked={editSectorUseCustomBroker} onChange={e => setEditSectorUseCustomBroker(e.target.checked)} />
+                      <span style={{ fontSize: '13px', color: 'var(--text-primary)' }}>Gunakan broker HiveMQ berbeda</span>
+                    </label>
+                    {editSectorUseCustomBroker && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px', gap: '8px', marginTop: '4px' }}>
+                        <input type="text" value={editSectorBrokerHost} onChange={e => setEditSectorBrokerHost(e.target.value)} placeholder="Host (xxx.hivemq.cloud)" style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} />
+                        <input type="text" value={editSectorBrokerPort} onChange={e => setEditSectorBrokerPort(e.target.value)} placeholder="Port" style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} />
+                        <input type="text" value={editSectorBrokerUser} onChange={e => setEditSectorBrokerUser(e.target.value)} placeholder="Username" style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none', gridColumn: '1 / -1' }} />
+                        <input type="password" value={editSectorBrokerPass} onChange={e => setEditSectorBrokerPass(e.target.value)} placeholder="Password" style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none', gridColumn: '1 / -1' }} />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px' }}>
                 <button type="button" onClick={() => setSectorToEdit(null)} style={{ padding: '10px 18px', background: 'var(--bg-base)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '8px', fontWeight: 500, cursor: 'pointer', fontSize: '14px' }}>Batal</button>
                 <button type="submit" disabled={editSectorLoading} style={{ padding: '10px 18px', background: '#6366f1', color: '#fff', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: editSectorLoading ? 'not-allowed' : 'pointer', fontSize: '14px', opacity: editSectorLoading ? 0.7 : 1 }}>
