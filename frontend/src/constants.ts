@@ -22,5 +22,6 @@ export function generateTempData() {
   }))
 }
 
-// Gunakan URL Railway langsung untuk mempermudah Vercel
-export const API_URL = 'https://smartfarming-app-production.up.railway.app';
+// Jika FE dan BE di server yang sama (Fly.io), gunakan string kosong agar request ke /api/* langsung ke server yang sama (same-origin)
+// Jika dihosting terpisah, set VITE_API_URL di environment variable Vercel/Fly.io
+export const API_URL = import.meta.env.VITE_API_URL || '';

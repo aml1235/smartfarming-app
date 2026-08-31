@@ -1,0 +1,19 @@
+# .dockerignore - file yang tidak perlu dimasukkan ke container Docker
+node_modules
+frontend/node_modules
+frontend/dist
+vendor
+.git
+.env
+*.log
+docker/
+
+# Laravel storage (akan dibuat ulang)
+storage/logs/*.log
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+
+# OS files
+.DS_Store
+Thumbs.db
