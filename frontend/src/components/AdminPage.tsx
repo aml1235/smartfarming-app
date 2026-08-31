@@ -47,6 +47,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
   const [editSectorBrokerUser, setEditSectorBrokerUser] = useState('');
   const [editSectorBrokerPass, setEditSectorBrokerPass] = useState('');
   const [editSectorBrokerTls, setEditSectorBrokerTls] = useState(true);
+  const [editSectorShowMqttPassword, setEditSectorShowMqttPassword] = useState(false);
   const [newSectorName, setNewSectorName] = useState('');
   const [newSectorUnit, setNewSectorUnit] = useState('');
   const [newSectorId, setNewSectorId] = useState('');
@@ -621,6 +622,11 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
       setEditSectorBrokerTls(mq.tls !== false);
     } else {
       setEditSectorUseCustomBroker(false);
+      setEditSectorBrokerHost('');
+      setEditSectorBrokerPort('8883');
+      setEditSectorBrokerUser('');
+      setEditSectorBrokerPass('');
+      setEditSectorBrokerTls(true);
     }
   };
 
@@ -852,7 +858,12 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
                         <input type="text" value={editSectorBrokerHost} onChange={e => setEditSectorBrokerHost(e.target.value)} placeholder="Host (xxx.hivemq.cloud)" style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} />
                         <input type="text" value={editSectorBrokerPort} onChange={e => setEditSectorBrokerPort(e.target.value)} placeholder="Port" style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} />
                         <input type="text" value={editSectorBrokerUser} onChange={e => setEditSectorBrokerUser(e.target.value)} placeholder="Username" style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none', gridColumn: '1 / -1' }} />
-                        <input type="password" value={editSectorBrokerPass} onChange={e => setEditSectorBrokerPass(e.target.value)} placeholder="Password" style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none', gridColumn: '1 / -1' }} />
+                        <div style={{ position: 'relative', gridColumn: '1 / -1' }}>
+                          <input type={editSectorShowMqttPassword ? "text" : "password"} value={editSectorBrokerPass} onChange={e => setEditSectorBrokerPass(e.target.value)} placeholder="Password" style={{ width: '100%', padding: '8px', paddingRight: '36px', borderRadius: '6px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }} />
+                          <button type="button" onClick={() => setEditSectorShowMqttPassword(!editSectorShowMqttPassword)} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex' }}>
+                            {editSectorShowMqttPassword ? <IcEyeOff size={16} /> : <IcEye size={16} />}
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
