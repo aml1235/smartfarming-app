@@ -10,7 +10,7 @@ export function OverviewMetrics({ sector }: { sector: any }) {
   const [hydroData, setHydroData] = React.useState({ waterLevel: 0, temp: 0, humidity: 0, light: 0 })
   const [kandangData, setKandangData] = React.useState({ temp: 0, humidity: 0, waterLevel: 0, ammonia: 0, aki: 0, soc: 0, lvd: '', pakan: 0, tangki: '' })
   
-  const id = sector.id || sector.sector_id;
+  const id = sector.sector_id || sector.id;
   const name = String(sector.name || '').toLowerCase();
   const unit = String(sector.unit || '').toLowerCase();
 
