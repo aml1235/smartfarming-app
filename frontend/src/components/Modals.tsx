@@ -125,7 +125,7 @@ export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd:
               </div>
 
               {useCustomBroker && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingLeft: 4, borderLeft: '3px solid #2E7D32', paddingLeft: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, borderLeft: '3px solid #2E7D32', paddingLeft: 12 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8 }}>
                     <div>
                       <label style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', display: 'block', marginBottom: 3 }}>Host</label>
