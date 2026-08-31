@@ -11,9 +11,16 @@ RUN apt-get update && apt-get install -y \
     git \
     supervisor \
     nginx \
-    && add-apt-repository ppa:ondrej/php -y \
-    && apt-get update \
-    && apt-get install -y \
+    gnupg2 \
+    ca-certificates \
+    lsb-release \
+    apt-transport-https
+
+# Add PHP PPA
+RUN add-apt-repository ppa:ondrej/php -y && apt-get update
+
+# Install PHP packages
+RUN apt-get install -y \
     php8.3-fpm \
     php8.3-pgsql \
     php8.3-mbstring \
