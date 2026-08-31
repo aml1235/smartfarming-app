@@ -46,7 +46,7 @@ class DatabaseSeeder extends Seeder
         );
 
         \App\Models\Sector::updateOrCreate(
-            ['sector_id' => 'SEC-010'],
+            ['sector_id' => 'hidroponik'],
             [
                 'name'    => 'Hidroponik',
                 'unit'    => 'Tanaman',
@@ -56,7 +56,7 @@ class DatabaseSeeder extends Seeder
         );
 
         // Hapus sektor yang tidak dipakai jika masih ada
-        \App\Models\Sector::whereIn('sector_id', ['kolam', 'irigasi', 'hidroponik'])->delete();
+        \App\Models\Sector::whereIn('sector_id', ['kolam', 'irigasi', 'SEC-010'])->delete();
 
         // 3. Tidak ada aktivitas dummy — log akan terisi dari aksi nyata pengguna
     }
