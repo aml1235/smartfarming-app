@@ -211,72 +211,13 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
 
       {/* Grid Khusus Unhan sec-03 */}
       {sectorId === 'sec-03' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 20 }}>
-          <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>🔋 Info Baterai</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Kekuatan Listrik</span>
-              <strong style={{ fontSize: 13 }}>{aki} V</strong>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14, marginBottom: 20 }}>
+          <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', padding: '24px' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>☀️ Info Panel Surya</div>
+            <div style={{ fontSize: 36, fontWeight: 800, color: '#059669', marginTop: 8 }}>
+              {aki !== '--' ? `${aki} Watt` : '-- Watt'}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Sisa Baterai</span>
-              <strong style={{ fontSize: 13, color: Number(soc) > 30 ? '#059669' : '#ef4444' }}>{soc}%</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Sistem Keamanan</span>
-              <strong style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{lvd}</strong>
-            </div>
-          </div>
-
-          <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>🌾 Info Pakan</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Stok di Penampung</span>
-              <strong style={{ fontSize: 13, color: Number(levelPakan) > 20 ? '#d97706' : '#ef4444' }}>{levelPakan}%</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Kondisi Mesin</span>
-              <strong style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{statusPakan}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Total Diberi Pakan</span>
-              <strong style={{ fontSize: 13 }}>{siklusPakan} kali</strong>
-            </div>
-            {kunciMotor && <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginTop: 4 }}>⚠️ MESIN MACET</div>}
-          </div>
-
-          <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>💧 Info Air</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Isi Tangki Air</span>
-              <strong style={{ fontSize: 11, background: '#e0f2fe', color: '#0369a1', padding: '2px 6px', borderRadius: 4 }}>{tangki}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Mesin Pompa</span>
-              <strong style={{ fontSize: 11, background: '#f3f4f6', padding: '2px 6px', borderRadius: 4 }}>{statusPompa}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Total Pompa Nyala</span>
-              <strong style={{ fontSize: 13 }}>{siklusPompa} kali</strong>
-            </div>
-            {kunciPompa && <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginTop: 4 }}>⚠️ AIR SUMBER HABIS</div>}
-          </div>
-
-          <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>🛠️ Info Perangkat</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Waktu Sistem</span>
-              <strong style={{ fontSize: 11, color: rtcStatus === 'SEHAT' ? '#059669' : '#ef4444' }}>{rtcStatus}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Lampu Kandang</span>
-              <strong style={{ fontSize: 11, background: '#fef9c3', color: '#a16207', padding: '2px 6px', borderRadius: 4 }}>{lampuMode}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>Alat Restart Ulang</span>
-              <strong style={{ fontSize: 13 }}>{bootCount} kali</strong>
-            </div>
-            {Number(i2cError) > 0 && <div style={{ fontSize: 11, color: '#ef4444', fontWeight: 600, marginTop: 4 }}>⚠️ {i2cError} Kerusakan Kabel</div>}
+            <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Daya yang Dihasilkan</div>
           </div>
         </div>
       )}
@@ -509,7 +450,11 @@ export function AiModal({ sector, aiLoading, aiResult, onClose }: any) {
 
 // ─── GENERIC DASHBOARD ────────────────────────────────────────────────────────
 function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRefresh, setLastRefresh }: any) {
-  const [metricsData, setMetricsData] = useState<any[]>([])
+  const [metricsData, setMetricsData] = useState<any[]>([
+    { key: 'suhu', label: 'Suhu', value: '--', color: '#E65100', icon: '🌡️', isProgress: false },
+    { key: 'kelembapan', label: 'Kelembapan', value: '--', color: '#1565C0', icon: '💧', isProgress: true },
+    { key: 'cahaya', label: 'Intensitas Cahaya', value: '--', color: '#F59E0B', icon: '☀️', isProgress: false }
+  ])
   const [controls, setControls] = useState<any[]>([{ key: 'pump_status', label: 'Pompa Air', isOn: true }])
   const [userOverrides, setUserOverrides] = useState<Record<string, { isOn: boolean; time: number }>>({})
   const [showAiModal, setShowAiModal] = useState(false)
@@ -527,8 +472,15 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         let latest: any = {}
         if (typeof sector.metrics === 'string') { try { latest = JSON.parse(sector.metrics) } catch { /* ignore */ } } else if (sector.metrics) { latest = { ...sector.metrics } }
         if (data?.length > 0) latest = { ...latest, ...data[data.length - 1] }
+        
+        const nm: any[] = [
+          { key: 'suhu', label: 'Suhu', value: '--', color: '#E65100', icon: '🌡️', isProgress: false },
+          { key: 'kelembapan', label: 'Kelembapan', value: '--', color: '#1565C0', icon: '💧', isProgress: true },
+          { key: 'cahaya', label: 'Intensitas Cahaya', value: '--', color: '#F59E0B', icon: '☀️', isProgress: false }
+        ]
+        const nc: any[] = []
+        
         if (Object.keys(latest).length > 0) {
-          const nm: any[] = [], nc: any[] = []
           const allow = ['temperature','humidity','ammonia','waterlevel','feedlevel','feeddistance','populasi','suhu','kelembapan','cahaya','light']
           for (const key in latest) {
             const kl = key.toLowerCase()
@@ -536,11 +488,12 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
             if (kl.includes('pump') || kl.includes('relay')) { const on = String(latest[key]).toUpperCase() === 'ON' || String(latest[key]) === '1'; const lbl = kl.includes('pump') ? 'Pompa Air' : 'Relay'; const ex = nc.find((c: any) => c.label === lbl); if (ex) { ex.isOn = on } else nc.push({ key, label: lbl, isOn: on }) }
             else { const ui = getMetricUI(key); const ex = nm.find((m: any) => m.label === ui.label); if (ex) { ex.value = latest[key] } else nm.push({ key, label: ui.label, value: latest[key], color: ui.color, icon: ui.icon, isProgress: ui.isProgress }) }
           }
-          if (nc.length === 0) nc.push({ key: 'pump_status', label: 'Pompa Air', isOn: true })
-          const fc = nc.map((c: any) => (userOverrides[c.key] && Date.now() - userOverrides[c.key].time < 60000) ? { ...c, isOn: userOverrides[c.key].isOn } : c)
-          setMetricsData(Array.from(new Map(nm.map((i: any) => [i.label, i])).values()))
-          setControls(Array.from(new Map(fc.map((i: any) => [i.label, i])).values()))
         }
+        
+        if (nc.length === 0) nc.push({ key: 'pump_status', label: 'Pompa Air', isOn: true })
+        const fc = nc.map((c: any) => (userOverrides[c.key] && Date.now() - userOverrides[c.key].time < 60000) ? { ...c, isOn: userOverrides[c.key].isOn } : c)
+        setMetricsData(Array.from(new Map(nm.map((i: any) => [i.label, i])).values()))
+        setControls(Array.from(new Map(fc.map((i: any) => [i.label, i])).values()))
       } catch (e) { console.error(e) }
     }
     fetchLogs(); const iv = setInterval(fetchLogs, 10000); return () => clearInterval(iv)

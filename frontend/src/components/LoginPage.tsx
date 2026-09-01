@@ -173,7 +173,7 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
               <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '8px', color: 'var(--text-secondary)' }}>Email</label>
               <input 
                 type="email" 
-                placeholder="admin@smartfarming.local"
+                placeholder="Masukkan email Anda"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
