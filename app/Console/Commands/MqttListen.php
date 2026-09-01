@@ -74,7 +74,7 @@ class MqttListen extends Command
             $fingerprint = $sector->getBrokerFingerprint();
 
             // Jika mode filter aktif, skip broker yang tidak cocok
-            if ($filterHost && !str_contains($fingerprint, $filterHost)) {
+            if ($filterHost && $fingerprint !== $filterHost) {
                 continue;
             }
 
@@ -103,8 +103,32 @@ class MqttListen extends Command
         }
 
         // ── 4. Jalankan listener untuk setiap broker grup ───────────────────
-        foreach ($brokerGroups as $fingerprint => $group) {
-            $this->runBrokerListener($fingerprint, $group['config'], $group['sectors']);
+        if (count($brokerGroups) > 1) {
+            $this->info('🚀 Starting multiple workers for ' . count($brokerGroups) . ' brokers...');
+            $processes = [];
+            foreach ($brokerGroups as $fingerprint => $group) {
+                // Gunakan argumen khusus untuk spawn worker khusus broker ini
+                $process = new \Symfony\Component\Process\Process(['php', 'artisan', 'mqtt:listen', '--broker-host=' . $fingerprint]);
+                $process->setTimeout(null);
+                $process->start();
+                $processes[] = $process;
+                $this->info("   ↳ Worker started for {$fingerprint}");
+            }
+            // Biarkan master tetap hidup dan monitor worker
+            while (true) {
+                foreach ($processes as $p) {
+                    if ($p->isRunning()) {
+                        echo $p->getIncrementalOutput();
+                        echo $p->getIncrementalErrorOutput();
+                    }
+                }
+                sleep(1);
+            }
+        } else {
+            // Cuma 1 broker, jalankan langsung di proses ini
+            foreach ($brokerGroups as $fingerprint => $group) {
+                $this->runBrokerListener($fingerprint, $group['config'], $group['sectors']);
+            }
         }
     }
 

@@ -57,6 +57,6 @@ class Sector extends Model
     public function getBrokerFingerprint(): string
     {
         $cfg = $this->getMqttConnectionConfig();
-        return $cfg['host'] . ':' . $cfg['port'];
+        return $cfg['host'] . ':' . $cfg['port'] . ':' . ($cfg['username'] ?? '');
     }
 }
