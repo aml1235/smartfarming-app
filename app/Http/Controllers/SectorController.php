@@ -439,7 +439,11 @@ class SectorController extends Controller
                     }
 
                 } else {
-                    $topic   = "{$controlBaseTopic}/{$target}";
+                    $smartcoopTarget = $target;
+                    if ($target === 'lampu') $smartcoopTarget = 'lamp';
+                    if ($target === 'pakan') $smartcoopTarget = 'servo'; // Untuk alat yg punya servo (misal sec-01)
+
+                    $topic   = "{$controlBaseTopic}/{$smartcoopTarget}";
                     $payload = (strtoupper($command) === 'ON' || $command === '1') ? '1' : '0';
                     $mqtt->publish($topic, $payload, 1);
 
