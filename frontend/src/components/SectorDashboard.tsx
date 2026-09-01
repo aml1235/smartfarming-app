@@ -206,21 +206,17 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
           <div style={{ fontSize: 26, fontWeight: 800, color: levelAir < 20 ? '#dc2626' : '#1565C0' }}>{levelAir}<span style={{ fontSize: 13 }}>%</span></div>
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: &gt; 20%</div>
         </div>
+        
+        {sectorId === 'sec-03' && (
+          <div style={{ ...card, textAlign: 'center' }}>
+            <div style={{ fontSize: 26, marginBottom: 4 }}>☀️</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Info Panel Surya</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: '#059669' }}>{aki !== '--' ? aki : '--'}<span style={{ fontSize: 13 }}>W</span></div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Daya Dihasilkan</div>
+          </div>
+        )}
 
       </div>
-
-      {/* Grid Khusus Unhan sec-03 */}
-      {sectorId === 'sec-03' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14, marginBottom: 20 }}>
-          <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center', padding: '24px' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>☀️ Info Panel Surya</div>
-            <div style={{ fontSize: 36, fontWeight: 800, color: '#059669', marginTop: 8 }}>
-              {aki !== '--' ? `${aki} Watt` : '-- Watt'}
-            </div>
-            <div style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Daya yang Dihasilkan</div>
-          </div>
-        </div>
-      )}
 
       {/* Chart + Control Panel */}
       <div className="kandang-content-grid">
