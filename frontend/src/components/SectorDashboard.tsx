@@ -200,12 +200,21 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
           <div style={{ fontSize: 26, fontWeight: 800, color: amoniaColor }}>{amonia}</div>
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: &lt; 250</div>
         </div>
-        <div style={{ ...card, textAlign: 'center' }}>
-          <div style={{ fontSize: 26, marginBottom: 4 }}>🌊</div>
-          <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Level Air</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: levelAir < 20 ? '#dc2626' : '#1565C0' }}>{levelAir}<span style={{ fontSize: 13 }}>%</span></div>
-          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: &gt; 20%</div>
-        </div>
+        {tangki !== '--' ? (
+          <div style={{ ...card, textAlign: 'center' }}>
+            <div style={{ fontSize: 26, marginBottom: 4 }}>🌊</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Status Tangki</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: tangki.toUpperCase() === 'KOSONG' ? '#dc2626' : '#1565C0' }}>{tangki}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Air Untuk Minum</div>
+          </div>
+        ) : (
+          <div style={{ ...card, textAlign: 'center' }}>
+            <div style={{ fontSize: 26, marginBottom: 4 }}>🌊</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Level Air</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: levelAir < 20 ? '#dc2626' : '#1565C0' }}>{levelAir}<span style={{ fontSize: 13 }}>%</span></div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: &gt; 20%</div>
+          </div>
+        )}
         
         {sectorId === 'sec-03' && (
           <div style={{ ...card, textAlign: 'center' }}>
