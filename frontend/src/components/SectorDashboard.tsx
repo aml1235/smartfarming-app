@@ -217,12 +217,20 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         )}
         
         {sectorId === 'sec-03' && (
-          <div style={{ ...card, textAlign: 'center' }}>
-            <div style={{ fontSize: 26, marginBottom: 4 }}>☀️</div>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Info Panel Surya</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: '#059669' }}>{aki !== '--' ? aki : '--'}<span style={{ fontSize: 13 }}>W</span></div>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Daya Dihasilkan</div>
-          </div>
+          <>
+            <div style={{ ...card, textAlign: 'center' }}>
+              <div style={{ fontSize: 26, marginBottom: 4 }}>☀️</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Info Panel Surya</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: '#059669' }}>{aki !== '--' ? aki : '--'}<span style={{ fontSize: 13 }}>W</span></div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Daya Dihasilkan</div>
+            </div>
+            <div style={{ ...card, textAlign: 'center' }}>
+              <div style={{ fontSize: 26, marginBottom: 4 }}>🔋</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Status Baterai (Aki)</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: Number(soc) < 20 ? '#dc2626' : '#1565C0' }}>{soc !== '--' ? soc : '--'}<span style={{ fontSize: 13 }}>%</span></div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>{lvd !== '--' ? lvd : 'Normal: > 20%'}</div>
+            </div>
+          </>
         )}
 
       </div>
