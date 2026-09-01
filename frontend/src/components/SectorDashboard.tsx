@@ -103,7 +103,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         }
         if (latest.temperature !== undefined) setSuhu(Number(latest.temperature).toFixed(1))
         if (latest.humidity !== undefined) setLembap(Number(latest.humidity).toFixed(0))
-        if (latest.ammonia !== undefined) setAmonia(Number(latest.ammonia).toFixed(0))
+        if (latest.ammonia !== undefined) setAmonia(Number(latest.ammonia) < 0 ? '--' : Number(latest.ammonia).toFixed(0))
         if (latest.waterLevel !== undefined) setLevelAir(Math.min(100, Math.max(0, Number(latest.waterLevel))))
         
         if (latest.aki !== undefined) setAki(Number(latest.aki).toFixed(2))
