@@ -641,7 +641,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
       mqtt_topic_pattern: editSectorMqttTopic || null,
       mqtt_control_topic: editSectorMqttControlTopic || null,
       mqtt_broker_config: editSectorUseCustomBroker && editSectorBrokerHost ? {
-        host: editSectorBrokerHost,
+        host: editSectorBrokerHost.replace(/^(https?:\/\/|mqtts?:\/\/)/i, ''),
         port: parseInt(editSectorBrokerPort) || 8883,
         tls: editSectorBrokerTls,
         username: editSectorBrokerUser,
