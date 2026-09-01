@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Log;
 
 class AiExpertService
 {
-    public function analyzeSensorData($sectorId, $metrics)
+    public function analyzeSensorData(\App\Models\Sector $sector, $metrics)
     {
         $apiKey = config('services.gemini.key');
         
@@ -15,8 +15,11 @@ class AiExpertService
             return "Kunci API Gemini belum dikonfigurasi.";
         }
 
+        $jenisSektor = strtolower($sector->unit); // peternakan / pertanian
+        $namaSektor = $sector->name;
+
         $systemInstruction = <<<PROMPT
-Kamu adalah asisten pertanian pintar. Tulis analisis dalam bahasa Indonesia yang santai dan mudah dipahami orang awam.
+Kamu adalah asisten ahli pintar untuk sektor $jenisSektor (Nama Lokasi: $namaSektor). Tulis analisis dalam bahasa Indonesia yang santai dan mudah dipahami orang awam. Sesuaikan saranmu secara spesifik untuk bidang $jenisSektor.
 
 ATURAN KERAS:
 - JANGAN gunakan tanda bintang (*) atau simbol markdown apapun
@@ -40,7 +43,7 @@ PREDIKSI:
 [1 kalimat tentang apa yang terjadi kalau saran diabaikan]
 PROMPT;
 
-        $prompt = "Data sensor dari sektor " . $sectorId . ":\n";
+        $prompt = "Data sensor terkini dari sektor " . $namaSektor . ":\n";
 
         if (is_array($metrics)) {
             foreach ($metrics as $key => $value) {

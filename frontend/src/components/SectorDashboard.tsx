@@ -87,19 +87,12 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         const res = await fetch(`${API_URL}/api/sectors/${sectorId}/logs`)
         if (!res.ok) return
         const data = await res.json()
-        setTempData(data.map((d: any) => ({ ...d, temperature: (d.temperature != null && Number(d.temperature) > 0) ? d.temperature : null, humidity: (d.humidity != null && Number(d.humidity) > 0) ? d.humidity : null })))
+        setTempData(data)
         let latest: any = {}
         if (typeof sector.metrics === 'string') { try { latest = JSON.parse(sector.metrics) } catch { /* ignore */ } }
         else if (sector.metrics) { latest = { ...sector.metrics } }
         if (data && data.length > 0) {
-          const rev = [...data].reverse()
           latest = { ...latest, ...data[data.length - 1] }
-          const pick = (keys: string[]) => rev.find((d: any) => keys.some(k => d[k] && Number(d[k]) > 0))
-          if (!latest.temperature || Number(latest.temperature) === 0) { const v = pick(['temperature']); if (v) latest.temperature = v.temperature }
-          if (!latest.humidity || Number(latest.humidity) === 0) { const v = pick(['humidity']); if (v) latest.humidity = v.humidity }
-          if (!latest.ammonia || Number(latest.ammonia) === 0) { const v = pick(['ammonia', 'mq135']); if (v) latest.ammonia = v.ammonia || v.mq135 }
-          if (!latest.waterLevel || Number(latest.waterLevel) === 0) { const v = pick(['waterLevel', 'water_level']); if (v) latest.waterLevel = v.waterLevel || v.water_level }
-          if (!latest.feedLevel || Number(latest.feedLevel) === 0) { const v = pick(['feedLevel']); if (v) latest.feedLevel = v.feedLevel }
         }
         if (latest.temperature !== undefined) setSuhu(Number(latest.temperature).toFixed(1))
         if (latest.humidity !== undefined) setLembap(Number(latest.humidity).toFixed(0))
@@ -481,7 +474,7 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         const res = await fetch(`${API_URL}/api/sectors/${sectorId}/logs`)
         if (!res.ok) return
         const data = await res.json()
-        setTempData(data.map((d: any) => ({ ...d, temperature: (d.temperature != null && Number(d.temperature) > 0) ? d.temperature : null, humidity: (d.humidity != null && Number(d.humidity) > 0) ? d.humidity : null })))
+        setTempData(data)
         let latest: any = {}
         if (typeof sector.metrics === 'string') { try { latest = JSON.parse(sector.metrics) } catch { /* ignore */ } } else if (sector.metrics) { latest = { ...sector.metrics } }
         if (data?.length > 0) latest = { ...latest, ...data[data.length - 1] }

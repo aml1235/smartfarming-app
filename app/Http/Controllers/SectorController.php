@@ -590,7 +590,7 @@ class SectorController extends Controller
         }
 
         $aiService = new \App\Services\AiExpertService();
-        $analisis = $aiService->analyzeSensorData($sector->sector_id, $metrics);
+        $analisis = $aiService->analyzeSensorData($sector, $metrics);
 
         return response()->json([
             'status' => 'Berhasil',

@@ -115,6 +115,7 @@ class MqttListen extends Command
                 $this->info("   ↳ Worker started for {$fingerprint}");
             }
             // Biarkan master tetap hidup dan monitor worker
+            $lastPrune = time();
             while (true) {
                 foreach ($processes as $p) {
                     if ($p->isRunning()) {
@@ -122,6 +123,14 @@ class MqttListen extends Command
                         echo $p->getIncrementalErrorOutput();
                     }
                 }
+                
+                // Prune data lebih dari 7 hari setiap 1 jam untuk mencegah DB bengkak
+                if (time() - $lastPrune > 3600) {
+                    \App\Models\SensorLog::where('created_at', '<', now()->subDays(7))->delete();
+                    $lastPrune = time();
+                    $this->info("🧹 Pruned logs older than 7 days.");
+                }
+                
                 sleep(1);
             }
         } else {
@@ -325,7 +334,7 @@ class MqttListen extends Command
         $regex = preg_quote($pattern, '/');
         $regex = str_replace('\#', '.*', $regex);  // # = multi-level wildcard
         $regex = str_replace('\+', '[^/]+', $regex); // + = single-level wildcard
-        return (bool) preg_match('/^' . $regex . '$/', $topic);
+        return (bool) preg_match('#^' . $regex . '$#', $topic);
     }
 
     /**
