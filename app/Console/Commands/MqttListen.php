@@ -228,10 +228,6 @@ class MqttListen extends Command
                 default        => $sector->mqtt_metric_map[$key] ?? $key,
             };
 
-            if (!in_array($normalizedKey, $validTypes) && !in_array($key, $validTypes)) {
-                continue; // skip key yang tidak dikenal
-            }
-
             $logValue = $this->normalizeValue($value);
 
             if (is_numeric($logValue) && !in_array($normalizedKey, self::NON_LOG_TYPES)) {
