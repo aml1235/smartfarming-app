@@ -440,41 +440,11 @@ class SectorController extends Controller
 
                 } else {
                     $smartcoopTarget = $target;
-                    $payload = (strtoupper($command) === 'ON' || $command === '1') ? '1' : '0'; // default
+                    if ($target === 'lampu') $smartcoopTarget = 'lamp';
+                    if ($target === 'pakan') $smartcoopTarget = 'servo'; // Untuk alat yg punya servo (misal sec-01)
 
-                    if ($target === 'lamp') {
-                        $smartcoopTarget = 'lampu';
-                        $payload = (strtoupper($command) === 'ON' || $command === '1') ? 'on' : 'off';
-                    } elseif ($target === 'pompa') {
-                        $smartcoopTarget = 'pompa';
-                        $payload = (strtoupper($command) === 'ON' || $command === '1') ? 'isi' : 'stop';
-                    } elseif ($target === 'feeder') {
-                        $smartcoopTarget = 'servo';
-                        $payload = (strtoupper($command) === 'ON' || $command === '1') ? 'buka' : 'tutup';
-                    } elseif ($target === 'conveyor') {
-                        $smartcoopTarget = 'pakan';
-                        $payload = 'mulai';
-                        if (strtoupper($command) === 'OFF' || $command === '0') {
-                            $smartcoopTarget = 'motor';
-                            $payload = 'stop';
-                        }
-                    } elseif ($target === 'convjog') {
-                        $smartcoopTarget = 'motor';
-                        if ($command === 'fwd' || $command === 'maju') $payload = 'maju';
-                        elseif ($command === 'rev' || $command === 'mundur') $payload = 'mundur';
-                        else $payload = 'stop';
-                    } elseif ($target === 'lampauto' || $target === 'pompaauto') {
-                        $smartcoopTarget = ($target === 'lampauto') ? '../config/oto_lampu' : '../config/oto_pompa';
-                        $payload = (strtoupper($command) === 'ON' || $command === '1') ? '1' : '0';
-                    } elseif ($target === 'reset') {
-                        // Support reset motor/pompa if needed
-                        $smartcoopTarget = 'reset';
-                        $payload = $command;
-                    }
-
-                    $topic = "{$controlBaseTopic}/{$smartcoopTarget}";
-                    $topic = str_replace('control/../config', 'config', $topic);
-
+                    $topic   = "{$controlBaseTopic}/{$smartcoopTarget}";
+                    $payload = (strtoupper($command) === 'ON' || $command === '1') ? '1' : '0';
                     $mqtt->publish($topic, $payload, 1);
 
                     // V3 fallback
