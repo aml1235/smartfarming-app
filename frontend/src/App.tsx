@@ -246,7 +246,7 @@ export default function App() {
     }
   }, [])
 
-  const handleEditSector = useCallback(async (sectorId: string, name: string, unit: string, icon: string, color: string) => {
+  const handleEditSector = useCallback(async (sectorId: string, name: string, unit: string, icon: string, color: string, mqttConfig?: any) => {
     const token = localStorage.getItem('token');
     try {
       const res = await fetch(`${API_URL}/api/sectors/${sectorId}`, {
@@ -255,7 +255,12 @@ export default function App() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ name, unit, metrics: { icon, color } }),
+        body: JSON.stringify({ 
+          name, 
+          unit, 
+          metrics: { icon, color },
+          ...(mqttConfig || {})
+        }),
       });
       if (res.ok) {
         const updated = await res.json();
