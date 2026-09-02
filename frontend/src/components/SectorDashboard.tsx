@@ -268,29 +268,44 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
               <CtrlRow icon="💧" label="Pompa Air"     sub={pompaAuto ? '(Auto aktif)' : pompaOn ? 'Menyala' : 'Mati'} subColor={pompaOn ? '#059669' : '#9CA3AF'} right={<Toggle isOn={pompaOn} onChange={togglePompa} disabled={pompaAuto} />} />
               <CtrlRow icon="🌾" label="Unit Pakan"    sub={feederOn ? 'Membuka...' : 'Tertutup'} subColor={feederOn ? '#059669' : '#9CA3AF'} right={<Toggle isOn={feederOn} onChange={toggleFeeder} />} />
               <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-color)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                  <span style={{ fontSize: 18 }}>⚙️</span>
-                  <div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Conveyor Pakan</div><div style={{ fontSize: 11, color: convOn ? '#059669' : '#9CA3AF' }}>{convOn ? <b style={{ color: '#059669' }}>{convPhase}</b> : 'Diam'}</div></div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
-                  <button onClick={startConv} style={{ ...btn4, background: '#dcfce7', color: '#059669', borderColor: '#059669' }}>▶ Jalankan</button>
-                  <button onClick={stopConv}  style={{ ...btn4, background: '#fee2e2', color: '#dc2626', borderColor: '#dc2626' }}>⏹ Stop</button>
-                  <button onMouseDown={() => jogConv('fwd')} onMouseUp={() => jogConv('stop')} onTouchStart={() => jogConv('fwd')} onTouchEnd={() => jogConv('stop')} disabled={jogSending} style={{ ...btn4, background: '#dbeafe', color: '#1d4ed8', borderColor: '#1d4ed8' }}>↑ Maju</button>
-                  <button onMouseDown={() => jogConv('rev')} onMouseUp={() => jogConv('stop')} onTouchStart={() => jogConv('rev')} onTouchEnd={() => jogConv('stop')} disabled={jogSending} style={{ ...btn4, background: '#fef3c7', color: '#d97706', borderColor: '#d97706' }}>↓ Mundur</button>
-                </div>
-                <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 5, textAlign: 'center' }}>Tahan Maju/Mundur untuk jog. Lepas = stop (maks 10 dtk)</div>
-                <div style={{ marginTop: 12, borderTop: '1px solid var(--border-color)', paddingTop: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--bg-base)', borderRadius: 8, border: '1px solid var(--border-color)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 18 }}>🌾⚙️</span>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Pakan + Conveyor</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>jalan bersamaan</div>
+                {sectorId === 'sec-03' ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <span style={{ fontSize: 18 }}>⚙️</span>
+                      <div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Motor Pakan</div><div style={{ fontSize: 11, color: convOn ? '#059669' : '#9CA3AF' }}>{convOn ? <b style={{ color: '#059669' }}>{convPhase}</b> : 'Diam'}</div></div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                      <button onClick={startConv} style={{ ...btn4, background: '#dcfce7', color: '#059669', borderColor: '#059669' }}>▶ Jalankan</button>
+                      <button onClick={stopConv}  style={{ ...btn4, background: '#fee2e2', color: '#dc2626', borderColor: '#dc2626' }}>⏹ Stop</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <span style={{ fontSize: 18 }}>⚙️</span>
+                      <div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Conveyor Pakan</div><div style={{ fontSize: 11, color: convOn ? '#059669' : '#9CA3AF' }}>{convOn ? <b style={{ color: '#059669' }}>{convPhase}</b> : 'Diam'}</div></div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 6 }}>
+                      <button onClick={startConv} style={{ ...btn4, background: '#dcfce7', color: '#059669', borderColor: '#059669' }}>▶ Jalankan</button>
+                      <button onClick={stopConv}  style={{ ...btn4, background: '#fee2e2', color: '#dc2626', borderColor: '#dc2626' }}>⏹ Stop</button>
+                      <button onMouseDown={() => jogConv('fwd')} onMouseUp={() => jogConv('stop')} onTouchStart={() => jogConv('fwd')} onTouchEnd={() => jogConv('stop')} disabled={jogSending} style={{ ...btn4, background: '#dbeafe', color: '#1d4ed8', borderColor: '#1d4ed8' }}>↑ Maju</button>
+                      <button onMouseDown={() => jogConv('rev')} onMouseUp={() => jogConv('stop')} onTouchStart={() => jogConv('rev')} onTouchEnd={() => jogConv('stop')} disabled={jogSending} style={{ ...btn4, background: '#fef3c7', color: '#d97706', borderColor: '#d97706' }}>↓ Mundur</button>
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 5, textAlign: 'center' }}>Tahan Maju/Mundur untuk jog. Lepas = stop (maks 10 dtk)</div>
+                    <div style={{ marginTop: 12, borderTop: '1px solid var(--border-color)', paddingTop: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--bg-base)', borderRadius: 8, border: '1px solid var(--border-color)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 18 }}>🌾⚙️</span>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Pakan + Conveyor</div>
+                            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>jalan bersamaan</div>
+                          </div>
+                        </div>
+                        <button onClick={() => { toggleFeeder(); setTimeout(startConv, 500); }} style={{ padding: '6px 16px', background: '#e0f2fe', color: '#0284c7', fontWeight: 700, borderRadius: 6, border: '1px solid #0284c7', cursor: 'pointer', fontSize: 13 }}>▶ Jalankan</button>
                       </div>
                     </div>
-                    <button onClick={() => { toggleFeeder(); setTimeout(startConv, 500); }} style={{ padding: '6px 16px', background: '#e0f2fe', color: '#0284c7', fontWeight: 700, borderRadius: 6, border: '1px solid #0284c7', cursor: 'pointer', fontSize: 13 }}>▶ Jalankan</button>
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
             </div>
           ) : (

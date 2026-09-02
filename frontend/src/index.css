@@ -1158,6 +1158,9 @@ body.dark .sidebar-status {
   border-left: 3px solid #059669;
   background: #f0fdf4;
 }
+body.dark .notif-item.unread {
+  background: rgba(16, 185, 129, 0.15);
+}
 .notif-dot {
   width: 8px;
   height: 8px;

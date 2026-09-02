@@ -38,7 +38,7 @@ export default function App() {
           time: new Date(n.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
           timestamp: new Date(n.created_at).toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }),
           type: n.type as 'alert' | 'info' | 'success' | 'warning',
-          read: n.is_read
+          read: Boolean(Number(n.is_read))
         }));
         setNotifications(mapped);
       })

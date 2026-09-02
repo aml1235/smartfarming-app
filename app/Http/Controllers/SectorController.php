@@ -424,20 +424,6 @@ class SectorController extends Controller
                 if ($target === 'convjog') {
                     $mqtt->publish("{$controlBaseTopic}/convjog", $command, 1);
 
-                } elseif ($target === 'pompaauto') {
-                    $payload = (strtoupper($command) === 'ON' || $command === '1') ? '1' : '0';
-                    $mqtt->publish("{$controlBaseTopic}/pompaauto", $payload, 1);
-
-                    // Update optimistis di DB
-                    if ($sectorModel) {
-                        $metrics = is_string($sectorModel->metrics)
-                            ? json_decode($sectorModel->metrics, true)
-                            : ($sectorModel->metrics ?? []);
-                        $metrics['pompaAutoMode'] = $payload;
-                        $sectorModel->metrics = $metrics;
-                        $sectorModel->save();
-                    }
-
                 } else {
                     $smartcoopTarget = $target;
                     $payload = (strtoupper($command) === 'ON' || $command === '1') ? '1' : '0'; // default
@@ -476,6 +462,17 @@ class SectorController extends Controller
                     $topic = str_replace('control/../config', 'config', $topic);
 
                     $mqtt->publish($topic, $payload, 1);
+
+                    // Update optimistis di DB
+                    if (in_array($target, ['lampauto', 'pompaauto']) && $sectorModel) {
+                        $metrics = is_string($sectorModel->metrics)
+                            ? json_decode($sectorModel->metrics, true)
+                            : ($sectorModel->metrics ?? []);
+                        $key = $target === 'lampauto' ? 'lampAutoMode' : 'pompaAutoMode';
+                        $metrics[$key] = $payload;
+                        $sectorModel->metrics = $metrics;
+                        $sectorModel->save();
+                    }
 
                     // V3 fallback
                     $v3Topic  = "smartfarming/poultry/cmd/{$sector_id}";
