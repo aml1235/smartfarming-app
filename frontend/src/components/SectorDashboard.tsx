@@ -161,13 +161,22 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   const inp:  any = { width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: 13 }
   const btn4: any = { flex: 1, padding: '8px 2px', borderRadius: 8, fontWeight: 700, cursor: 'pointer', fontSize: 11, border: '1px solid', transition: 'opacity 0.15s' }
 
+  let translatedName = sector.name;
+  if (sector.id === 'hidroponik') translatedName = t('sector_hidroponik');
+  else if (sector.id === 'sec-02') translatedName = t('sector_kandang_unhan');
+  else if (sector.id === 'sec-01') translatedName = t('sector_kandang_bengpuskomlek');
+
+  let translatedUnit = sector.unit;
+  if (sector.unit?.toLowerCase() === 'tanaman') translatedUnit = t('unit_tanaman');
+  else if (sector.unit?.toLowerCase() === 'peternakan') translatedUnit = t('unit_peternakan');
+
   return (
     <div className="sector-dash fade-up">
       <div className="sector-dash-header">
         <div className="sector-dash-icon" style={{ background: sector.colorLight || '#fff3e0' }}>{sector.icon || '🐔'}</div>
         <div>
-          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{sector.name}</h2>
-          <p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{sector.unit} — {t('monitoring_rt')}</p>
+          <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{translatedName}</h2>
+          <p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{translatedUnit} — {t('monitoring_rt')}</p>
         </div>
         <div className="kandang-header-actions">
           <button className="btn" onClick={handleAiEvaluate} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer' }}>✨ {t('ai_analysis')}</button>
@@ -552,14 +561,25 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
     catch { setControls(p => p.map(c => c.key === ctrlKey ? { ...c, isOn: cur } : c)) }
   }
 
+  const { t } = useLanguage();
+
+  let translatedName = sector.name;
+  if (sector.id === 'hidroponik') translatedName = t('sector_hidroponik');
+  else if (sector.id === 'sec-02') translatedName = t('sector_kandang_unhan');
+  else if (sector.id === 'sec-01') translatedName = t('sector_kandang_bengpuskomlek');
+
+  let translatedUnit = sector.unit;
+  if (sector.unit?.toLowerCase() === 'tanaman') translatedUnit = t('unit_tanaman');
+  else if (sector.unit?.toLowerCase() === 'peternakan') translatedUnit = t('unit_peternakan');
+
   return (
     <div className="sector-dash fade-up">
       <div className="sector-dash-header">
         <div className="sector-dash-icon" style={{ background: sector.colorLight || '#f0f0f0' }}>{sector.icon || '🌱'}</div>
-        <div><h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{sector.name}</h2><p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{sector.unit} — Monitoring Real-time</p></div>
+        <div><h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{translatedName}</h2><p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{translatedUnit} — {t('monitoring_rt')}</p></div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button className="btn" onClick={handleAiEvaluate} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer' }}>✨ Analisis AI</button>
-          <button className="btn btn-ghost btn-sm" onClick={() => setLastRefresh(new Date())}><IcRefresh size={13}/> Perbarui</button>
+          <button className="btn" onClick={handleAiEvaluate} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer' }}>✨ {t('ai_analysis')}</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setLastRefresh(new Date())}><IcRefresh size={13}/> {t('update')}</button>
           <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{lastRefresh.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
       </div>

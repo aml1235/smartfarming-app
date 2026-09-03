@@ -186,7 +186,32 @@ export function OverviewMetrics({ sector }: { sector: any }) {
 }
 
 export function SectorCard({ sector, onOpen }: { sector: Sector & { metrics: React.ReactNode }; onOpen: () => void }) {
+  const { t } = useLanguage();
   const { label, cls } = STATUS_MAP[sector.status]
+  
+  let translatedName = sector.name;
+  if (sector.id === 'hidroponik') translatedName = t('sector_hidroponik');
+  else if (sector.id === 'sec-02') translatedName = t('sector_kandang_unhan');
+  else if (sector.id === 'sec-01') translatedName = t('sector_kandang_bengpuskomlek');
+
+  let translatedUnit = sector.unit;
+  if (sector.unit?.toLowerCase() === 'tanaman') translatedUnit = t('unit_tanaman');
+  else if (sector.unit?.toLowerCase() === 'peternakan') translatedUnit = t('unit_peternakan');
+
+  let translatedStatus = label;
+  if (sector.status === 'baik') translatedStatus = t('status_baik');
+  else if (sector.status === 'normal') translatedStatus = t('status_normal');
+  else if (sector.status === 'peringatan') translatedStatus = t('status_waspada');
+  else if (sector.status === 'kritis') translatedStatus = t('status_kritis');
+
+  let translatedTime = sector.lastUpdate;
+  if (translatedTime) {
+    translatedTime = translatedTime.replace('Baru saja', t('just_now'))
+                                   .replace('mnt lalu', t('mins_ago'))
+                                   .replace('jam lalu', t('hours_ago'))
+                                   .replace('hari lalu', t('days_ago'));
+  }
+
   return (
     <div className="card card-clickable fade-up" onClick={onOpen} style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{ height: 4, background: sector.color }} />
@@ -196,22 +221,22 @@ export function SectorCard({ sector, onOpen }: { sector: Sector & { metrics: Rea
             {sector.icon}
           </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>{sector.name}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{sector.unit}</div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>{translatedName}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 1 }}>{translatedUnit}</div>
           </div>
         </div>
-        <div className={`badge ${cls}`}>{label}</div>
+        <div className={`badge ${cls}`}>{translatedStatus}</div>
       </div>
       <div style={{ padding: '0 20px 16px', flex: 1 }}>
         {sector.metrics}
       </div>
       <div className="card-footer" style={{ borderTop: '1px solid var(--border-color)', padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Diperbarui {sector.lastUpdate}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{t('updated')} {translatedTime}</span>
         <button
           style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 7, border: 'none', background: sector.colorLight, color: sector.color, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'opacity 0.15s' }}
           onClick={e => { e.stopPropagation(); onOpen() }}
         >
-          Kelola <IcChevronRight size={14} />
+          {t('manage')} <IcChevronRight size={14} />
         </button>
       </div>
     </div>

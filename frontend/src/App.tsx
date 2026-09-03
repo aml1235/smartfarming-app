@@ -455,11 +455,11 @@ export default function App() {
             <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-base)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '2px', height: '38px' }}>
               <button
                 onClick={() => setLang('id')}
-                style={{ padding: '0 8px', border: 'none', borderRadius: '8px', background: lang === 'id' ? 'var(--color-primary)' : 'transparent', color: lang === 'id' ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.2s' }}
+                style={{ padding: '0 8px', border: 'none', borderRadius: '8px', background: lang === 'id' ? '#059669' : 'transparent', color: lang === 'id' ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.2s' }}
               >ID</button>
               <button
                 onClick={() => setLang('en')}
-                style={{ padding: '0 8px', border: 'none', borderRadius: '8px', background: lang === 'en' ? 'var(--color-primary)' : 'transparent', color: lang === 'en' ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.2s' }}
+                style={{ padding: '0 8px', border: 'none', borderRadius: '8px', background: lang === 'en' ? '#059669' : 'transparent', color: lang === 'en' ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.2s' }}
               >EN</button>
             </div>
 

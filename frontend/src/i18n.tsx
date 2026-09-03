@@ -153,6 +153,26 @@ const dictionary = {
     'admin_settings': 'Pengaturan Sistem',
     'admin_add_user': 'Tambah Pengguna Baru',
     'admin_add_sector': 'Tambah Sektor Baru',
+
+    // Sector Names & Units
+    'sector_hidroponik': 'Hidroponik',
+    'sector_kandang_unhan': 'Kandang Ayam Unhan',
+    'sector_kandang_bengpuskomlek': 'Kandang Ayam Bengpuskomlek',
+    'unit_tanaman': 'Tanaman',
+    'unit_peternakan': 'Peternakan',
+    
+    // Status & Time
+    'status_baik': 'Baik',
+    'status_normal': 'Normal',
+    'status_waspada': 'Waspada',
+    'status_kritis': 'Kritis',
+    'status_bahaya': 'Bahaya',
+    'manage': 'Kelola',
+    'updated': 'Diperbarui',
+    'just_now': 'Baru saja',
+    'mins_ago': 'mnt lalu',
+    'hours_ago': 'jam lalu',
+    'days_ago': 'hari lalu',
   },
   en: {
     // General
@@ -296,6 +316,26 @@ const dictionary = {
     'admin_settings': 'System Settings',
     'admin_add_user': 'Add New User',
     'admin_add_sector': 'Add New Sector',
+
+    // Sector Names & Units
+    'sector_hidroponik': 'Hydroponics',
+    'sector_kandang_unhan': 'Unhan Chicken Coop',
+    'sector_kandang_bengpuskomlek': 'Bengpuskomlek Chicken Coop',
+    'unit_tanaman': 'Crops',
+    'unit_peternakan': 'Livestock',
+    
+    // Status & Time
+    'status_baik': 'Good',
+    'status_normal': 'Normal',
+    'status_waspada': 'Warning',
+    'status_kritis': 'Critical',
+    'status_bahaya': 'Danger',
+    'manage': 'Manage',
+    'updated': 'Updated',
+    'just_now': 'Just now',
+    'mins_ago': 'mins ago',
+    'hours_ago': 'hours ago',
+    'days_ago': 'days ago',
   }
 };
 
