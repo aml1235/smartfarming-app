@@ -4,6 +4,7 @@ import { Sector } from '../types'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Toggle, ProgressBar, ChartTooltip } from './UIComponents'
 import { IcActivity, IcRefresh, IcX } from './Icons'
+import { AnimatedWaterTank, AnimatedBatteryTank } from './AnimatedTanks'
 
 interface SectorDashboardProps {
   sector: Sector
@@ -194,11 +195,13 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: &lt; 250</div>
         </div>
         {tangki !== '--' ? (
-          <div style={{ ...card, textAlign: 'center' }}>
-            <div style={{ fontSize: 26, marginBottom: 4 }}>🌊</div>
+          <div style={{ ...card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
+              <AnimatedWaterTank status={tangki} percentage={levelAir > 0 ? levelAir : undefined} size={56} />
+            </div>
             <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Status Tangki</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: tangki.toUpperCase() === 'KOSONG' ? '#dc2626' : '#1565C0' }}>{tangki}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Air Untuk Minum</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: tangki.toUpperCase() === 'KOSONG' ? '#dc2626' : tangki.toUpperCase() === 'SEDANG' ? '#0284c7' : '#1565C0' }}>{tangki}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Air Untuk Minum</div>
           </div>
         ) : (
           <div style={{ ...card, textAlign: 'center' }}>
@@ -217,11 +220,13 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
               <div style={{ fontSize: 26, fontWeight: 800, color: '#059669' }}>{aki !== '--' ? aki : '--'}<span style={{ fontSize: 13 }}>W</span></div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Daya Dihasilkan</div>
             </div>
-            <div style={{ ...card, textAlign: 'center' }}>
-              <div style={{ fontSize: 26, marginBottom: 4 }}>🔋</div>
+            <div style={{ ...card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
+                <AnimatedBatteryTank soc={soc} aki={aki} size={56} lvd={lvd} />
+              </div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Status Baterai (Aki)</div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: Number(soc) < 20 ? '#dc2626' : '#1565C0' }}>{soc !== '--' ? soc : '--'}<span style={{ fontSize: 13 }}>%</span></div>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>{lvd !== '--' ? lvd : 'Normal: > 20%'}</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: Number(soc) < 20 || String(soc).toUpperCase() === 'KOSONG' ? '#dc2626' : '#059669' }}>{soc !== '--' ? `${soc}%` : '--'}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{lvd !== '--' ? lvd : 'Normal: > 20%'}</div>
             </div>
           </>
         )}

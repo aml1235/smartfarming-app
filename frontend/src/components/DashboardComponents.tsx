@@ -3,6 +3,7 @@ import { Sector, SectorId } from '../types'
 import { STATUS_MAP } from '../constants'
 import { ProgressBar } from './UIComponents'
 import { IcCheck, IcChevronRight } from './Icons'
+import { AnimatedWaterTank, AnimatedBatteryTank } from './AnimatedTanks'
 
 import { API_URL } from '../constants'
 
@@ -96,17 +97,23 @@ export function OverviewMetrics({ sector }: { sector: any }) {
         {id === 'sec-03' ? (
           <>
             <div style={{ display: 'flex', gap: 8 }}>
-              <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
-                <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>🔋 Daya (Aki)</div>
-                <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 14, color: kandangData.soc > 30 ? '#059669' : '#ef4444', marginTop: 1 }}>{kandangData.aki}V ({kandangData.soc}%)</div>
+              <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <AnimatedBatteryTank soc={kandangData.soc} aki={kandangData.aki} size={36} />
+                <div>
+                  <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Daya (Aki)</div>
+                  <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 13, color: kandangData.soc > 30 ? '#059669' : '#ef4444', marginTop: 1 }}>{kandangData.aki}V ({kandangData.soc}%)</div>
+                </div>
               </div>
               <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
                 <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>🌾 Sisa Pakan</div>
                 <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 14, color: kandangData.pakan > 20 ? '#d97706' : '#ef4444', marginTop: 1 }}>{kandangData.pakan}%</div>
               </div>
-              <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
-                <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>💧 Tangki</div>
-                <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 14, color: '#1565C0', marginTop: 1 }}>{kandangData.tangki || 'SEDANG'}</div>
+              <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <AnimatedWaterTank status={kandangData.tangki} percentage={kandangData.waterLevel} size={36} />
+                <div>
+                  <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Tangki Air</div>
+                  <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 13, color: '#1565C0', marginTop: 1 }}>{kandangData.tangki || 'SEDANG'}</div>
+                </div>
               </div>
             </div>
           </>
