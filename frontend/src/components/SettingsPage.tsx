@@ -1,6 +1,7 @@
-﻿import { API_URL } from '../constants'
+import { API_URL } from '../constants'
 import React, { useState, useEffect } from 'react'
 import { IcChevronRight, IcEye, IcEyeOff } from './Icons'
+import { useLanguage } from '../i18n'
 
 interface SettingsProps {
   darkMode: boolean;
@@ -36,6 +37,7 @@ const AccordionSection = ({
 }
 
 export function SettingsPage({ darkMode, setDarkMode, user, onUpdateUser }: SettingsProps) {
+  const { t } = useLanguage();
   const [openSection, setOpenSection] = useState<string | null>('profile')
 
   // Profile form state
@@ -158,13 +160,13 @@ export function SettingsPage({ darkMode, setDarkMode, user, onUpdateUser }: Sett
   return (
     <div className="fade-up">
       <div style={{ marginBottom: 24 }}>
-        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>Pengaturan Akun</h2>
-        <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>Kelola informasi profil dan keamanan akun Anda</p>
+        <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{t('settings_title')}</h2>
+        <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{t('settings_desc')}</p>
       </div>
 
       <div style={{ maxWidth: 800 }}>
         {/* Profile */}
-        <AccordionSection id="profile" title="Edit Profil" desc="Perbarui nama dan alamat email Anda" openSection={openSection} toggleSection={toggleSection}>
+        <AccordionSection id="profile" title={t('profile_edit_title')} desc={t('profile_edit_desc')} openSection={openSection} toggleSection={toggleSection}>
           {profileMsg && (
             <div style={{ padding: '12px 16px', marginBottom: '20px', borderRadius: '12px', background: profileMsg.includes('berhasil') ? '#dcfce7' : '#fee2e2', color: profileMsg.includes('berhasil') ? '#059669' : '#dc2626', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
               {profileMsg}
@@ -172,23 +174,23 @@ export function SettingsPage({ darkMode, setDarkMode, user, onUpdateUser }: Sett
           )}
           <form onSubmit={handleUpdateProfile}>
             <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>Nama Lengkap</label>
+              <label style={labelStyle}>{t('full_name_label')}</label>
               <input type="text" value={name} onChange={e => setName(e.target.value)} style={inputStyle} placeholder={user?.name} />
             </div>
             <div style={{ marginBottom: 24 }}>
-              <label style={labelStyle}>Alamat Email</label>
+              <label style={labelStyle}>{t('email_address_label')}</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} placeholder={user?.email} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button type="submit" className="btn btn-primary" style={{ padding: '12px 24px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 600, boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)' }} disabled={profileLoading}>
-                {profileLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                {profileLoading ? t('saving') : t('save_changes')}
               </button>
             </div>
           </form>
         </AccordionSection>
 
         {/* Password */}
-        <AccordionSection id="password" title="Ganti Password" desc="Tingkatkan keamanan dengan memperbarui password Anda" openSection={openSection} toggleSection={toggleSection}>
+        <AccordionSection id="password" title={t('password_change_title')} desc={t('password_change_desc')} openSection={openSection} toggleSection={toggleSection}>
           {passwordMsg && (
             <div style={{ padding: '12px 16px', marginBottom: '20px', borderRadius: '12px', background: passwordMsg.includes('berhasil') ? '#dcfce7' : '#fee2e2', color: passwordMsg.includes('berhasil') ? '#059669' : '#dc2626', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
               {passwordMsg}
@@ -196,7 +198,7 @@ export function SettingsPage({ darkMode, setDarkMode, user, onUpdateUser }: Sett
           )}
           <form onSubmit={handleUpdatePassword}>
             <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>Password Lama</label>
+              <label style={labelStyle}>{t('old_password_label')}</label>
               <div style={{ position: 'relative' }}>
                 <input type={showCurrentPassword ? "text" : "password"} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} style={{...inputStyle, paddingRight: 48}} required />
                 <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
@@ -205,7 +207,7 @@ export function SettingsPage({ darkMode, setDarkMode, user, onUpdateUser }: Sett
               </div>
             </div>
             <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>Password Baru</label>
+              <label style={labelStyle}>{t('new_password_label')}</label>
               <div style={{ position: 'relative' }}>
                 <input type={showNewPassword ? "text" : "password"} value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{...inputStyle, paddingRight: 48}} required minLength={6} />
                 <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
@@ -214,7 +216,7 @@ export function SettingsPage({ darkMode, setDarkMode, user, onUpdateUser }: Sett
               </div>
             </div>
             <div style={{ marginBottom: 24 }}>
-              <label style={labelStyle}>Konfirmasi Password</label>
+              <label style={labelStyle}>{t('confirm_password_label')}</label>
               <div style={{ position: 'relative' }}>
                 <input type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} style={{ ...inputStyle, paddingRight: 40 }} required minLength={6} />
                 <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: 12, top: 12, background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
@@ -224,7 +226,7 @@ export function SettingsPage({ darkMode, setDarkMode, user, onUpdateUser }: Sett
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button type="submit" className="btn btn-primary" style={{ padding: '12px 24px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 600, boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)' }} disabled={passwordLoading}>
-                {passwordLoading ? 'Menyimpan...' : 'Perbarui Password'}
+                {passwordLoading ? t('saving') : t('update_password_btn')}
               </button>
             </div>
           </form>

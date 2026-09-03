@@ -1,11 +1,13 @@
 import React from 'react';
 import { IcLeaf, IcDownload, IcStar, IcShield } from './Icons';
+import { useLanguage } from '../i18n';
 
 interface ApkDownloadPageProps {
   onBack: () => void;
 }
 
 export function ApkDownloadPage({ onBack }: ApkDownloadPageProps) {
+  const { t } = useLanguage();
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-base)', fontFamily: 'Roboto, sans-serif' }}>
       {/* Header */}
@@ -34,56 +36,56 @@ export function ApkDownloadPage({ onBack }: ApkDownloadPageProps) {
           
           {/* App Info */}
           <div style={{ flex: 1, minWidth: '280px' }}>
-            <h1 style={{ margin: '0 0 8px 0', fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>Smart Farming Indonesia</h1>
-            <div style={{ fontSize: '1rem', color: '#059669', fontWeight: 600, marginBottom: '16px' }}>Kadet Informatika Universitas Pertahanan RI</div>
-            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>Berisi Iklan · Pembelian Dalam Aplikasi</div>
+            <h1 style={{ margin: '0 0 8px 0', fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>{t('apk_title')}</h1>
+            <div style={{ fontSize: '1rem', color: '#059669', fontWeight: 600, marginBottom: '16px' }}>{t('apk_author')}</div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '24px' }}>{t('apk_contains_ads')}</div>
             
             <div style={{ display: 'flex', gap: '32px', marginBottom: '24px' }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 700, fontSize: '1.1rem', color: 'var(--text-primary)' }}>
                   4.9 <IcStar size={16} />
                 </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>12 rb ulasan</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{t('apk_reviews')}</div>
               </div>
               <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--text-primary)' }}>100 rb+</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Download</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{t('apk_downloads')}</div>
               </div>
               <div style={{ width: '1px', background: 'var(--border-color)' }}></div>
               <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <div style={{ border: '1px solid var(--text-primary)', borderRadius: '4px', padding: '0 4px', fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)', display: 'inline-block', marginBottom: '2px' }}>3+</div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Rating 3+</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{t('apk_rating')}</div>
               </div>
             </div>
 
             <a href="/SmartFarming.apk" download="SmartFarming.apk" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#059669', color: '#fff', textDecoration: 'none', padding: '12px 32px', borderRadius: '999px', fontWeight: 600, fontSize: '1.1rem', transition: 'background 0.2s', width: '100%', maxWidth: '300px' }} onMouseEnter={(e) => e.currentTarget.style.background = '#047857'} onMouseLeave={(e) => e.currentTarget.style.background = '#059669'}>
-              Instal APK
+              {t('apk_install')}
             </a>
           </div>
         </div>
 
         {/* Screenshots Placeholder */}
         <div style={{ marginTop: '48px' }}>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px' }}>Tentang aplikasi ini</h2>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px' }}>{t('apk_about')}</h2>
           <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '32px' }}>
-            Tingkatkan efisiensi produksi dan kelola sektor pertanian Anda dari satu genggaman dengan aplikasi Smart Farming. Sistem monitoring terpadu berbasis IoT yang dirancang khusus untuk memenuhi kebutuhan pertanian modern di Indonesia. Pantau parameter krusial seperti suhu, kelembapan, intensitas cahaya, level air, dan pH secara real-time.
+            {t('apk_about_desc')}
           </p>
 
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px' }}>Keamanan Data</h2>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px' }}>{t('apk_data_safety')}</h2>
           <div style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '24px', background: 'var(--bg-surface)' }}>
-            <p style={{ margin: '0 0 16px 0', color: 'var(--text-secondary)', lineHeight: 1.5 }}>Keamanan dimulai dengan memahami cara developer mengumpulkan dan membagikan data Anda. Praktik privasi dan keamanan data mungkin berbeda-beda berdasarkan penggunaan, wilayah, dan usia Anda.</p>
+            <p style={{ margin: '0 0 16px 0', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{t('apk_data_safety_desc')}</p>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center', color: 'var(--text-primary)', marginBottom: '12px' }}>
               <div style={{ padding: '8px', background: 'rgba(5,150,105,0.1)', borderRadius: '50%', color: '#059669' }}>
                 <IcShield />
               </div>
-              <div>Data tidak dibagikan kepada pihak ketiga</div>
+              <div>{t('apk_data_not_shared')}</div>
             </div>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center', color: 'var(--text-primary)' }}>
               <div style={{ padding: '8px', background: 'rgba(5,150,105,0.1)', borderRadius: '50%', color: '#059669' }}>
                 <IcDownload />
               </div>
-              <div>Data dienkripsi dalam perjalanan</div>
+              <div>{t('apk_data_encrypted')}</div>
             </div>
           </div>
         </div>

@@ -10,6 +10,7 @@ import {
 import { Toggle } from './UIComponents';
 import { SettingsPage } from './SettingsPage';
 import { Sidebar } from './Sidebar';
+import { useLanguage } from '../i18n';
 
 interface AdminPageProps {
   sectors: Sector[];
@@ -26,6 +27,7 @@ interface AdminPageProps {
 }
 
 export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, setDarkMode, loggedInUser, onUpdateUser, onAddSector, onDeleteSector, onEditSector }: AdminPageProps) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [activities, setActivities] = useState<any[]>([]);
 
@@ -323,6 +325,16 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
 
   const renderUsers = () => (
     <div className="tab-users">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>{t('admin_users')}</h2>
+          <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>Kelola hak akses dan peran tim Anda</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => openEditModal({} as User)}>
+          <IcUserPlus size={18} /> {t('admin_add_user')}
+        </button>
+      </div>
+
       <div className="toolbar" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div className="search-box" style={{ position: 'relative', width: '100%', maxWidth: '320px' }}>
           <div style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)', display: 'flex' }}><IcSearch size={18} /></div>
@@ -334,16 +346,6 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
             style={{ width: '100%', padding: '10px 12px 10px 40px', borderRadius: '8px', border: '1px solid #d1d5db', outline: 'none' }}
           />
         </div>
-        <button className="btn btn-primary" onClick={() => {
-          setEditUserId(null);
-          setNewUserName('');
-          setNewUserEmail('');
-          setNewUserRole('operator');
-          setNewUserPassword('');
-          setShowAddModal(true);
-        }} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#059669', color: 'var(--text-primary)', border: 'none', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: 500, whiteSpace: 'nowrap' }}>
-          <IcUserPlus size={18} /> Tambah Pengguna
-        </button>
       </div>
 
       <div className="admin-table-wrapper" style={{ background: 'var(--bg-surface)', borderRadius: '12px', border: '1px solid var(--border-color)', overflowX: 'auto' }}>
@@ -658,13 +660,13 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
 
   const renderSectors = () => (
     <div className="tab-sectors">
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px' }}>
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowAddSectorModal(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#059669', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '10px', cursor: 'pointer', fontWeight: 600, fontSize: '14px' }}
-        >
-          + Tambah Sektor
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>{t('admin_sectors')}</h2>
+          <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>Konfigurasi parameter dan integrasi perangkat IoT</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => setShowAddSectorModal(true)}>
+          + {t('admin_add_sector')}
         </button>
       </div>
 

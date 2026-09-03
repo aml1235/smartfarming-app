@@ -6,8 +6,10 @@ import { IcCheck, IcChevronRight } from './Icons'
 import { AnimatedWaterTank, AnimatedBatteryTank } from './AnimatedTanks'
 
 import { API_URL } from '../constants'
+import { useLanguage } from '../i18n'
 
 export function OverviewMetrics({ sector }: { sector: any }) {
+  const { t } = useLanguage();
   const [hydroData, setHydroData] = React.useState({ waterLevel: 0, temp: 0, humidity: 0, light: 0 })
   const [kandangData, setKandangData] = React.useState({ temp: 0, humidity: 0, waterLevel: 0, ammonia: 0, aki: 0, soc: 0, lvd: '', pakan: 0, tangki: '' })
   
@@ -84,12 +86,22 @@ export function OverviewMetrics({ sector }: { sector: any }) {
     kandang: (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', gap: 8 }}>
+          {id === 'sec-03' ? (
+            <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AnimatedThermometer temperature={kandangData.temp} size={36} />
+              <div>
+                <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>{t('temp')}</div>
+                <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 14, color: kandangData.temp > 32 ? '#dc2626' : kandangData.temp > 28 ? '#d97706' : '#059669', marginTop: 1 }}>{kandangData.temp}°C</div>
+              </div>
+            </div>
+          ) : (
+            <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
+              <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>{t('temp')}</div>
+              <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>{kandangData.temp}°C</div>
+            </div>
+          )}
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
-            <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Suhu</div>
-            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>{kandangData.temp}°C</div>
-          </div>
-          <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
-            <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Kelembapan</div>
+            <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>{t('humidity')}</div>
             <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>{kandangData.humidity}%</div>
           </div>
         </div>
@@ -100,19 +112,19 @@ export function OverviewMetrics({ sector }: { sector: any }) {
               <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <AnimatedBatteryTank soc={kandangData.soc} aki={kandangData.aki} size={36} />
                 <div>
-                  <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Daya (Aki)</div>
+                  <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>{t('battery_status')}</div>
                   <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 13, color: kandangData.soc > 30 ? '#059669' : '#ef4444', marginTop: 1 }}>{kandangData.aki}V ({kandangData.soc}%)</div>
                 </div>
               </div>
               <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
-                <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>🌾 Sisa Pakan</div>
+                <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>🌾 {t('feed_left')}</div>
                 <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 14, color: kandangData.pakan > 20 ? '#d97706' : '#ef4444', marginTop: 1 }}>{kandangData.pakan}%</div>
               </div>
               <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <AnimatedWaterTank status={kandangData.tangki} percentage={kandangData.waterLevel} size={36} />
                 <div>
-                  <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Tangki Air</div>
-                  <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 13, color: '#1565C0', marginTop: 1 }}>{kandangData.tangki || 'SEDANG'}</div>
+                  <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>{t('water_tank_status')}</div>
+                  <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 13, color: '#1565C0', marginTop: 1, textTransform: 'capitalize' }}>{kandangData.tangki ? kandangData.tangki.toLowerCase() : t('medium').toLowerCase()}</div>
                 </div>
               </div>
             </div>

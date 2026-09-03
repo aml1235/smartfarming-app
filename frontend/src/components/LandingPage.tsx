@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   IcLeaf, IcShield, IcActivity, IcZap, IcBarChart, IcUsers, IcGrid, IcBell, IcWaves, IcDroplets, IcSettings, IcLink, IcHome, IcSun, IcMoon, IcMail
 } from './Icons';
+import { useLanguage } from '../i18n';
 
 interface LandingPageProps {
   onLogin: () => void;
@@ -98,6 +99,7 @@ const AnimatedCounter = ({ endValue, suffix = '', decimals = 0 }: { endValue: nu
 };
 
 export function LandingPage({ onLogin, onDownloadApk, darkMode, setDarkMode }: LandingPageProps) {
+  const { t } = useLanguage();
   const heroAnim = useVisible(0.1);
   const sectorsAnim = useVisible(0.1);
   const featuresAnim = useVisible(0.1);
@@ -154,15 +156,15 @@ export function LandingPage({ onLogin, onDownloadApk, darkMode, setDarkMode }: L
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '24px', flexWrap: 'wrap' }}>
             {!isMobile && (
               <div style={{ display: 'flex', gap: '20px', marginRight: '10px' }}>
-                <button onClick={() => scrollTo('sektor')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.95rem' }}>Sektor</button>
-                <button onClick={() => scrollTo('fitur')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.95rem' }}>Fitur</button>
-                <button onClick={() => scrollTo('cara-kerja')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.95rem' }}>Cara Kerja</button>
+                <button onClick={() => scrollTo('sektor')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.95rem' }}>{t('lp_sector')}</button>
+                <button onClick={() => scrollTo('fitur')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.95rem' }}>{t('lp_features')}</button>
+                <button onClick={() => scrollTo('cara-kerja')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 600, fontSize: '0.95rem' }}>{t('lp_how_it_works')}</button>
               </div>
             )}
             <button onClick={() => setDarkMode(!darkMode)} style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', cursor: 'pointer', borderRadius: '50%', width: isMobile ? '36px' : '40px', height: isMobile ? '36px' : '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#059669', transition: 'all 0.3s' }}>
               {darkMode ? <IcMoon size={isMobile ? 18 : 20} /> : <IcSun size={isMobile ? 18 : 20} />}
             </button>
-            <button className="btn btn-primary" onClick={onLogin} style={{ padding: isMobile ? '8px 16px' : '10px 24px', borderRadius: '999px', fontSize: isMobile ? '0.9rem' : '1rem' }}>{isMobile ? 'Masuk' : 'Masuk Dashboard'}</button>
+            <button className="btn btn-primary" onClick={onLogin} style={{ padding: isMobile ? '8px 16px' : '10px 24px', borderRadius: '999px', fontSize: isMobile ? '0.9rem' : '1rem' }}>{isMobile ? t('lp_login') : t('lp_login_dashboard')}</button>
           </div>
         </div>
       </nav>
@@ -174,29 +176,29 @@ export function LandingPage({ onLogin, onDownloadApk, darkMode, setDarkMode }: L
           <div className="hero-copy" style={{ zIndex: 2 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '999px', backgroundColor: 'rgba(16,185,129,0.1)', color: '#059669', fontWeight: 700, marginBottom: '24px', fontSize: '14px', border: '1px solid rgba(16,185,129,0.2)' }}>
               <div style={{ animation: 'pulse-glow 2s infinite' }}><IcLeaf size={16} /></div>
-              Sistem Terpadu Generasi Baru
+              {t('lp_hero_badge')}
             </div>
             <h1 style={{ fontSize: isMobile ? '2.5rem' : '3.5rem', lineHeight: 1.1, marginBottom: '24px', color: 'var(--text-primary)', fontWeight: 900, letterSpacing: '-0.03em' }}>
-              Monitoring <span style={{ background: 'linear-gradient(135deg, #059669, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Pertanian Cerdas</span> untuk Produksi Optimal
+              {t('lp_hero_title1')}<span style={{ background: 'linear-gradient(135deg, #059669, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{t('lp_hero_title_highlight')}</span>{t('lp_hero_title2')}
             </h1>
             <p style={{ fontSize: '1.125rem', color: 'var(--text-secondary)', marginBottom: '40px', lineHeight: 1.7, maxWidth: 480 }}>
-              Tingkatkan efisiensi produksi dan kelola empat sektor pertanian Anda dari satu dashboard terpadu berbasis IoT.
+              {t('lp_hero_desc')}
             </p>
             <div style={{ display: 'flex', gap: '16px', marginBottom: '56px', flexWrap: 'wrap' }}>
-              <button className="btn btn-primary" onClick={onLogin} style={{ padding: '16px 32px', fontSize: '1.1rem', borderRadius: '12px' }}>Mulai Sekarang</button>
+              <button className="btn btn-primary" onClick={onLogin} style={{ padding: '16px 32px', fontSize: '1.1rem', borderRadius: '12px' }}>{t('lp_start_now')}</button>
 
               <button onClick={onDownloadApk} className="btn btn-secondary" style={{ padding: '16px 32px', fontSize: '1.1rem', borderRadius: '12px', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontWeight: 600, cursor: 'pointer' }}>
-                Unduh APK Android
+                {t('lp_download_apk')}
               </button>
             </div>
             <div style={{ display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
               <div>
                 <span style={{ display: 'block', fontSize: '2.5rem', fontWeight: 900, color: 'var(--text-primary)' }}><AnimatedCounter endValue={4} suffix="+" /></span>
-                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Sektor Aktif</span>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{t('lp_active_sectors')}</span>
               </div>
               <div>
                 <span style={{ display: 'block', fontSize: '2.5rem', fontWeight: 900, color: 'var(--text-primary)' }}><AnimatedCounter endValue={99.4} suffix="%" decimals={1} /></span>
-                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Uptime Sistem</span>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{t('lp_system_uptime')}</span>
               </div>
             </div>
           </div>
@@ -205,9 +207,9 @@ export function LandingPage({ onLogin, onDownloadApk, darkMode, setDarkMode }: L
             <div style={{ position: 'absolute', top: -30, right: -30, width: 200, height: 200, background: 'linear-gradient(135deg, #10b981, transparent)', borderRadius: '50%', filter: 'blur(40px)', opacity: 0.2, zIndex: 0 }} />
             
             {[
-              { icon: <IcBarChart />, title: 'Monitoring Real-time', desc: 'Pantau suhu, kelembapan, pH dari satu dashboard terpadu.', color: '#10b981', delay: '0.1s' },
-              { icon: <IcShield />, title: 'Keamanan & Kontrol', desc: 'Akses sistem diatur secara ketat hanya untuk personel berwenang.', color: '#3b82f6', delay: '0.2s', isAccent: true },
-              { icon: <IcGrid />, title: 'Multi-Perangkat', desc: 'Responsif di desktop, tablet, dan ponsel.', color: '#8b5cf6', delay: '0.3s' }
+              { icon: <IcBarChart />, title: t('lp_feature1_title'), desc: t('lp_feature1_desc'), color: '#10b981', delay: '0.1s' },
+              { icon: <IcShield />, title: t('lp_feature2_title'), desc: t('lp_feature2_desc'), color: '#3b82f6', delay: '0.2s', isAccent: true },
+              { icon: <IcGrid />, title: t('lp_feature3_title'), desc: t('lp_feature3_desc'), color: '#8b5cf6', delay: '0.3s' }
             ].map((card, i) => (
               <div key={i} style={{
                 position: 'relative', zIndex: 1, padding: '28px', borderRadius: '20px', 

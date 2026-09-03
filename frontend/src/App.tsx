@@ -13,8 +13,10 @@ import { NotificationsPage } from './components/NotificationsPage'
 import { SettingsPage } from './components/SettingsPage'
 import { ApkDownloadPage } from './components/ApkDownloadPage'
 import { IcMenu, IcLeaf, IcBell, IcPlus, IcSun, IcMoon } from './components/Icons'
+import { useLanguage } from './i18n'
 
 export default function App() {
+  const { t } = useLanguage();
   const [appView, setAppView] = useState<AppView>('landing')
   const [isInitializing, setIsInitializing] = useState(true)
   const [page, setPage] = useState<PageId>('overview')
@@ -440,7 +442,7 @@ export default function App() {
           </div>
 
           <div className="header-title">
-            <div>{getPageTitle()}</div>
+            <div>{page === 'overview' ? t('dashboard') : getPageTitle()}</div>
           </div>
 
           <div className="header-actions">
@@ -471,7 +473,7 @@ export default function App() {
                   {loggedInUser ? loggedInUser.name : 'Operator'}
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>
-                  {loggedInUser?.role === 'admin' ? 'Administrator' : 'Monitoring'}
+                  {loggedInUser?.role === 'admin' ? 'Administrator' : t('monitoring_rt')}
                 </div>
               </div>
             </div>

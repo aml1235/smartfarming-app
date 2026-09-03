@@ -1,6 +1,7 @@
 import { API_URL } from '../constants'
 import React, { useState, useEffect } from 'react';
 import { IcLeaf, IcArrowLeft, IcEye, IcEyeOff } from './Icons';
+import { useLanguage } from '../i18n';
 
 interface LoginPageProps {
   onLogin: (user: any) => void;
@@ -10,6 +11,7 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onLogin, onBack }: LoginPageProps) {
+  const { t } = useLanguage();
   const [view, setView] = useState<'login' | 'forgot' | 'reset'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -158,7 +160,7 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
             <IcLeaf color="#fff" />
           </div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '8px', color: 'var(--text-primary)' }}>Smart Farming</h2>
-          <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{view === 'login' ? 'Masuk ke platform monitoring' : view === 'forgot' ? 'Atur ulang password Anda' : 'Buat password baru'}</p>
+          <p style={{ color: '#6b7280', fontSize: '0.875rem' }}>{view === 'login' ? t('login_subtitle') : view === 'forgot' ? t('forgot_subtitle') : t('reset_subtitle')}</p>
         </div>
 
         {message && (
@@ -170,10 +172,10 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
         {view === 'login' ? (
           <form onSubmit={handleLogin}>
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '8px', color: 'var(--text-secondary)' }}>Email</label>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '8px', color: 'var(--text-secondary)' }}>{t('email_label')}</label>
               <input 
                 type="email" 
-                placeholder="Masukkan email Anda"
+                placeholder={t('email_placeholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -182,8 +184,8 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
             </div>
             <div style={{ marginBottom: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>Password</label>
-                <button type="button" onClick={() => { setView('forgot'); setMessage(''); }} style={{ background: 'none', border: 'none', color: '#059669', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>Lupa Password?</button>
+                <label style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-secondary)' }}>{t('password_label')}</label>
+                <button type="button" onClick={() => { setView('forgot'); setMessage(''); }} style={{ background: 'none', border: 'none', color: '#059669', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>{t('forgot_password')}</button>
               </div>
               <div style={{ position: 'relative' }}>
                 <input 
@@ -200,7 +202,7 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
               </div>
             </div>
             <button type="submit" style={{ width: '100%', padding: '12px', borderRadius: '8px', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#fff', border: 'none', fontWeight: 600, cursor: (isLoading || countdown > 0) ? 'not-allowed' : 'pointer', opacity: (isLoading || countdown > 0) ? 0.7 : 1 }} disabled={isLoading || countdown > 0}>
-              {isLoading ? 'Memproses...' : countdown > 0 ? `Tunggu ${countdown}s` : 'Masuk'}
+              {isLoading ? t('login_wait') : countdown > 0 ? `Tunggu ${countdown}s` : t('login_btn')}
             </button>
           </form>
         ) : view === 'forgot' ? (
@@ -220,7 +222,7 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
               {isLoading ? 'Mengirim...' : countdown > 0 ? `Tunggu ${countdown}s` : 'Kirim Link Reset'}
             </button>
             <button type="button" onClick={() => setView('login')} style={{ width: '100%', padding: '12px', marginTop: '12px', borderRadius: '8px', background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', fontWeight: 600, cursor: 'pointer' }}>
-              Kembali ke Login
+              {t('back_to_login')}
             </button>
           </form>
         ) : (
@@ -235,7 +237,7 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
               />
             </div>
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '8px', color: 'var(--text-secondary)' }}>Password Baru</label>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 500, marginBottom: '8px', color: 'var(--text-secondary)' }}>{t('new_password_label')}</label>
               <div style={{ position: 'relative' }}>
                 <input 
                   type={showPassword ? "text" : "password"} 

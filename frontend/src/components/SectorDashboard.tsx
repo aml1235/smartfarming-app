@@ -4,7 +4,8 @@ import { Sector } from '../types'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Toggle, ProgressBar, ChartTooltip } from './UIComponents'
 import { IcActivity, IcRefresh, IcX } from './Icons'
-import { AnimatedWaterTank, AnimatedBatteryTank } from './AnimatedTanks'
+import { AnimatedWaterTank, AnimatedBatteryTank, AnimatedThermometer } from './AnimatedTanks'
+import { useLanguage } from '../i18n'
 
 interface SectorDashboardProps {
   sector: Sector
@@ -33,6 +34,7 @@ export function SectorDashboard({ sector, loggedInUser }: SectorDashboardProps) 
 
 // ─── KANDANG DASHBOARD ────────────────────────────────────────────────────────
 function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRefresh, setLastRefresh }: any) {
+  const { t } = useLanguage();
   const [suhu, setSuhu]         = useState('--')
   const [lembap, setLembap]     = useState('--')
   const [amonia, setAmonia]     = useState('--')
@@ -165,23 +167,34 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         <div className="sector-dash-icon" style={{ background: sector.colorLight || '#fff3e0' }}>{sector.icon || '🐔'}</div>
         <div>
           <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: 'var(--text-primary)' }}>{sector.name}</h2>
-          <p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{sector.unit} — Monitoring Real-time</p>
+          <p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>{sector.unit} — {t('monitoring_rt')}</p>
         </div>
         <div className="kandang-header-actions">
-          <button className="btn" onClick={handleAiEvaluate} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer' }}>✨ Analisis AI</button>
-          <button className="btn btn-ghost btn-sm" onClick={() => setLastRefresh(new Date())}><IcRefresh size={13} /> Perbarui</button>
+          <button className="btn" onClick={handleAiEvaluate} style={{ padding: '8px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#8B5CF6,#6D28D9)', color: 'white', fontWeight: 600, border: 'none', cursor: 'pointer' }}>✨ {t('ai_analysis')}</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setLastRefresh(new Date())}><IcRefresh size={13} /> {t('update')}</button>
           <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{lastRefresh.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
       </div>
 
       {/* 5 Metric Cards */}
       <div className="kandang-metrics-grid">
-        <div style={{ ...card, textAlign: 'center' }}>
-          <div style={{ fontSize: 26, marginBottom: 4 }}>🌡️</div>
-          <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Suhu</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: suhuColor }}>{suhu}<span style={{ fontSize: 13 }}>°C</span></div>
-          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: 28-32°C</div>
-        </div>
+        {sectorId === 'sec-03' ? (
+          <div style={{ ...card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
+              <AnimatedThermometer temperature={suhu} size={56} />
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Suhu</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: suhuColor }}>{suhu}<span style={{ fontSize: 14 }}>°C</span></div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Normal: 28-32°C</div>
+          </div>
+        ) : (
+          <div style={{ ...card, textAlign: 'center' }}>
+            <div style={{ fontSize: 26, marginBottom: 4 }}>🌡️</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Suhu</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: suhuColor }}>{suhu}<span style={{ fontSize: 13 }}>°C</span></div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: 28-32°C</div>
+          </div>
+        )}
         <div style={{ ...card, textAlign: 'center' }}>
           <div style={{ fontSize: 26, marginBottom: 4 }}>💧</div>
           <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Kelembapan</div>
@@ -200,7 +213,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
               <AnimatedWaterTank status={tangki} percentage={levelAir > 0 ? levelAir : undefined} size={56} />
             </div>
             <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Status Tangki</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: tangki.toUpperCase() === 'KOSONG' ? '#dc2626' : tangki.toUpperCase() === 'SEDANG' ? '#0284c7' : '#1565C0' }}>{tangki}</div>
+            <div style={{ fontSize: 26, fontWeight: 800, textTransform: 'capitalize', color: tangki.toUpperCase() === 'KOSONG' ? '#dc2626' : tangki.toUpperCase() === 'SEDANG' ? '#0284c7' : '#1565C0' }}>{tangki.toLowerCase()}</div>
             <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Air Untuk Minum</div>
           </div>
         ) : (
@@ -216,9 +229,9 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
           <>
             <div style={{ ...card, textAlign: 'center' }}>
               <div style={{ fontSize: 26, marginBottom: 4 }}>☀️</div>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Info Panel Surya</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>{t('solar_panel_info')}</div>
               <div style={{ fontSize: 26, fontWeight: 800, color: '#059669' }}>{aki !== '--' ? aki : '--'}<span style={{ fontSize: 13 }}>W</span></div>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Daya Dihasilkan</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>{t('power_generated')}</div>
             </div>
             <div style={{ ...card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
@@ -237,8 +250,8 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
       <div className="kandang-content-grid">
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>Grafik Riwayat</div><div style={{ fontSize: 13, color: 'var(--text-primary)', marginTop: 2 }}>24 Jam Terakhir</div></div>
-            <div className="badge badge-amber"><IcActivity size={11} /> Data Historis</div>
+            <div><div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{t('history')}</div><div style={{ fontSize: 13, color: 'var(--text-primary)', marginTop: 2 }}>{t('history_desc')}</div></div>
+            <div className="badge badge-amber"><IcActivity size={11} /> {t('historical_data')}</div>
           </div>
           {tempData.length > 0 ? (
             <ResponsiveContainer width="100%" height={195}>
@@ -269,19 +282,19 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
 
           {activeTab === 'manual' ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <CtrlRow icon="💡" label="Lampu Kandang" sub={lampAuto ? '(Auto aktif)' : lampOn ? 'Menyala' : 'Mati'} subColor={lampOn ? '#059669' : '#9CA3AF'} right={<Toggle isOn={lampOn} onChange={toggleLamp} disabled={lampAuto} />} />
-              <CtrlRow icon="💧" label="Pompa Air"     sub={pompaAuto ? '(Auto aktif)' : pompaOn ? 'Menyala' : 'Mati'} subColor={pompaOn ? '#059669' : '#9CA3AF'} right={<Toggle isOn={pompaOn} onChange={togglePompa} disabled={pompaAuto} />} />
-              <CtrlRow icon="🌾" label="Unit Pakan"    sub={feederOn ? 'Membuka...' : 'Tertutup'} subColor={feederOn ? '#059669' : '#9CA3AF'} right={<Toggle isOn={feederOn} onChange={toggleFeeder} />} />
+              <CtrlRow icon="💡" label={t('lamp_cage')} sub={lampAuto ? t('auto_active') : lampOn ? t('on') : t('off')} subColor={lampOn ? '#059669' : '#9CA3AF'} right={<Toggle isOn={lampOn} onChange={toggleLamp} disabled={lampAuto} />} />
+              <CtrlRow icon="💧" label={t('water_pump')}     sub={pompaAuto ? t('auto_active') : pompaOn ? t('on') : t('off')} subColor={pompaOn ? '#059669' : '#9CA3AF'} right={<Toggle isOn={pompaOn} onChange={togglePompa} disabled={pompaAuto} />} />
+              <CtrlRow icon="🌾" label={t('feed_unit')}    sub={feederOn ? t('opening') : t('closed')} subColor={feederOn ? '#059669' : '#9CA3AF'} right={<Toggle isOn={feederOn} onChange={toggleFeeder} />} />
               <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: '10px 12px', border: '1px solid var(--border-color)' }}>
                 {sectorId === 'sec-03' ? (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                       <span style={{ fontSize: 18 }}>⚙️</span>
-                      <div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Motor Pakan</div><div style={{ fontSize: 11, color: convOn ? '#059669' : '#9CA3AF' }}>{convOn ? <b style={{ color: '#059669' }}>{convPhase}</b> : 'Diam'}</div></div>
+                      <div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{t('feed_motor')}</div><div style={{ fontSize: 11, color: convOn ? '#059669' : '#9CA3AF' }}>{convOn ? <b style={{ color: '#059669' }}>{convPhase === 'Maju' ? t('forward') : t('backward')}</b> : t('idle')}</div></div>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                      <button onClick={startConv} style={{ ...btn4, background: '#dcfce7', color: '#059669', borderColor: '#059669' }}>▶ Jalankan</button>
-                      <button onClick={stopConv}  style={{ ...btn4, background: '#fee2e2', color: '#dc2626', borderColor: '#dc2626' }}>⏹ Stop</button>
+                      <button onClick={startConv} style={{ ...btn4, background: '#dcfce7', color: '#059669', borderColor: '#059669' }}>▶ {t('run')}</button>
+                      <button onClick={stopConv}  style={{ ...btn4, background: '#fee2e2', color: '#dc2626', borderColor: '#dc2626' }}>⏹ {t('stop')}</button>
                     </div>
                   </>
                 ) : (

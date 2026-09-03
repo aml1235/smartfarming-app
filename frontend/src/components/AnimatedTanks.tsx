@@ -459,3 +459,164 @@ function AnimatedBatteryTankSvg({ pct, fillY, theme, clipId, size, state, isChar
     </svg>
   )
 }
+
+// ─── ANIMATED THERMOMETER COMPONENT ─────────────────────────────────────────
+export function AnimatedThermometer({ temperature, size = 64, variant = 'icon' }: { temperature: number | string, size?: number, variant?: 'icon' | 'card' }) {
+  const temp = parseFloat(String(temperature)) || 0
+  const clamped = Math.min(60, Math.max(0, temp))
+  
+  // Color scheme based on temperature
+  // Normal: <= 28, Warning: 29-32, Critical: > 32
+  const isHot = temp > 32
+  const isWarm = temp > 28 && temp <= 32
+  const isCold = temp < 20
+  
+  const theme = isHot ? {
+    stroke: '#ef4444',
+    fill1: '#dc2626',
+    fill2: '#ef4444',
+    glow: 'rgba(239, 68, 68, 0.4)',
+    text: '#dc2626',
+    status: 'Panas'
+  } : isWarm ? {
+    stroke: '#f59e0b',
+    fill1: '#d97706',
+    fill2: '#f59e0b',
+    glow: 'rgba(245, 158, 11, 0.35)',
+    text: '#d97706',
+    status: 'Hangat'
+  } : isCold ? {
+    stroke: '#3b82f6',
+    fill1: '#2563eb',
+    fill2: '#60a5fa',
+    glow: 'rgba(59, 130, 246, 0.35)',
+    text: '#2563eb',
+    status: 'Dingin'
+  } : {
+    stroke: '#10b981',
+    fill1: '#059669',
+    fill2: '#34d399',
+    glow: 'rgba(16, 185, 129, 0.35)',
+    text: '#059669',
+    status: 'Normal'
+  }
+
+  // Calculate fill height. Thermometer bar Y is from 20 to 75 (height 55). Max temp mapped is 50C for visual scale.
+  const scaleMax = 50
+  const pct = Math.min(100, Math.max(0, (clamped / scaleMax) * 100))
+  const barTop = 24
+  const barBottom = 75
+  const barHeight = barBottom - barTop
+  const fillY = barBottom - (pct / 100) * barHeight
+
+  const uniqueId = React.useId().replace(/:/g, '_')
+  const clipId = `thermo-clip-${uniqueId}`
+
+  if (variant === 'card') {
+    return (
+      <div style={{
+        background: 'var(--bg-surface)',
+        borderRadius: 14,
+        border: `1px solid ${theme.stroke}44`,
+        padding: '16px 18px',
+        textAlign: 'center',
+        boxShadow: `0 4px 16px ${theme.glow}`,
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'all 0.3s ease'
+      }}>
+        <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 6, letterSpacing: '0.05em' }}>
+          Suhu
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '8px 0' }}>
+          <AnimatedThermometerSvg temp={temp} fillY={fillY} theme={theme} clipId={clipId} size={90} isHot={isHot} />
+        </div>
+        <div style={{ fontSize: 24, fontWeight: 800, color: theme.text, marginTop: 4 }}>
+          {temp.toFixed(1)}<span style={{ fontSize: 14 }}>°C</span>
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4, fontWeight: 500 }}>
+          Normal: 28-32°C
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+      <AnimatedThermometerSvg temp={temp} fillY={fillY} theme={theme} clipId={clipId} size={size} isHot={isHot} />
+    </div>
+  )
+}
+
+function AnimatedThermometerSvg({ temp, fillY, theme, clipId, size, isHot }: any) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" style={{ overflow: 'visible' }}>
+      <style>{`
+        @keyframes thermoPulse_${clipId} {
+          0%, 100% { filter: drop-shadow(0 0 2px ${theme.fill1}); opacity: 0.9; transform: scale(1); }
+          50% { filter: drop-shadow(0 0 8px ${theme.fill1}); opacity: 1; transform: scale(1.02); }
+        }
+        @keyframes liquidRise_${clipId} {
+          0% { height: 0; y: 75; }
+          100% { height: ${75 - fillY}; y: ${fillY}; }
+        }
+      `}</style>
+      
+      <defs>
+        <linearGradient id={`thermoGlass-${clipId}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.4" />
+          <stop offset="30%" stopColor="#ffffff" stopOpacity="0.1" />
+          <stop offset="80%" stopColor="#ffffff" stopOpacity="0.05" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.2" />
+        </linearGradient>
+        <linearGradient id={`thermoLiquid-${clipId}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={theme.fill2} stopOpacity="1" />
+          <stop offset="100%" stopColor={theme.fill1} stopOpacity="1" />
+        </linearGradient>
+      </defs>
+
+      {/* Thermometer Outer Glow (if hot) */}
+      {isHot && (
+        <circle cx="50" cy="80" r="16" fill={theme.fill1} opacity="0.3" style={{ animation: `thermoPulse_${clipId} 1.5s infinite ease-in-out`, transformOrigin: '50px 80px' }} />
+      )}
+
+      {/* Ticks & Scale */}
+      <g stroke="#94a3b8" strokeWidth="1.5" opacity="0.6">
+        <line x1="32" y1="25" x2="38" y2="25" /> {/* 50C */}
+        <line x1="34" y1="35" x2="38" y2="35" /> {/* 40C */}
+        <line x1="32" y1="45" x2="38" y2="45" /> {/* 30C */}
+        <line x1="34" y1="55" x2="38" y2="55" /> {/* 20C */}
+        <line x1="32" y1="65" x2="38" y2="65" /> {/* 10C */}
+      </g>
+
+      {/* Thermometer Glass Body Base */}
+      <rect x="42" y="15" width="16" height="65" rx="8" fill="#f8fafc" stroke={theme.stroke} strokeWidth="2.5" />
+      <circle cx="50" cy="80" r="14" fill="#f8fafc" stroke={theme.stroke} strokeWidth="2.5" />
+      {/* Hide stroke connection between tube and bulb */}
+      <rect x="43.5" y="66" width="13" height="4" fill="#f8fafc" />
+
+      {/* Thermometer Liquid Base (Bulb) */}
+      <circle cx="50" cy="80" r="10" fill={theme.fill1} style={isHot ? { animation: `thermoPulse_${clipId} 2s infinite` } : {}} />
+      
+      {/* Thermometer Liquid Column */}
+      <rect x="46" y={fillY} width="8" height={75 - fillY} rx="4" fill={`url(#thermoLiquid-${clipId})`} />
+      
+      {/* Liquid connection fix */}
+      <rect x="46" y="70" width="8" height="5" fill={theme.fill1} />
+
+      {/* Glass Reflection Highlight */}
+      <rect x="42" y="15" width="16" height="65" rx="8" fill={`url(#thermoGlass-${clipId})`} pointerEvents="none" />
+      <circle cx="50" cy="80" r="14" fill={`url(#thermoGlass-${clipId})`} pointerEvents="none" />
+      
+      {/* Temperature Text if icon variant */}
+      {size >= 60 && (
+        <>
+          <rect x="62" y="47" width="28" height="14" rx="4" fill="rgba(15, 23, 42, 0.7)" />
+          <text x="76" y="57" textAnchor="middle" fill="#ffffff" fontSize="9" fontWeight="800" fontFamily="sans-serif">
+            {temp.toFixed(1)}°
+          </text>
+        </>
+      )}
+    </svg>
+  )
+}
