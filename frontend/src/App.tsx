@@ -16,7 +16,7 @@ import { IcMenu, IcLeaf, IcBell, IcPlus, IcSun, IcMoon } from './components/Icon
 import { useLanguage } from './i18n'
 
 export default function App() {
-  const { t } = useLanguage();
+  const { t, lang, setLang } = useLanguage();
   const [appView, setAppView] = useState<AppView>('landing')
   const [isInitializing, setIsInitializing] = useState(true)
   const [page, setPage] = useState<PageId>('overview')
@@ -450,6 +450,17 @@ export default function App() {
               <span>{clock.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', timeZone: 'Asia/Jakarta' })}</span>
               <span style={{ color: 'var(--border-color)' }}>|</span>
               <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{clock.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' })}</span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-base)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '2px', height: '38px' }}>
+              <button
+                onClick={() => setLang('id')}
+                style={{ padding: '0 8px', border: 'none', borderRadius: '8px', background: lang === 'id' ? 'var(--color-primary)' : 'transparent', color: lang === 'id' ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.2s' }}
+              >ID</button>
+              <button
+                onClick={() => setLang('en')}
+                style={{ padding: '0 8px', border: 'none', borderRadius: '8px', background: lang === 'en' ? 'var(--color-primary)' : 'transparent', color: lang === 'en' ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.2s' }}
+              >EN</button>
             </div>
 
             <button onClick={() => setDarkMode(!darkMode)} style={{ background: 'none', border: '1px solid var(--border-color)', cursor: 'pointer', borderRadius: 10, width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', transition: 'all 0.3s' }}>

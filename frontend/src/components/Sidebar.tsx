@@ -100,19 +100,7 @@ export function Sidebar({ activeId, onSelect, alertCount, unitAktif, onLogout, i
         )}
       </nav>
 
-      {/* Language Toggle */}
-      <div style={{ padding: '10px 20px' }}>
-        <div style={{ display: 'flex', background: 'var(--bg-base)', borderRadius: 8, padding: 4 }}>
-          <button
-            onClick={() => setLang('id')}
-            style={{ flex: 1, padding: '6px 0', border: 'none', borderRadius: 6, background: lang === 'id' ? 'var(--color-primary)' : 'transparent', color: lang === 'id' ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'all 0.2s' }}
-          >ID</button>
-          <button
-            onClick={() => setLang('en')}
-            style={{ flex: 1, padding: '6px 0', border: 'none', borderRadius: 6, background: lang === 'en' ? 'var(--color-primary)' : 'transparent', color: lang === 'en' ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'all 0.2s' }}
-          >EN</button>
-        </div>
-      </div>
+    
 
       {/* Footer */}
       <div className="sidebar-footer" style={{ padding: '16px 20px', borderTop: '1px solid var(--border-color)' }}>
