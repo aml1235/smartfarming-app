@@ -3,7 +3,7 @@ import { Sector, SectorId } from '../types'
 import { STATUS_MAP } from '../constants'
 import { ProgressBar } from './UIComponents'
 import { IcCheck, IcChevronRight } from './Icons'
-import { AnimatedWaterTank, AnimatedBatteryTank } from './AnimatedTanks'
+import { AnimatedWaterTank, AnimatedBatteryTank, AnimatedThermometer } from './AnimatedTanks'
 
 import { API_URL } from '../constants'
 import { useLanguage } from '../i18n'
