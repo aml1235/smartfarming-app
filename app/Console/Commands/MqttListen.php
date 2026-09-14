@@ -282,6 +282,7 @@ class MqttListen extends Command
 
         $sector->metrics = $metrics;
         $sector->save();
+        broadcast(new \App\Events\SectorUpdated($sector));
         $this->info("✅ JSON payload saved → sector {$sector->sector_id}");
     }
 
@@ -306,6 +307,7 @@ class MqttListen extends Command
         $metrics[$fieldName] = $logValue;
         $sector->metrics = $metrics;
         $sector->save();
+        broadcast(new \App\Events\SectorUpdated($sector));
 
         $this->info("✅ Scalar saved → {$sector->sector_id}.{$fieldName} = {$logValue}");
     }

@@ -14,6 +14,7 @@ import { SettingsPage } from './components/SettingsPage'
 import { ApkDownloadPage } from './components/ApkDownloadPage'
 import { IcMenu, IcLeaf, IcBell, IcPlus, IcSun, IcMoon } from './components/Icons'
 import { useLanguage } from './i18n'
+import { useRealtimeUpdates } from './useRealtimeUpdates'
 
 export default function App() {
   const { t, lang, setLang } = useLanguage();
@@ -27,6 +28,25 @@ export default function App() {
   const [users, setUsers] = useState<User[]>([])
   const [loggedInUser, setLoggedInUser] = useState<User | null>(null)
   const [notifications, setNotifications] = useState<AppNotification[]>([])
+
+  // ── Realtime: menerima update sektor via Pusher WebSocket ──
+  useRealtimeUpdates(useCallback((data) => {
+    setSectors(prev => prev.map(s => {
+      if (String(s.id) !== data.sector_id) return s
+      const metricsParsed = typeof data.metrics === 'string'
+        ? JSON.parse(data.metrics)
+        : (data.metrics || {})
+      return {
+        ...s,
+        status: (data.status as any) || s.status,
+        metrics: data.metrics,
+        lastUpdate: 'Baru saja',
+        icon: metricsParsed.icon || s.icon,
+        color: metricsParsed.color || s.color,
+        colorLight: metricsParsed.color ? `${metricsParsed.color}20` : s.colorLight,
+      }
+    }))
+  }, []))
   
   const fetchNotifications = () => {
     fetch(`${API_URL}/api/notifications`)
@@ -148,7 +168,7 @@ export default function App() {
     const dataInterval = setInterval(() => {
       fetchSectors();
       fetchUserData();
-    }, 5000);
+    }, 30000); // Dikurangi dari 5s → 30s: realtime Pusher sudah menangani, ini hanya fallback
 
     // Refresh notifikasi setiap 60 detik
     const notifInterval = setInterval(() => {

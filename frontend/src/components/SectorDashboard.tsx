@@ -136,7 +136,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         }
       } catch (e) { console.error(e) }
     }
-    load(); const iv = setInterval(load, 10000); return () => clearInterval(iv)
+    load(); const iv = setInterval(load, 30000); return () => clearInterval(iv) // Dikurangi dari 10s → 30s: realtime Pusher sudah menangani
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sector, lastRefresh])
 
@@ -544,7 +544,7 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         setControls(Array.from(new Map(fc.map((i: any) => [i.label, i])).values()))
       } catch (e) { console.error(e) }
     }
-    fetchLogs(); const iv = setInterval(fetchLogs, 10000); return () => clearInterval(iv)
+    fetchLogs(); const iv = setInterval(fetchLogs, 30000); return () => clearInterval(iv) // Dikurangi dari 10s → 30s: realtime Pusher sudah menangani
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sector, lastRefresh])
 
