@@ -46,7 +46,7 @@ const char* mqtt_server = "7953ca21897d4be78141b6206bf9c205.s1.eu.hivemq.cloud";
 const int   mqtt_port   = 8883;           // TLS port
 const char* mqtt_user   = "rendi";
 const char* mqtt_pass   = "12345678";
-const char* client_id   = "esp32_smartcoop_001";
+const char* client_id   = "esp32_bengpuskomlek_001";
 
 /* ============================================================================
    PIN HARDWARE
@@ -191,49 +191,49 @@ const char* NAMA_HARI[] = {"Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sab
 /* ============================================================================
    MQTT TOPICS
    ============================================================================ */
-const char* TOPIC_TEMP        = "smartcoop/sensor/temp";
-const char* TOPIC_HUM         = "smartcoop/sensor/humidity";
-const char* TOPIC_MQ135       = "smartcoop/sensor/mq135";
-const char* TOPIC_MQ135_VOLT  = "smartcoop/sensor/mq135volt";
-const char* TOPIC_WATER_ADC   = "smartcoop/sensor/wateradc";
-const char* TOPIC_WATER_VOLT  = "smartcoop/sensor/watervoltage";
-const char* TOPIC_WATER_LEVEL = "smartcoop/sensor/waterlevel";
+const char* TOPIC_TEMP        = "smartcoop_bengpuskomlek/sensor/temp";
+const char* TOPIC_HUM         = "smartcoop_bengpuskomlek/sensor/humidity";
+const char* TOPIC_MQ135       = "smartcoop_bengpuskomlek/sensor/mq135";
+const char* TOPIC_MQ135_VOLT  = "smartcoop_bengpuskomlek/sensor/mq135volt";
+const char* TOPIC_WATER_ADC   = "smartcoop_bengpuskomlek/sensor/wateradc";
+const char* TOPIC_WATER_VOLT  = "smartcoop_bengpuskomlek/sensor/watervoltage";
+const char* TOPIC_WATER_LEVEL = "smartcoop_bengpuskomlek/sensor/waterlevel";
 
-const char* TOPIC_LAMP        = "smartcoop/status/lamp";
-const char* TOPIC_CONVEYOR    = "smartcoop/status/conveyor";
-const char* TOPIC_CONVPHASE   = "smartcoop/status/conveyorphase";
-const char* TOPIC_POMPA       = "smartcoop/status/pompa";
-const char* TOPIC_LAMPAUTO    = "smartcoop/status/lampauto";
-const char* TOPIC_POMPAAUTO   = "smartcoop/status/pompaauto";
-const char* TOPIC_TIME        = "smartcoop/status/time";
-const char* TOPIC_SYSTEM      = "smartcoop/status/system";
+const char* TOPIC_LAMP        = "smartcoop_bengpuskomlek/status/lamp";
+const char* TOPIC_CONVEYOR    = "smartcoop_bengpuskomlek/status/conveyor";
+const char* TOPIC_CONVPHASE   = "smartcoop_bengpuskomlek/status/conveyorphase";
+const char* TOPIC_POMPA       = "smartcoop_bengpuskomlek/status/pompa";
+const char* TOPIC_LAMPAUTO    = "smartcoop_bengpuskomlek/status/lampauto";
+const char* TOPIC_POMPAAUTO   = "smartcoop_bengpuskomlek/status/pompaauto";
+const char* TOPIC_TIME        = "smartcoop_bengpuskomlek/status/time";
+const char* TOPIC_SYSTEM      = "smartcoop_bengpuskomlek/status/system";
 
-const char* TOPIC_CTRL_LAMP     = "smartcoop/control/lamp";
-const char* TOPIC_CTRL_CONVEYOR = "smartcoop/control/conveyor";
-const char* TOPIC_CTRL_CONVJOG  = "smartcoop/control/convjog";
-const char* TOPIC_CTRL_POMPA    = "smartcoop/control/pompa";
-const char* TOPIC_CTRL_LAMPAUTO = "smartcoop/control/lampauto";
-const char* TOPIC_CTRL_POMPAAUTO = "smartcoop/control/pompaauto";
+const char* TOPIC_CTRL_LAMP     = "smartcoop_bengpuskomlek/control/lamp";
+const char* TOPIC_CTRL_CONVEYOR = "smartcoop_bengpuskomlek/control/conveyor";
+const char* TOPIC_CTRL_CONVJOG  = "smartcoop_bengpuskomlek/control/convjog";
+const char* TOPIC_CTRL_POMPA    = "smartcoop_bengpuskomlek/control/pompa";
+const char* TOPIC_CTRL_LAMPAUTO = "smartcoop_bengpuskomlek/control/lampauto";
+const char* TOPIC_CTRL_POMPAAUTO = "smartcoop_bengpuskomlek/control/pompaauto";
 
 // --- Dashboard -> ESP32 (set jadwal) ---
-const char* TOPIC_CFG_LAMPON    = "smartcoop/config/lampon";
-const char* TOPIC_CFG_LAMPOFF   = "smartcoop/config/lampoff";
-const char* TOPIC_CFG_CONVON    = "smartcoop/config/conveyoron";
-const char* TOPIC_CFG_CONV2ON   = "smartcoop/config/conveyor2on";
-const char* TOPIC_CFG_CONV2EN   = "smartcoop/config/conveyor2en";
-const char* TOPIC_CFG_CONVRUN   = "smartcoop/config/convrun";
-const char* TOPIC_CFG_CONVPAUSE = "smartcoop/config/convpause";
-const char* TOPIC_CFG_CONVSPEED = "smartcoop/config/convspeed";
+const char* TOPIC_CFG_LAMPON    = "smartcoop_bengpuskomlek/config/lampon";
+const char* TOPIC_CFG_LAMPOFF   = "smartcoop_bengpuskomlek/config/lampoff";
+const char* TOPIC_CFG_CONVON    = "smartcoop_bengpuskomlek/config/conveyoron";
+const char* TOPIC_CFG_CONV2ON   = "smartcoop_bengpuskomlek/config/conveyor2on";
+const char* TOPIC_CFG_CONV2EN   = "smartcoop_bengpuskomlek/config/conveyor2en";
+const char* TOPIC_CFG_CONVRUN   = "smartcoop_bengpuskomlek/config/convrun";
+const char* TOPIC_CFG_CONVPAUSE = "smartcoop_bengpuskomlek/config/convpause";
+const char* TOPIC_CFG_CONVSPEED = "smartcoop_bengpuskomlek/config/convspeed";
 
 // --- ESP32 -> Dashboard (jadwal yang sedang aktif, retained) ---
-const char* TOPIC_ST_LAMPON     = "smartcoop/status/lampon";
-const char* TOPIC_ST_LAMPOFF    = "smartcoop/status/lampoff";
-const char* TOPIC_ST_CONVON     = "smartcoop/status/conveyoron";
-const char* TOPIC_ST_CONV2ON    = "smartcoop/status/conveyor2on";
-const char* TOPIC_ST_CONV2EN    = "smartcoop/status/conveyor2en";
-const char* TOPIC_ST_CONVRUN    = "smartcoop/status/convrun";
-const char* TOPIC_ST_CONVPAUSE  = "smartcoop/status/convpause";
-const char* TOPIC_ST_CONVSPEED  = "smartcoop/status/convspeed";
+const char* TOPIC_ST_LAMPON     = "smartcoop_bengpuskomlek/status/lampon";
+const char* TOPIC_ST_LAMPOFF    = "smartcoop_bengpuskomlek/status/lampoff";
+const char* TOPIC_ST_CONVON     = "smartcoop_bengpuskomlek/status/conveyoron";
+const char* TOPIC_ST_CONV2ON    = "smartcoop_bengpuskomlek/status/conveyor2on";
+const char* TOPIC_ST_CONV2EN    = "smartcoop_bengpuskomlek/status/conveyor2en";
+const char* TOPIC_ST_CONVRUN    = "smartcoop_bengpuskomlek/status/convrun";
+const char* TOPIC_ST_CONVPAUSE  = "smartcoop_bengpuskomlek/status/convpause";
+const char* TOPIC_ST_CONVSPEED  = "smartcoop_bengpuskomlek/status/convspeed";
 
 /* ============================================================================
    HELPER: string status
@@ -625,7 +625,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   message.trim();
   Serial.print(F("[MQTT] RX [")); Serial.print(topic); Serial.print(F("]: ")); Serial.println(message);
 
-  if (strncmp(topic, "smartcoop/config/", 17) == 0) {
+  if (strncmp(topic, "smartcoop_bengpuskomlek/config/", 17) == 0) {
     handleTimerConfig(topic, message);
     return;
   }
