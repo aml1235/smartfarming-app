@@ -483,7 +483,8 @@ class SectorController extends Controller
                 }
             } else {
                 // Format kontrol umum — JSON
-                $topic   = "{$controlBaseTopic}/{$sector_id}";
+                $actual_id = ($sector_id === 'hidroponik') ? 'SEC-010' : $sector_id;
+                $topic   = "{$controlBaseTopic}/{$actual_id}";
                 $payload = json_encode(['status' => $command]);
                 $mqtt->publish($topic, $payload, 0);
             }

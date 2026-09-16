@@ -187,7 +187,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
 
       {/* 5 Metric Cards */}
       <div className="kandang-metrics-grid">
-        {sectorId === 'sec-03' ? (
+        {sectorId === 'sec-03' || sectorId === 'sec-01' ? (
           <div style={{ ...card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
               <AnimatedThermometer temperature={suhu} size={56} />
@@ -583,9 +583,42 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
           <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{lastRefresh.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
       </div>
-      <div className="sector-dash-grid">
-        {metricsData.length > 0 ? metricsData.map(m => (<div key={m.key} className="sector-dash-metric"><div className="metric-label">{m.icon} {m.label}</div><div className="metric-value" style={{ color: m.color }}>{m.value} {m.isProgress ? '%' : (m.key.toLowerCase().includes('temp') ? '°C' : '')}</div></div>))
-        : <div style={{ padding: 20, color: 'var(--text-secondary)' }}>Menunggu data sensor...</div>}
+      <div className={sector.id === 'hidroponik' ? "kandang-metrics-grid" : "sector-dash-grid"}>
+        {sector.id === 'hidroponik' ? (
+          <>
+            <div style={{ background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
+                <AnimatedThermometer temperature={metricsData.find(m => m.key.includes('suhu'))?.value || '--'} size={56} />
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Suhu</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#E65100' }}>{metricsData.find(m => m.key.includes('suhu'))?.value || '--'}<span style={{ fontSize: 14 }}>°C</span></div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Normal: 20-30°C</div>
+            </div>
+            <div style={{ background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px', textAlign: 'center' }}>
+              <div style={{ fontSize: 26, marginBottom: 4 }}>💧</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Kelembapan</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: '#1565C0' }}>{metricsData.find(m => m.key.includes('kelembapan'))?.value || '--'}<span style={{ fontSize: 13 }}>%</span></div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: 50-70%</div>
+            </div>
+            <div style={{ background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px', textAlign: 'center' }}>
+              <div style={{ fontSize: 26, marginBottom: 4 }}>☀️</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Intensitas Cahaya</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: '#F59E0B' }}>{metricsData.find(m => m.key.includes('cahaya'))?.value || '--'}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: &gt; 200</div>
+            </div>
+            <div style={{ background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
+                <AnimatedWaterTank percentage={Number(metricsData.find(m => m.key.toLowerCase().includes('water') || m.key.toLowerCase().includes('air'))?.value || 0)} status="Tersedia" size={56} />
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Level Air</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: '#1565C0' }}>{metricsData.find(m => m.key.toLowerCase().includes('water') || m.key.toLowerCase().includes('air'))?.value || '--'}<span style={{ fontSize: 13 }}>%</span></div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Normal: &gt; 50%</div>
+            </div>
+          </>
+        ) : (
+          metricsData.length > 0 ? metricsData.map(m => (<div key={m.key} className="sector-dash-metric"><div className="metric-label">{m.icon} {m.label}</div><div className="metric-value" style={{ color: m.color }}>{m.value} {m.isProgress ? '%' : (m.key.toLowerCase().includes('temp') ? '°C' : '')}</div></div>))
+          : <div style={{ padding: 20, color: 'var(--text-secondary)' }}>Menunggu data sensor...</div>
+        )}
       </div>
       <div className="sector-dash-main-grid">
         <div className="card" style={{ padding: 20 }}>

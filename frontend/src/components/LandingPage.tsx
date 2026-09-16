@@ -3,7 +3,7 @@ import {
   IcLeaf, IcShield, IcActivity, IcZap, IcBarChart, IcUsers, IcGrid, IcBell, IcWaves, IcDroplets, IcSettings, IcLink, IcHome, IcSun, IcMoon, IcMail
 } from './Icons';
 import { useLanguage } from '../i18n';
-
+import { API_URL } from '../constants';
 interface LandingPageProps {
   onLogin: () => void;
   onDownloadApk: () => void;
@@ -107,9 +107,19 @@ export function LandingPage({ onLogin, onDownloadApk, darkMode, setDarkMode }: L
   const ctaAnim = useVisible(0.1);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [activeSectorsCount, setActiveSectorsCount] = useState(3);
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
+    
+    fetch(`${API_URL}/api/sectors`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setActiveSectorsCount(data.length);
+      })
+      .catch(err => console.error(err));
+
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
@@ -193,7 +203,7 @@ export function LandingPage({ onLogin, onDownloadApk, darkMode, setDarkMode }: L
             </div>
             <div style={{ display: 'flex', gap: '40px', flexWrap: 'wrap' }}>
               <div>
-                <span style={{ display: 'block', fontSize: '2.5rem', fontWeight: 900, color: 'var(--text-primary)' }}><AnimatedCounter endValue={4} suffix="+" /></span>
+                <span style={{ display: 'block', fontSize: '2.5rem', fontWeight: 900, color: 'var(--text-primary)' }}><AnimatedCounter endValue={activeSectorsCount} /></span>
                 <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', fontWeight: 600 }}>{t('lp_active_sectors')}</span>
               </div>
               <div>
