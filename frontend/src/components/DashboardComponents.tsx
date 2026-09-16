@@ -86,7 +86,7 @@ export function OverviewMetrics({ sector }: { sector: any }) {
     kandang: (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', gap: 8 }}>
-          {id === 'sec-03' ? (
+          {id === 'sec-03' || id === 'sec-01' ? (
             <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
               <AnimatedThermometer temperature={kandangData.temp} size={36} />
               <div>
@@ -136,12 +136,13 @@ export function OverviewMetrics({ sector }: { sector: any }) {
                 <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Amonia</div>
                 <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#059669', marginTop: 1 }}>{kandangData.ammonia}</div>
               </div>
-            </div>
-            <div>
-              <div className="metric-row-label" style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
-                <span>💧 Level Air</span><span style={{ fontWeight: 600, color: '#1565C0' }}>{kandangData.waterLevel}%</span>
+              <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <AnimatedWaterTank status="Tersedia" percentage={kandangData.waterLevel} size={36} />
+                <div>
+                  <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Level Air</div>
+                  <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 14, color: '#1565C0', marginTop: 1 }}>{kandangData.waterLevel}%</div>
+                </div>
               </div>
-              <ProgressBar value={kandangData.waterLevel} color="#1565C0" />
             </div>
           </>
         )}
@@ -155,9 +156,12 @@ export function OverviewMetrics({ sector }: { sector: any }) {
     hidroponik: (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', gap: 8 }}>
-          <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
-            <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Suhu</div>
-            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#E65100', marginTop: 1 }}>{hydroData.temp}°C</div>
+          <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <AnimatedThermometer temperature={hydroData.temp} size={36} />
+            <div>
+              <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Suhu</div>
+              <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 14, color: '#E65100', marginTop: 1 }}>{hydroData.temp}°C</div>
+            </div>
           </div>
           <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Kelembapan</div>
@@ -169,9 +173,12 @@ export function OverviewMetrics({ sector }: { sector: any }) {
             <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Cahaya</div>
             <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#F59E0B', marginTop: 1 }}>{hydroData.light} lux</div>
           </div>
-          <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px' }}>
-            <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Level Air</div>
-            <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 18, color: '#1565C0', marginTop: 1 }}>{hydroData.waterLevel}%</div>
+          <div className="metric-box" style={{ flex: 1, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <AnimatedWaterTank status="Tersedia" percentage={hydroData.waterLevel} size={36} />
+            <div>
+              <div className="metric-box-label" style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Level Air</div>
+              <div className="metric-box-val" style={{ fontWeight: 700, fontSize: 14, color: '#1565C0', marginTop: 1 }}>{hydroData.waterLevel}%</div>
+            </div>
           </div>
         </div>
       </div>
