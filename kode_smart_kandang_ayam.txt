@@ -625,7 +625,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   message.trim();
   Serial.print(F("[MQTT] RX [")); Serial.print(topic); Serial.print(F("]: ")); Serial.println(message);
 
-  if (strncmp(topic, "smartcoop_bengpuskomlek/config/", 17) == 0) {
+  if (strncmp(topic, "smartcoop_bengpuskomlek/config/", 32) == 0) {
     handleTimerConfig(topic, message);
     return;
   }
