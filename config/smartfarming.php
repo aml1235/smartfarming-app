@@ -14,5 +14,5 @@ return [
     | (paket gratis ±500 MB) sebelum menaikkan angka ini.
     |
     */
-    'retention_days' => env('SENSOR_LOG_RETENTION_DAYS', 30),
+    'retention_days' => env('SENSOR_LOG_RETENTION_DAYS', 7),
 ];
