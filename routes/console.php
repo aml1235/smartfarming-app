@@ -7,11 +7,6 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-use Illuminate\Support\Facades\Schedule;
-
-// Pembersihan harian: sensor logs, notifikasi (7 hari), dan aktivitas (30 hari)
-Schedule::command('sensor:cleanup')->daily();
-
-Schedule::call(function () {
-    \App\Models\Activity::where('created_at', '<', now()->subDays(30))->delete();
-})->daily();
+// Catatan: Pembersihan harian (sensor logs, notifikasi, aktivitas)
+// sekarang dieksekusi secara otomatis oleh background process (MqttListen.php)
+// setiap 6 jam sekali. Tidak perlu lagi memakai Laravel Scheduler di sini.

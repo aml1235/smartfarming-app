@@ -205,27 +205,40 @@ class MqttListen extends Command
                     }, 0);
                 }
 
-                // ── Detektor perubahan sektor: cek fingerprint tiap 30 detik ──
+                // ── Detektor perubahan sektor & Pembersihan Data Otomatis ──
                 $lastFingerprint = $this->sectorFingerprint();
                 $lastCheck = time();
+                $lastCleanup = time();
 
                 $mqtt->registerLoopEventHandler(
-                    function (MqttClient $client) use (&$lastFingerprint, &$lastCheck, &$needsReload) {
-                        if (time() - $lastCheck < self::SECTOR_RELOAD_INTERVAL) {
-                            return;
-                        }
-                        $lastCheck = time();
+                    function (MqttClient $client) use (&$lastFingerprint, &$lastCheck, &$lastCleanup, &$needsReload) {
+                        $now = time();
 
-                        $newFingerprint = $this->sectorFingerprint();
-                        if ($newFingerprint !== $lastFingerprint) {
-                            $this->info('🔄 Konfigurasi sektor berubah, memuat ulang...');
-                            $needsReload = true;
-                            $client->interrupt(); // hentikan loop secara bersih
+                        // 1. Cek perubahan sektor tiap 30 detik
+                        if ($now - $lastCheck >= self::SECTOR_RELOAD_INTERVAL) {
+                            $lastCheck = $now;
+
+                            $newFingerprint = $this->sectorFingerprint();
+                            if ($newFingerprint !== $lastFingerprint) {
+                                $this->info('🔄 Konfigurasi sektor berubah, memuat ulang...');
+                                $needsReload = true;
+                                $client->interrupt(); // hentikan loop secara bersih
+                            }
+                        }
+
+                        // 2. Jalankan pembersihan data (sensor logs, notifikasi, aktivitas) setiap 6 jam
+                        // 21600 detik = 6 jam
+                        if ($now - $lastCleanup >= 21600) {
+                            $lastCleanup = $now;
+                            $this->info('🧹 Menjalankan pembersihan data otomatis...');
+                            \Illuminate\Support\Facades\Artisan::call('sensor:cleanup');
+                            $this->info(\Illuminate\Support\Facades\Artisan::output());
                         }
                     }
                 );
 
                 $mqtt->loop(true);
+
                 $mqtt->disconnect();
 
                 // Jika loop berhenti karena reload, keluar dari while(true) ini

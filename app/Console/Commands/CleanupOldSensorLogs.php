@@ -33,6 +33,9 @@ class CleanupOldSensorLogs extends Command
         $deletedLogs   = SensorLog::where('created_at', '<', $batas)->delete();
         $deletedNotifs = \App\Models\Notification::where('created_at', '<', $batas)->delete();
 
-        $this->info("Berhasil menghapus {$deletedLogs} data sensor dan {$deletedNotifs} notifikasi yang lebih lama dari {$days} hari.");
+        // Hapus aktivitas yang lebih lama dari 30 hari (hardcoded, bisa dipindah ke config juga nanti jika perlu)
+        $deletedActs = \App\Models\Activity::where('created_at', '<', now()->subDays(30))->delete();
+
+        $this->info("Berhasil menghapus {$deletedLogs} data sensor dan {$deletedNotifs} notifikasi (>{$days} hari), serta {$deletedActs} aktivitas (>30 hari).");
     }
 }
