@@ -8,18 +8,10 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 use Illuminate\Support\Facades\Schedule;
-use App\Models\SensorLog;
-use App\Models\Activity;
-use Carbon\Carbon;
+
+// Pembersihan harian: sensor logs, notifikasi (7 hari), dan aktivitas (30 hari)
+Schedule::command('sensor:cleanup')->daily();
 
 Schedule::call(function () {
-    // Menghapus data sensor lokal yang lebih tua dari 7 hari
-    SensorLog::where('created_at', '<', Carbon::now()->subDays(7))->delete();
-    
-    // Menghapus notifikasi yang lebih tua dari 7 hari
-    \App\Models\Notification::where('created_at', '<', Carbon::now()->subDays(7))->delete();
-
-    // Menghapus log aktivitas yang lebih tua dari 30 hari
-    Activity::where('created_at', '<', Carbon::now()->subDays(30))->delete();
+    \App\Models\Activity::where('created_at', '<', now()->subDays(30))->delete();
 })->daily();
-

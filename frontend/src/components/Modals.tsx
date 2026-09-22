@@ -172,7 +172,7 @@ export function AddSectorModal({ onClose, onAdd }: { onClose: () => void; onAdd:
 
 import { SectorDashboard, AiModal } from './SectorDashboard'
 
-export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () => void }) {
+export function KandangDetail({ sector, onBack, loggedInUser }: { sector: Sector; onBack: () => void; loggedInUser?: any }) {
   return (
     <div className="modal-overlay" onClick={onBack}>
       <div className="modal-sheet" style={{ maxWidth: 1000, width: '90%' }} onClick={e => e.stopPropagation()}>
@@ -182,14 +182,14 @@ export function KandangDetail({ sector, onBack }: { sector: Sector; onBack: () =
           </button>
         </div>
         <div style={{ padding: 20, maxHeight: 'calc(90vh - 70px)', overflowY: 'auto' }}>
-           <SectorDashboard sector={sector} />
+           <SectorDashboard sector={sector} loggedInUser={loggedInUser} />
         </div>
       </div>
     </div>
   )
 }
 
-export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () => void }) {
+export function GenericDetail({ sector, onBack, loggedInUser }: { sector: Sector; onBack: () => void; loggedInUser?: any }) {
   const [pump, setPump] = useState(true)
   const [auto, setAuto] = useState(true)
   
@@ -240,11 +240,12 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
 
   const handlePumpChange = async (newState: boolean) => {
     setPump(newState)
+    if (loggedInUser) fetch(`${API_URL}/api/activities`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_name: loggedInUser.name, action: newState ? 'mengaktifkan' : 'mematikan', target: `pump (${sector.name})` }) }).catch(() => {})
     try {
       await fetch(`${API_URL}/api/sector/${sector.id}/control`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command: newState ? 'ON' : 'OFF' })
+        body: JSON.stringify({ command: newState ? 'ON' : 'OFF', target: 'pump', user_name: loggedInUser?.name })
       })
     } catch (e) {
       console.error(e)
@@ -286,6 +287,18 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
                     : String(sector.id).toLowerCase().includes('kolam') ? 'kolam'
                     : String(sector.id).split('_')[0];
   const cfg = configs[effectiveId as SectorId] || configs['irigasi']
+
+  const handleAutoChange = async (newState: boolean) => {
+    setAuto(newState)
+    if (loggedInUser) fetch(`${API_URL}/api/activities`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_name: loggedInUser.name, action: newState ? 'mengaktifkan' : 'mematikan', target: `auto (${sector.name})` }) }).catch(() => {})
+    try {
+      await fetch(`${API_URL}/api/sector/${sector.id}/control`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: newState ? 'ON' : 'OFF', target: 'auto', user_name: loggedInUser?.name })
+      })
+    } catch (e) { console.error(e) }
+  }
 
   return (
     <div className="modal-overlay" onClick={onBack}>
@@ -344,7 +357,7 @@ export function GenericDetail({ sector, onBack }: { sector: Sector; onBack: () =
                         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{cfg.ctrl2}</div>
                         <div style={{ fontSize: 12, color: auto ? '#2E7D32' : '#9CA3AF', marginTop: 1 }}>{auto ? 'Aktif' : 'Nonaktif'}</div>
                       </div>
-                      <Toggle isOn={auto} onChange={setAuto} />
+                      <Toggle isOn={auto} onChange={handleAutoChange} />
                     </div>
                   )}
                 </>

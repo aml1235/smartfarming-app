@@ -3,13 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Activity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        abort_unless($request->user()->role === 'admin', 403, 'Admin access required.');
+
         $users = User::all();
         return $users->map(function ($user) {
             return [
@@ -26,9 +29,8 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        if ($request->user() && $request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
+        abort_unless($request->user()->role === 'admin', 403, 'Admin access required.');
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users',
@@ -45,6 +47,9 @@ class UserController extends Controller
             'assigned_sectors' => [],
         ]);
 
+        // Catat aktivitas
+        Activity::record($request->user(), 'Menambah pengguna', $user->name);
+
         return response()->json([
             'id' => (string) $user->id,
             'name' => $user->name,
@@ -56,8 +61,10 @@ class UserController extends Controller
         ], 201);
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
+        abort_unless($request->user()->role === 'admin', 403, 'Admin access required.');
+
         $user = User::findOrFail($id);
         return response()->json([
             'id' => (string) $user->id,
@@ -72,9 +79,8 @@ class UserController extends Controller
 
     public function update(Request $request, $id)
     {
-        if ($request->user() && $request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
+        abort_unless($request->user()->role === 'admin', 403, 'Admin access required.');
+
         $user = User::findOrFail($id);
         
         $validated = $request->validate([
@@ -95,6 +101,9 @@ class UserController extends Controller
 
         $user->save();
 
+        // Catat aktivitas
+        Activity::record($request->user(), 'Memperbarui pengguna', $user->name);
+
         return response()->json([
             'id' => (string) $user->id,
             'name' => $user->name,
@@ -108,11 +117,15 @@ class UserController extends Controller
 
     public function destroy(Request $request, $id)
     {
-        if ($request->user() && $request->user()->role !== 'admin') {
-            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
-        }
+        abort_unless($request->user()->role === 'admin', 403, 'Admin access required.');
+
         $user = User::findOrFail($id);
+        $userName = $user->name;
         $user->delete();
+
+        // Catat aktivitas
+        Activity::record($request->user(), 'Menghapus pengguna', $userName);
+
         return response()->json(['message' => 'User deleted successfully']);
     }
 

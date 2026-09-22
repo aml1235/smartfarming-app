@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Activity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -24,6 +25,9 @@ class AuthController extends Controller
                 'email' => ['Email atau password salah.'],
             ]);
         }
+
+        // Catat aktivitas login
+        Activity::record($user, 'Login', 'Sistem');
 
         return response()->json([
             'user' => $user,

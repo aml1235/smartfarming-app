@@ -311,16 +311,8 @@ export default function App() {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
   const handleLogin = (user: any) => {
-    setLoggedInUser({
-      ...user,
-      assignedSectors: user.assigned_sectors || user.assignedSectors || []
-    })
-    if (user.role === 'admin') {
-      setAppView('superadmin')
-    } else {
-      setAppView('dashboard')
-      setPage('overview')
-    }
+    // Reload the application to ensure all data (sectors, activities, etc) are fetched with the new token
+    window.location.reload();
   }
 
   const handleLogout = () => {
@@ -415,8 +407,11 @@ export default function App() {
           onAddSector={handleAddSector}
           onDeleteSector={handleDeleteSector}
           onEditSector={handleEditSector}
+          onOpenSector={setDetailSector}
         />
         {renderLogoutModal()}
+        {detailSector && (String(detailSector.id).startsWith('kandang') || String(detailSector.id).startsWith('sec-')) && <KandangDetail sector={detailSector} onBack={closeDetail} loggedInUser={loggedInUser!} />}
+        {detailSector && !(String(detailSector.id).startsWith('kandang') || String(detailSector.id).startsWith('sec-')) && <GenericDetail sector={detailSector} onBack={closeDetail} loggedInUser={loggedInUser!} />}
       </>
     )
   }
@@ -594,8 +589,8 @@ export default function App() {
       </div>
 
       {/* Modals */}
-      {detailSector && (String(detailSector.id).startsWith('kandang') || String(detailSector.id).startsWith('sec-')) && <KandangDetail sector={detailSector} onBack={closeDetail} />}
-      {detailSector && !(String(detailSector.id).startsWith('kandang') || String(detailSector.id).startsWith('sec-')) && <GenericDetail sector={detailSector} onBack={closeDetail} />}
+      {detailSector && (String(detailSector.id).startsWith('kandang') || String(detailSector.id).startsWith('sec-')) && <KandangDetail sector={detailSector} onBack={closeDetail} loggedInUser={loggedInUser} />}
+      {detailSector && !(String(detailSector.id).startsWith('kandang') || String(detailSector.id).startsWith('sec-')) && <GenericDetail sector={detailSector} onBack={closeDetail} loggedInUser={loggedInUser} />}
       {showAddModal && <AddSectorModal onClose={() => setShowAddModal(false)} onAdd={(name: string, type: string, mqttConfig?: any) => {
         const iconMap: Record<string, string> = { kandang: '🐓', kolam: '🐟', hidroponik: '🌿', irigasi: '🌱' }
         const colorMap: Record<string, string> = { kandang: '#E65100', kolam: '#1565C0', hidroponik: '#2E7D32', irigasi: '#795548' }

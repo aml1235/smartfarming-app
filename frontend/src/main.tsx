@@ -5,6 +5,33 @@ import './index.css'
 
 import { LanguageProvider } from './i18n'
 
+const originalFetch = window.fetch;
+window.fetch = async (input, init) => {
+  let url = '';
+  if (typeof input === 'string') {
+    url = input;
+  } else if (input instanceof URL) {
+    url = input.toString();
+  } else if (input && 'url' in input) {
+    url = (input as Request).url;
+  }
+
+  if (url.includes('/api/') && !url.includes('/login') && !url.includes('/forgot-password') && !url.includes('/reset-password')) {
+    const token = localStorage.getItem('token');
+    if (token) {
+      init = init || {};
+      const headers = new Headers(init.headers || {});
+      if (!headers.has('Authorization')) {
+        headers.set('Authorization', `Bearer ${token}`);
+      }
+      
+      // Convert Headers object or Record back to what fetch accepts, usually Headers is fine.
+      init.headers = headers;
+    }
+  }
+  return originalFetch(input, init);
+};
+
 class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: Error | null}> {
   constructor(props: {children: React.ReactNode}) {
     super(props);

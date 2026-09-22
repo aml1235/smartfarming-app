@@ -16,12 +16,14 @@ class Sector extends Model
         'mqtt_broker_config',
         'mqtt_metric_map',
         'mqtt_control_topic',
+        'alert_thresholds',
     ];
 
     protected $casts = [
         'metrics'            => 'array',
         'mqtt_broker_config' => 'array',
         'mqtt_metric_map'    => 'array',
+        'alert_thresholds'   => 'array',
     ];
 
     /**

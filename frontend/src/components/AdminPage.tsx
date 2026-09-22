@@ -24,9 +24,10 @@ interface AdminPageProps {
   onAddSector: (name: string, unit: string, sectorId: string, icon: string, color: string) => Promise<void>;
   onDeleteSector: (sectorId: string) => Promise<void>;
   onEditSector: (sectorId: string, name: string, unit: string, icon: string, color: string, mqttConfig?: any) => Promise<void>;
+  onOpenSector?: (sector: Sector) => void;
 }
 
-export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, setDarkMode, loggedInUser, onUpdateUser, onAddSector, onDeleteSector, onEditSector }: AdminPageProps) {
+export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, setDarkMode, loggedInUser, onUpdateUser, onAddSector, onDeleteSector, onEditSector, onOpenSector }: AdminPageProps) {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [activities, setActivities] = useState<any[]>([]);
@@ -65,10 +66,10 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
   }, []);
 
   useEffect(() => {
-    if (activeTab === 'activity') {
-      fetchActivities();
-    }
-  }, [activeTab, fetchActivities]);
+    fetchActivities();
+    const intervalId = setInterval(fetchActivities, 5000); // Auto-refresh setiap 5 detik
+    return () => clearInterval(intervalId);
+  }, [fetchActivities]);
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -267,7 +268,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
           <h3 className="section-title" style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>Status Sektor</h3>
           <div className="grid-sectors" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             {sectors.map(sector => (
-              <div key={sector.id} className="sector-card-mini" style={{ padding: '16px', borderRadius: '12px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)' }}>
+              <div key={sector.id} className="sector-card-mini hover-effect" onClick={() => onOpenSector?.(sector)} style={{ padding: '16px', borderRadius: '12px', background: 'var(--bg-surface)', border: '1px solid var(--border-color)', cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                   <span style={{ fontSize: 24 }}>{sector.icon}</span>
                   <h4 style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)' }}>{sector.name}</h4>
@@ -312,8 +313,10 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
             {activities.slice(0, 5).map(activity => (
               <div key={activity.id} className="activity-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                 <div className={`activity-dot ${activity.type}`} style={{ width: '10px', height: '10px', borderRadius: '50%', background: activity.type === 'user' ? '#6366f1' : activity.type === 'system' ? '#f59e0b' : '#059669', flexShrink: 0 }} />
-                <div className="activity-text" style={{ flex: 1, color: 'var(--text-primary)', fontSize: '14px' }}>{activity.action}</div>
-                <div className="activity-time" style={{ color: 'var(--text-secondary)', fontSize: '12px', whiteSpace: 'nowrap' }}>{activity.timestamp}</div>
+                <div className="activity-text" style={{ flex: 1, color: 'var(--text-primary)', fontSize: '14px' }}>
+                  <span style={{ fontWeight: 600 }}>{activity.user_name || activity.user || 'Sistem'}</span> {activity.action} {activity.target ? ` - ${activity.target}` : ''}
+                </div>
+                <div className="activity-time" style={{ color: 'var(--text-secondary)', fontSize: '12px', whiteSpace: 'nowrap' }}>{new Date(activity.created_at || activity.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
               </div>
             ))}
           </div>

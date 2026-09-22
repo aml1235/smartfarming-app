@@ -52,4 +52,18 @@ class User extends Authenticatable
             'assigned_sectors' => 'array',
         ];
     }
+
+    /**
+     * Periksa apakah pengguna boleh mengakses sektor tertentu.
+     * Admin boleh mengakses semua sektor.
+     * Operator hanya boleh mengakses sektor yang ditugaskan kepadanya.
+     */
+    public function canAccessSector(string $sectorId): bool
+    {
+        if ($this->role === 'admin') {
+            return true;
+        }
+
+        return in_array($sectorId, $this->assigned_sectors ?? [], true);
+    }
 }

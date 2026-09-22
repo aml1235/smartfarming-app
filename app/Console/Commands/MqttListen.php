@@ -7,6 +7,7 @@ use PhpMqtt\Client\MqttClient;
 use PhpMqtt\Client\ConnectionSettings;
 use App\Models\SensorLog;
 use App\Models\Sector;
+use Illuminate\Support\Facades\Cache;
 use Exception;
 
 /**
@@ -29,13 +30,6 @@ class MqttListen extends Command
 
     protected $description = 'Listen ke semua MQTT broker yang dikonfigurasi di tabel sectors';
 
-    // Default validTypes untuk sektor yang tidak punya mqtt_metric_map
-    private const DEFAULT_VALID_TYPES = [
-        'temperature', 'humidity', 'waterLevel', 'lightLevel',
-        'water_level', 'light_level', 'pumpStatus', 'pump_status',
-        'lampStatus', 'exhaustStatus', 'motorStatus', 'lampAutoMode',
-    ];
-
     // Tipe yang TIDAK disimpan ke sensor_logs (hanya ke metrics)
     private const NON_LOG_TYPES = [
         'lastSync', 'systemStatus',
@@ -49,6 +43,15 @@ class MqttListen extends Command
         'feedTime1', 'feedTime2', 'feedTime2En', 'feedDuration',
         'feedAngleOpen', 'feedAngleClose', 'feedAngleOpen2', 'feedAngleClose2',
         'feedDistFull', 'feedDistEmpty',
+    ];
+
+    // Ambang batas default (digunakan jika sektor tidak punya alert_thresholds sendiri)
+    private const DEFAULT_ALERT_THRESHOLDS = [
+        'temperature_high' => 35,
+        'temperature_low'  => 20,
+        'waterLevel_low'   => 20,
+        'ammonia_high'     => 200,
+        'feedLevel_low'    => 20,
     ];
 
     public function handle()
@@ -115,7 +118,6 @@ class MqttListen extends Command
                 $this->info("   ↳ Worker started for {$fingerprint}");
             }
             // Biarkan master tetap hidup dan monitor worker
-            $lastPrune = time();
             while (true) {
                 foreach ($processes as $p) {
                     if ($p->isRunning()) {
@@ -123,14 +125,6 @@ class MqttListen extends Command
                         echo $p->getIncrementalErrorOutput();
                     }
                 }
-                
-                // Prune data lebih dari 7 hari setiap 1 jam untuk mencegah DB bengkak
-                if (time() - $lastPrune > 3600) {
-                    \App\Models\SensorLog::where('created_at', '<', now()->subDays(7))->delete();
-                    $lastPrune = time();
-                    $this->info("🧹 Pruned logs older than 7 days.");
-                }
-                
                 sleep(1);
             }
         } else {
@@ -243,13 +237,6 @@ class MqttListen extends Command
      */
     private function processJsonPayload(Sector $sector, array $payload)
     {
-        $validTypes = self::DEFAULT_VALID_TYPES;
-
-        // Jika sektor punya metric map sendiri, expand valid types dari map values
-        if ($sector->mqtt_metric_map) {
-            $validTypes = array_merge($validTypes, array_values($sector->mqtt_metric_map));
-        }
-
         $metrics = is_string($sector->metrics) ? json_decode($sector->metrics, true) : ($sector->metrics ?? []);
 
         foreach ($payload as $key => $value) {
@@ -269,7 +256,7 @@ class MqttListen extends Command
                     'type'      => $normalizedKey,
                     'value'     => (float) $logValue,
                 ]);
-                $this->checkAlerts($sector->sector_id, $normalizedKey, (float) $logValue);
+                $this->checkAlerts($sector, $normalizedKey, (float) $logValue);
             }
 
             $metrics[$normalizedKey] = $logValue;
@@ -282,7 +269,12 @@ class MqttListen extends Command
 
         $sector->metrics = $metrics;
         $sector->save();
-        broadcast(new \App\Events\SectorUpdated($sector));
+
+        // Siarkan paling sering sekali per 2 detik per sektor (hemat kuota Pusher)
+        if (Cache::add("broadcast:{$sector->sector_id}", true, 2)) {
+            broadcast(new \App\Events\SectorUpdated($sector));
+        }
+
         $this->info("✅ JSON payload saved → sector {$sector->sector_id}");
     }
 
@@ -300,14 +292,18 @@ class MqttListen extends Command
                 'type'      => $fieldName,
                 'value'     => (float) $logValue,
             ]);
-            $this->checkAlerts($sector->sector_id, $fieldName, (float) $logValue);
+            $this->checkAlerts($sector, $fieldName, (float) $logValue);
         }
 
         $metrics = is_string($sector->metrics) ? json_decode($sector->metrics, true) : ($sector->metrics ?? []);
         $metrics[$fieldName] = $logValue;
         $sector->metrics = $metrics;
         $sector->save();
-        broadcast(new \App\Events\SectorUpdated($sector));
+
+        // Siarkan paling sering sekali per 2 detik per sektor (hemat kuota Pusher)
+        if (Cache::add("broadcast:{$sector->sector_id}", true, 2)) {
+            broadcast(new \App\Events\SectorUpdated($sector));
+        }
 
         $this->info("✅ Scalar saved → {$sector->sector_id}.{$fieldName} = {$logValue}");
     }
@@ -341,47 +337,57 @@ class MqttListen extends Command
 
     /**
      * Cek ambang batas dan kirim notifikasi jika perlu.
-     * Notifikasi tidak dikirim jika sudah ada notifikasi serupa dalam 30 menit terakhir.
+     * Ambang batas dibaca dari kolom alert_thresholds sektor, dengan fallback ke default.
+     * Notifikasi tidak dikirim jika sudah ada notifikasi serupa dalam 30 menit terakhir
+     * untuk sektor yang sama.
      */
-    private function checkAlerts(string $sectorId, string $type, float $value)
+    private function checkAlerts(Sector $sector, string $type, float $value)
     {
+        $sectorId = $sector->sector_id;
+
+        // Baca ambang batas dari konfigurasi sektor, fallback ke default
+        $thresholds = array_merge(self::DEFAULT_ALERT_THRESHOLDS, $sector->alert_thresholds ?? []);
+
         $title   = null;
         $message = null;
         $notifType = 'alert';
 
-        if ($type === 'temperature' && $value > 35) {
+        if ($type === 'temperature' && $value > $thresholds['temperature_high']) {
             $title     = 'Suhu Kritis';
             $message   = "Suhu di sektor {$sectorId} mencapai {$value}°C. Harap segera periksa pendingin/kipas.";
             $notifType = 'alert';
-        } elseif ($type === 'temperature' && $value > 0 && $value < 20) {
+        } elseif ($type === 'temperature' && $value > 0 && $value < $thresholds['temperature_low']) {
             $title     = 'Suhu Terlalu Dingin';
             $message   = "Suhu di sektor {$sectorId} turun menjadi {$value}°C. Harap periksa pemanas.";
             $notifType = 'warning';
-        } elseif ($type === 'waterLevel' && $value > 0 && $value < 20) {
+        } elseif ($type === 'waterLevel' && $value > 0 && $value < $thresholds['waterLevel_low']) {
             $title     = 'Air Habis';
             $message   = "Level air di sektor {$sectorId} tersisa {$value}%. Segera isi tangki.";
             $notifType = 'warning';
-        } elseif ($type === 'ammonia' && $value > 200) {
+        } elseif ($type === 'ammonia' && $value > $thresholds['ammonia_high']) {
             $title     = 'Amonia Tinggi';
             $message   = "Kadar amonia di sektor {$sectorId} terlalu tinggi ({$value}). Kualitas udara memburuk.";
             $notifType = 'alert';
-        } elseif ($type === 'feedLevel' && $value > 0 && $value < 20) {
+        } elseif ($type === 'feedLevel' && $value > 0 && $value < $thresholds['feedLevel_low']) {
             $title     = 'Pakan Hampir Habis';
             $message   = "Sisa pakan di sektor {$sectorId} tersisa {$value}%. Segera isi ulang wadah pakan.";
             $notifType = 'warning';
         }
 
         if ($title) {
-            $recent = \App\Models\Notification::where('title', $title)
+            // Cek duplikat per sektor, bukan hanya per judul
+            $recent = \App\Models\Notification::where('sector_id', $sectorId)
+                ->where('title', $title)
                 ->where('created_at', '>=', now()->subMinutes(30))
-                ->first();
+                ->exists();
 
             if (!$recent) {
                 \App\Models\Notification::create([
-                    'title'   => $title,
-                    'message' => $message,
-                    'type'    => $notifType,
-                    'is_read' => false,
+                    'sector_id' => $sectorId,
+                    'title'     => $title,
+                    'message'   => $message,
+                    'type'      => $notifType,
+                    'is_read'   => false,
                 ]);
                 $this->info("🔔 Alert sent: {$title}");
             }

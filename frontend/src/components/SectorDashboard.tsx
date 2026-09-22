@@ -57,6 +57,11 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   const [aiLoading, setAiLoading]   = useState(false)
   const [aiResult, setAiResult]     = useState<any>(null)
   const [activeTab, setActiveTab]   = useState<'manual' | 'auto'>('manual')
+
+  // ─── Sinkronisasi Jadwal ─────────────────────────────────────────────────────
+  type SyncStatus = 'idle' | 'pending' | 'synced' | 'failed'
+  const [syncStatus, setSyncStatus] = useState<Record<string, SyncStatus>>({})
+  const syncTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
   
   // States for sec-03 (Unhan)
   const [aki, setAki] = useState('--')
@@ -140,9 +145,37 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sector, lastRefresh])
 
-  const ctrl = async (target: string, command: string) => { lastAction.current = Date.now(); try { await fetch(`${API_URL}/api/sector/${sectorId}/control`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ command, target }) }) } catch (e) { console.error(e) } }
-  const cfg  = async (target: string, value: string)   => { lastAction.current = Date.now(); try { await fetch(`${API_URL}/api/sector/${sectorId}/config`,  { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ target, value })   }) } catch (e) { console.error(e) } }
+  const ctrl = async (target: string, command: string) => { lastAction.current = Date.now(); try { await fetch(`${API_URL}/api/sector/${sectorId}/control`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ command, target, user_name: loggedInUser?.name }) }) } catch (e) { console.error(e) } }
+  const cfg  = async (target: string, value: string)   => { lastAction.current = Date.now(); try { await fetch(`${API_URL}/api/sector/${sectorId}/config`,  { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ target, value, user_name: loggedInUser?.name })   }) } catch (e) { console.error(e) } }
   const logA = (action: string) => { if (!loggedInUser) return; fetch(`${API_URL}/api/activities`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_name: loggedInUser.name, action, target: sector.name }) }).catch(() => {}) }
+
+  // Wrapper cfg() dengan indikator sinkronisasi: kirim jadwal lalu poll konfirmasi dari DB
+  const cfgWithSync = async (target: string, value: string) => {
+    // Reset timer lama jika user ubah lagi sebelum konfirmasi
+    if (syncTimers.current[target]) clearTimeout(syncTimers.current[target])
+    setSyncStatus(s => ({ ...s, [target]: 'pending' }))
+    await cfg(target, value)
+
+    // Poll setelah 8 detik: beri waktu ESP32 simpan ke NVS & publish balik
+    syncTimers.current[target] = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `${API_URL}/api/sectors/${sectorId}/config-status?target=${encodeURIComponent(target)}&expected=${encodeURIComponent(value)}`,
+          { headers: { Accept: 'application/json', Authorization: `Bearer ${localStorage.getItem('token') ?? ''}` } }
+        )
+        if (!res.ok) throw new Error('HTTP ' + res.status)
+        const data = await res.json()
+        setSyncStatus(s => ({ ...s, [target]: data.synced ? 'synced' : 'failed' }))
+      } catch {
+        setSyncStatus(s => ({ ...s, [target]: 'failed' }))
+      }
+      // Auto-reset ke idle setelah 30 detik
+      syncTimers.current[target] = setTimeout(
+        () => setSyncStatus(s => ({ ...s, [target]: 'idle' })),
+        30000
+      )
+    }, 8000)
+  }
 
   const toggleLamp   = () => { const n = !lampOn;   setLampOn(n);   ctrl('lamp',  n ? 'ON' : 'OFF'); logA(n ? 'Menyalakan Lampu'  : 'Mematikan Lampu')  }
   const togglePompa  = () => { if (pompaAuto) return; const n = !pompaOn;  setPompaOn(n);  ctrl('pompa', n ? 'ON' : 'OFF'); logA(n ? 'Menyalakan Pompa'  : 'Mematikan Pompa')  }
@@ -344,8 +377,18 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
                   <Toggle isOn={lampAuto} onChange={toggleLampAuto} />
                 </div>
                 {lampAuto && <div style={{ display: 'flex', gap: 10 }}>
-                  <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JAM NYALA</div><input type="time" value={lampJadwalOn} style={inp} onChange={e => { setLampJadwalOn(e.target.value); cfg('lampon', e.target.value) }}/></div>
-                  <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JAM MATI</div><input type="time" value={lampJadwalOff} style={inp} onChange={e => { setLampJadwalOff(e.target.value); cfg('lampoff', e.target.value) }}/></div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>JAM NYALA</span><SyncBadge status={syncStatus['lampon'] ?? 'idle'} />
+                    </div>
+                    <input type="time" value={lampJadwalOn} style={inp} onChange={e => { setLampJadwalOn(e.target.value); cfgWithSync('lampon', e.target.value) }}/>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>JAM MATI</span><SyncBadge status={syncStatus['lampoff'] ?? 'idle'} />
+                    </div>
+                    <input type="time" value={lampJadwalOff} style={inp} onChange={e => { setLampJadwalOff(e.target.value); cfgWithSync('lampoff', e.target.value) }}/>
+                  </div>
                 </div>}
               </div>
               
@@ -358,8 +401,18 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
               <div style={{ background: 'var(--bg-base)', borderRadius: 8, padding: 12, border: '1px solid var(--border-color)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><span style={{ fontSize: 18 }}>⚙️🌾</span><div><div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Otomasi Conveyor & Pakan</div><div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Waktu nyala disamakan</div></div></div>
                 <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
-                  <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 1 (JAM MULAI)</div><input type="time" value={cv1On} style={inp} onChange={e => { const val = e.target.value; setCv1On(val); cfg('conveyoron', val); setFeedTime1(val); cfg('feedtime1', val); }}/></div>
-                  <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>LAMA BUKA PAKAN (DTK)</div><input type="number" min="1" max="120" value={feedDur} style={inp} onChange={e => { setFeedDur(e.target.value); cfg('feedduration', e.target.value) }}/></div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>JADWAL 1 (JAM MULAI)</span><SyncBadge status={syncStatus['conveyoron'] ?? 'idle'} />
+                    </div>
+                    <input type="time" value={cv1On} style={inp} onChange={e => { const val = e.target.value; setCv1On(val); cfgWithSync('conveyoron', val); setFeedTime1(val); cfgWithSync('feedtime1', val); }}/>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>LAMA BUKA PAKAN (DTK)</span><SyncBadge status={syncStatus['feedduration'] ?? 'idle'} />
+                    </div>
+                    <input type="number" min="1" max="120" value={feedDur} style={inp} onChange={e => { setFeedDur(e.target.value); cfgWithSync('feedduration', e.target.value) }}/>
+                  </div>
                 </div>
                 <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: cv2En ? 10 : 0 }}>
@@ -367,7 +420,12 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
                     <Toggle isOn={cv2En} onChange={() => { const n = !cv2En; setCv2En(n); cfg('conveyor2en', n ? '1' : '0'); setFeedTime2En(n); cfg('feedtime2en', n ? '1' : '0') }}/>
                   </div>
                   {cv2En && <div style={{ display: 'flex', gap: 10 }}>
-                    <div style={{ flex: 1 }}><div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4 }}>JADWAL 2 (JAM MULAI)</div><input type="time" value={cv2On} style={inp} onChange={e => { const val = e.target.value; setCv2On(val); cfg('conveyor2on', val); setFeedTime2(val); cfg('feedtime2', val); }}/></div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>JADWAL 2 (JAM MULAI)</span><SyncBadge status={syncStatus['conveyor2on'] ?? 'idle'} />
+                      </div>
+                      <input type="time" value={cv2On} style={inp} onChange={e => { const val = e.target.value; setCv2On(val); cfgWithSync('conveyor2on', val); setFeedTime2(val); cfgWithSync('feedtime2', val); }}/>
+                    </div>
                   </div>}
                 </div>
               </div>
@@ -391,6 +449,30 @@ function CtrlRow({ icon, label, sub, subColor, right }: { icon: string; label: s
       </div>
       {right}
     </div>
+  )
+}
+
+// Indikator sinkronisasi jadwal ke ESP32
+function SyncBadge({ status }: { status: 'idle' | 'pending' | 'synced' | 'failed' }) {
+  if (status === 'idle') return null
+  const styles: Record<string, React.CSSProperties> = {
+    pending: { color: '#d97706', background: '#fffbeb', border: '1px solid #fde68a' },
+    synced:  { color: '#059669', background: '#ecfdf5', border: '1px solid #a7f3d0' },
+    failed:  { color: '#dc2626', background: '#fef2f2', border: '1px solid #fecaca' },
+  }
+  const labels = { pending: '⏳ Mengirim...', synced: '✅ Tersinkronisasi', failed: '⚠️ Belum Tersinkronisasi' }
+  return (
+    <span style={{
+      ...styles[status],
+      fontSize: 9,
+      fontWeight: 700,
+      padding: '2px 6px',
+      borderRadius: 10,
+      whiteSpace: 'nowrap',
+      letterSpacing: '0.02em',
+    }}>
+      {labels[status]}
+    </span>
   )
 }
 
@@ -557,7 +639,7 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   const toggleControl = async (ctrlKey: string, cur: boolean) => {
     const n = !cur; setUserOverrides(p => ({ ...p, [ctrlKey]: { isOn: n, time: Date.now() } })); setControls(p => p.map(c => c.key === ctrlKey ? { ...c, isOn: n } : c))
     if (loggedInUser) fetch(`${API_URL}/api/activities`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_name: loggedInUser.name, action: n ? 'mengaktifkan' : 'mematikan', target: `${ctrlKey} (${sector.name})` }) }).catch(() => {})
-    try { await fetch(`${API_URL}/api/sector/${sector.sector_id || sector.id}/control`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ command: n ? 'ON' : 'OFF', target: ctrlKey }) }) }
+    try { await fetch(`${API_URL}/api/sector/${sector.sector_id || sector.id}/control`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ command: n ? 'ON' : 'OFF', target: ctrlKey, user_name: loggedInUser?.name }) }) }
     catch { setControls(p => p.map(c => c.key === ctrlKey ? { ...c, isOn: cur } : c)) }
   }
 

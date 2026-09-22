@@ -5,12 +5,24 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Sector;
 use App\Models\SensorLog;
+use App\Models\Activity;
+use App\Models\Notification;
+use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 
 class SectorController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(Sector::all());
+        $user = $request->user();
+        $query = Sector::query();
+
+        // Operator hanya melihat sektor yang ditugaskan
+        if ($user->role !== 'admin') {
+            $query->whereIn('sector_id', $user->assigned_sectors ?? []);
+        }
+
+        return response()->json($query->get());
     }
 
     public function store(Request $request)
@@ -30,6 +42,7 @@ class SectorController extends Controller
             'mqtt_broker_config'  => 'sometimes|nullable|array',
             'mqtt_metric_map'     => 'sometimes|nullable|array',
             'mqtt_control_topic'  => 'sometimes|nullable|string|max:255',
+            'alert_thresholds'    => 'sometimes|nullable|array',
         ]);
 
         $sector = Sector::create([
@@ -42,14 +55,11 @@ class SectorController extends Controller
             'mqtt_broker_config'  => $validated['mqtt_broker_config'] ?? null,
             'mqtt_metric_map'     => $validated['mqtt_metric_map']    ?? null,
             'mqtt_control_topic'  => $validated['mqtt_control_topic'] ?? null,
+            'alert_thresholds'    => $validated['alert_thresholds']   ?? null,
         ]);
 
         // Catat aktivitas
-        \App\Models\Activity::create([
-            'user_name' => $request->user() ? $request->user()->name : 'Admin',
-            'action'    => 'Menambahkan sektor baru',
-            'target'    => $sector->name,
-        ]);
+        Activity::record($request->user(), 'Menambahkan sektor baru', $sector->name);
 
         return response()->json($sector, 201);
     }
@@ -63,14 +73,25 @@ class SectorController extends Controller
 
         $sector = Sector::where('sector_id', $sector_id)->firstOrFail();
         $sectorName = $sector->name;
+
+        // Hapus data turunan milik sektor
+        SensorLog::where('sector_id', $sector->sector_id)->delete();
+        Notification::where('sector_id', $sector->sector_id)->delete();
+
+        // Hapus sektor dari daftar penugasan setiap pengguna
+        User::whereJsonContains('assigned_sectors', $sector->sector_id)
+            ->get()
+            ->each(function (User $user) use ($sector) {
+                $user->assigned_sectors = array_values(
+                    array_diff($user->assigned_sectors ?? [], [$sector->sector_id])
+                );
+                $user->save();
+            });
+
         $sector->delete();
 
         // Catat aktivitas
-        \App\Models\Activity::create([
-            'user_name' => $request->user() ? $request->user()->name : 'Admin',
-            'action'    => 'Menghapus sektor',
-            'target'    => $sectorName,
-        ]);
+        Activity::record($request->user(), 'Menghapus sektor', $sectorName);
 
         return response()->json(['message' => "Sektor {$sectorName} berhasil dihapus."]);
     }
@@ -93,6 +114,7 @@ class SectorController extends Controller
             'mqtt_broker_config' => 'sometimes|nullable|array',
             'mqtt_metric_map'    => 'sometimes|nullable|array',
             'mqtt_control_topic' => 'sometimes|nullable|string|max:255',
+            'alert_thresholds'   => 'sometimes|nullable|array',
         ]);
 
         if (isset($validated['name']))               $sector->name               = $validated['name'];
@@ -103,21 +125,24 @@ class SectorController extends Controller
         if (array_key_exists('mqtt_broker_config', $validated)) $sector->mqtt_broker_config = $validated['mqtt_broker_config'];
         if (array_key_exists('mqtt_metric_map',    $validated)) $sector->mqtt_metric_map    = $validated['mqtt_metric_map'];
         if (array_key_exists('mqtt_control_topic', $validated)) $sector->mqtt_control_topic = $validated['mqtt_control_topic'];
+        if (array_key_exists('alert_thresholds',   $validated)) $sector->alert_thresholds   = $validated['alert_thresholds'];
 
         $sector->save();
 
         // Catat aktivitas
-        \App\Models\Activity::create([
-            'user_name' => $request->user() ? $request->user()->name : 'Admin',
-            'action'    => 'Mengedit sektor',
-            'target'    => $sector->name,
-        ]);
+        Activity::record($request->user(), 'Mengedit sektor', $sector->name);
 
         return response()->json($sector);
     }
 
-    public function logs($id)
+    public function logs(Request $request, $id)
     {
+        abort_unless(
+            $request->user()->canAccessSector($id),
+            403,
+            'Anda tidak memiliki akses ke sektor ini.'
+        );
+
         $latestLog = SensorLog::where('sector_id', $id)->latest('created_at')->first();
 
         if (!$latestLog) {
@@ -166,8 +191,14 @@ class SectorController extends Controller
         return response()->json(array_values($formattedLogs));
     }
 
-    public function evaluate($id)
+    public function evaluate(Request $request, $id)
     {
+        abort_unless(
+            $request->user()->canAccessSector($id),
+            403,
+            'Anda tidak memiliki akses ke sektor ini.'
+        );
+
         $latestLog = SensorLog::where('sector_id', $id)->latest('created_at')->first();
 
         if (!$latestLog) {
@@ -374,24 +405,28 @@ class SectorController extends Controller
 
     public function control(Request $request, $sector_id)
     {
+        abort_unless(
+            $request->user()->canAccessSector($sector_id),
+            403,
+            'Anda tidak memiliki akses ke sektor ini.'
+        );
+
         $validated = $request->validate([
-            'command' => 'required|string',
-            'target'  => 'nullable|string'
+            'command'   => 'required|string',
+            'target'    => 'nullable|string',
         ]);
 
         $command = $validated['command'];
         $target  = $validated['target'] ?? 'pump';
         
+        $sectorModel = Sector::where('sector_id', $sector_id)->first();
+        $sectorName = $sectorModel ? $sectorModel->name : $sector_id;
+        
         // Catat aktivitas
-        \App\Models\Activity::create([
-            'user_name' => auth()->check() ? auth()->user()->name : 'System/Admin',
-            'action'    => "Mengubah Kontrol ($command)",
-            'target'    => "Sektor $sector_id / $target"
-        ]);
+        Activity::record($request->user(), "Mengubah Kontrol ($command)", "Sektor $sectorName / $target");
 
         // Publish to MQTT — config broker dibaca dinamis dari DB
         try {
-            $sectorModel = \App\Models\Sector::where('sector_id', $sector_id)->first();
             $mqttCfg = $sectorModel
                 ? $sectorModel->getMqttConnectionConfig()
                 : [
@@ -505,22 +540,26 @@ class SectorController extends Controller
 
     public function configTimer(Request $request, $sector_id)
     {
+        abort_unless(
+            $request->user()->canAccessSector($sector_id),
+            403,
+            'Anda tidak memiliki akses ke sektor ini.'
+        );
+
         $validated = $request->validate([
             'target' => 'required|string', // e.g. lampon, lampoff
-            'value' => 'required|string'   // e.g. 18:00
+            'value' => 'required|string',   // e.g. 18:00
         ]);
 
         $target = $validated['target'];
         $value = $validated['value'];
 
-        \App\Models\Activity::create([
-            'user_name' => auth()->check() ? auth()->user()->name : 'System/Admin',
-            'action' => "Mengubah Jadwal $target menjadi $value",
-            'target' => "Sektor $sector_id"
-        ]);
+        $sectorModel = Sector::where('sector_id', $sector_id)->first();
+        $sectorName = $sectorModel ? $sectorModel->name : $sector_id;
+
+        Activity::record($request->user(), "Mengubah Jadwal $target menjadi $value", "Sektor $sectorName");
 
         try {
-            $sectorModel = \App\Models\Sector::where('sector_id', $sector_id)->first();
             if (!$sectorModel) {
                 return response()->json(['message' => 'Sektor tidak ditemukan'], 404);
             }
@@ -579,32 +618,66 @@ class SectorController extends Controller
         ]);
     }
 
-    public function getPumpCommand($id)
+    public function configStatus(Request $request, $sector_id)
     {
-        $command = \Illuminate\Support\Facades\Cache::get("pump_command_{$id}");
-        
-        if ($command) {
-            return response()->json([
-                'status' => $command,
-                'executed' => false
-            ]);
+        abort_unless(
+            $request->user()->canAccessSector($sector_id),
+            403,
+            'Anda tidak memiliki akses ke sektor ini.'
+        );
+
+        $target   = $request->query('target');
+        $expected = $request->query('expected');
+
+        if (!$target || $expected === null) {
+            return response()->json(['error' => 'Parameter target dan expected wajib diisi.'], 422);
         }
 
+        $sector = Sector::where('sector_id', $sector_id)->first();
+        if (!$sector) {
+            return response()->json(['synced' => false, 'error' => 'Sektor tidak ditemukan.'], 404);
+        }
+
+        $metrics = is_array($sector->metrics)
+            ? $sector->metrics
+            : json_decode($sector->metrics, true);
+
+        // Map target config (dari frontend) ke key di kolom metrics DB
+        $metricMap = [
+            'lampon'       => 'lampOn',
+            'lampoff'      => 'lampOff',
+            'conveyoron'   => 'cv1On',
+            'conveyor2on'  => 'cv2On',
+            'conveyor2en'  => 'cv2En',
+            'feedtime1'    => 'feedTime1',
+            'feedtime2'    => 'feedTime2',
+            'feedtime2en'  => 'feedTime2En',
+            'feedduration' => 'feedDuration',
+        ];
+
+        $dbKey  = $metricMap[$target] ?? $target;
+        $actual = $metrics[$dbKey] ?? null;
+
+        // Bandingkan sebagai string (nilai yang disimpan di metrics selalu string)
+        $synced = ($actual !== null) && ((string) $actual === (string) $expected);
+
         return response()->json([
-            'status' => 'OFF', // default if no pending command
-            'executed' => true
+            'synced'   => $synced,
+            'actual'   => $actual,
+            'expected' => $expected,
+            'db_key'   => $dbKey,
         ]);
     }
 
-    public function acknowledgePumpCommand($id)
+    public function analyzeSectorWithAi(Request $request, $id)
     {
-        \Illuminate\Support\Facades\Cache::forget("pump_command_{$id}");
-        return response()->json(['message' => 'Command acknowledged']);
-    }
+        abort_unless(
+            $request->user()->canAccessSector($id),
+            403,
+            'Anda tidak memiliki akses ke sektor ini.'
+        );
 
-    public function analyzeSectorWithAi($id)
-    {
-        $sector = \App\Models\Sector::where('sector_id', $id)->first();
+        $sector = Sector::where('sector_id', $id)->first();
         if (!$sector) {
             return response()->json([
                 'status' => 'Error',
