@@ -54,6 +54,17 @@ class MqttListen extends Command
         'feedLevel_low'    => 20,
     ];
 
+    // Seberapa sering (detik) memeriksa apakah konfigurasi sektor berubah
+    private const SECTOR_RELOAD_INTERVAL = 30;
+
+    /**
+     * Sidik jari konfigurasi sektor: berubah jika ada sektor ditambah, diubah, atau dihapus.
+     */
+    private function sectorFingerprint(): string
+    {
+        return Sector::count() . '|' . (Sector::max('updated_at') ?? 'none');
+    }
+
     public function handle()
     {
         date_default_timezone_set('Asia/Jakarta');
@@ -61,85 +72,111 @@ class MqttListen extends Command
 
         $filterHost = $this->option('broker-host');
 
-        // ── 1. Baca semua sektor yang sudah dikonfigurasi MQTT ──────────────
-        $sectors = Sector::whereNotNull('mqtt_topic_pattern')->get();
+        // ── Outer reload loop: restart seluruh konfigurasi saat sektor berubah ──
+        while (true) {
+            // ── 1. Baca semua sektor yang sudah dikonfigurasi MQTT ──────────────
+            $sectors = Sector::whereNotNull('mqtt_topic_pattern')->get();
 
-        if ($sectors->isEmpty()) {
-            $this->error('Tidak ada sektor dengan mqtt_topic_pattern di database.');
-            $this->info('Tambahkan sektor melalui UI atau jalankan seeder: php artisan db:seed --class=UpdateSectorsMqttConfig');
-            return;
-        }
-
-        // ── 2. Group sektor berdasarkan fingerprint broker ──────────────────
-        // Sektor dengan broker yang sama digroup ke 1 koneksi MQTT.
-        $brokerGroups = [];
-        foreach ($sectors as $sector) {
-            $fingerprint = $sector->getBrokerFingerprint();
-
-            // Jika mode filter aktif, skip broker yang tidak cocok
-            if ($filterHost && $fingerprint !== $filterHost) {
+            if ($sectors->isEmpty()) {
+                $this->error('Tidak ada sektor dengan mqtt_topic_pattern di database.');
+                $this->info('Tambahkan sektor melalui UI atau jalankan seeder: php artisan db:seed --class=UpdateSectorsMqttConfig');
+                $this->info('🔄 Akan mencoba lagi dalam ' . self::SECTOR_RELOAD_INTERVAL . ' detik...');
+                sleep(self::SECTOR_RELOAD_INTERVAL);
                 continue;
             }
 
-            $brokerGroups[$fingerprint]['config']    = $sector->getMqttConnectionConfig();
-            $brokerGroups[$fingerprint]['sectors'][] = $sector;
-        }
+            // ── 2. Group sektor berdasarkan fingerprint broker ──────────────────
+            $brokerGroups = [];
+            foreach ($sectors as $sector) {
+                $fingerprint = $sector->getBrokerFingerprint();
 
-        if (empty($brokerGroups)) {
-            $this->error("Tidak ada broker yang cocok" . ($filterHost ? " dengan host '{$filterHost}'" : '') . ".");
-            return;
-        }
-
-        $this->info('📡 Ditemukan ' . count($brokerGroups) . ' broker grup:');
-        foreach ($brokerGroups as $fp => $group) {
-            $topicList = collect($group['sectors'])->pluck('mqtt_topic_pattern')->join(', ');
-            $this->info("   • {$fp} → [{$topicList}]");
-        }
-
-        // ── 3. Jika lebih dari 1 broker & tidak ada filter, hanya proses broker pertama ──
-        // Untuk menjalankan semua broker secara paralel, jalankan:
-        //   php artisan mqtt:listen --broker-host=<host1>
-        //   php artisan mqtt:listen --broker-host=<host2>
-        if (count($brokerGroups) > 1 && !$filterHost) {
-            $this->warn('⚠️  Ada lebih dari 1 broker. Process ini akan menangani SEMUA broker secara bergantian (round-robin non-blocking).');
-            $this->warn('   Untuk isolasi penuh, jalankan satu process per broker dengan --broker-host=<host>');
-        }
-
-        // ── 4. Jalankan listener untuk setiap broker grup ───────────────────
-        if (count($brokerGroups) > 1) {
-            $this->info('🚀 Starting multiple workers for ' . count($brokerGroups) . ' brokers...');
-            $processes = [];
-            foreach ($brokerGroups as $fingerprint => $group) {
-                // Gunakan argumen khusus untuk spawn worker khusus broker ini
-                $process = new \Symfony\Component\Process\Process(['php', 'artisan', 'mqtt:listen', '--broker-host=' . $fingerprint]);
-                $process->setTimeout(null);
-                $process->start();
-                $processes[] = $process;
-                $this->info("   ↳ Worker started for {$fingerprint}");
-            }
-            // Biarkan master tetap hidup dan monitor worker
-            while (true) {
-                foreach ($processes as $p) {
-                    if ($p->isRunning()) {
-                        echo $p->getIncrementalOutput();
-                        echo $p->getIncrementalErrorOutput();
-                    }
+                if ($filterHost && $fingerprint !== $filterHost) {
+                    continue;
                 }
-                sleep(1);
+
+                $brokerGroups[$fingerprint]['config']    = $sector->getMqttConnectionConfig();
+                $brokerGroups[$fingerprint]['sectors'][] = $sector;
             }
-        } else {
-            // Cuma 1 broker, jalankan langsung di proses ini
+
+            if (empty($brokerGroups)) {
+                $this->error("Tidak ada broker yang cocok" . ($filterHost ? " dengan host '{$filterHost}'" : '') . ".");
+                sleep(self::SECTOR_RELOAD_INTERVAL);
+                continue;
+            }
+
+            $this->info('📡 Ditemukan ' . count($brokerGroups) . ' broker grup:');
+            foreach ($brokerGroups as $fp => $group) {
+                $topicList = collect($group['sectors'])->pluck('mqtt_topic_pattern')->join(', ');
+                $this->info("   • {$fp} → [{$topicList}]");
+            }
+
+            // ── 3. Multi-broker: spawn worker per broker, monitor + reload ──────
+            if (count($brokerGroups) > 1 && !$filterHost) {
+                $this->warn('⚠️  Ada lebih dari 1 broker. Mode multi-worker aktif.');
+                $this->warn('   Untuk isolasi penuh, jalankan satu process per broker dengan --broker-host=<host>');
+
+                $lastFingerprint = $this->sectorFingerprint();
+                $processes = [];
+
+                foreach ($brokerGroups as $fingerprint => $group) {
+                    $process = new \Symfony\Component\Process\Process(['php', 'artisan', 'mqtt:listen', '--broker-host=' . $fingerprint]);
+                    $process->setTimeout(null);
+                    $process->start();
+                    $processes[] = $process;
+                    $this->info("   ↳ Worker started for {$fingerprint}");
+                }
+
+                // Master loop: teruskan output worker + cek perubahan sektor
+                $lastCheck = time();
+                while (true) {
+                    foreach ($processes as $p) {
+                        if ($p->isRunning()) {
+                            echo $p->getIncrementalOutput();
+                            echo $p->getIncrementalErrorOutput();
+                        }
+                    }
+
+                    // Cek fingerprint setiap SECTOR_RELOAD_INTERVAL detik
+                    if (time() - $lastCheck >= self::SECTOR_RELOAD_INTERVAL) {
+                        $lastCheck = time();
+                        $newFingerprint = $this->sectorFingerprint();
+
+                        if ($newFingerprint !== $lastFingerprint) {
+                            $this->info('🔄 Konfigurasi sektor berubah — menghentikan semua worker dan memuat ulang...');
+                            foreach ($processes as $p) {
+                                $p->stop(3);
+                            }
+                            break; // keluar dari while(true) master, outer loop akan reload
+                        }
+                    }
+                    sleep(1);
+                }
+
+                continue; // outer reload loop — baca sektor lagi dari awal
+            }
+
+            // ── 4. Single broker: jalankan langsung di proses ini ───────────────
             foreach ($brokerGroups as $fingerprint => $group) {
-                $this->runBrokerListener($fingerprint, $group['config'], $group['sectors']);
+                $needsReload = false;
+                $this->runBrokerListener($fingerprint, $group['config'], $group['sectors'], $needsReload);
+
+                if ($needsReload) {
+                    $this->info('🔄 Memuat ulang konfigurasi sektor...');
+                    break; // keluar dari foreach, outer loop akan reload
+                }
             }
+            // Jika needsReload, outer while(true) akan baca sektor dari awal
         }
     }
 
     /**
      * Jalankan koneksi + subscribe loop untuk satu broker.
      * Reconnect otomatis jika koneksi putus.
+     * Jika $needsReload diset true oleh loop event handler, caller harus reload konfigurasi.
+     *
+     * @param bool $needsReload Diset true jika fingerprint sektor berubah (by-reference)
      */
-    private function runBrokerListener(string $fingerprint, array $config, array $sectors)
+    private function runBrokerListener(string $fingerprint, array $config, array $sectors, bool &$needsReload = false)
     {
         $clientId = 'laravel_sf_' . md5($fingerprint) . '_' . uniqid();
 
@@ -168,10 +205,39 @@ class MqttListen extends Command
                     }, 0);
                 }
 
+                // ── Detektor perubahan sektor: cek fingerprint tiap 30 detik ──
+                $lastFingerprint = $this->sectorFingerprint();
+                $lastCheck = time();
+
+                $mqtt->registerLoopEventHandler(
+                    function (MqttClient $client) use (&$lastFingerprint, &$lastCheck, &$needsReload) {
+                        if (time() - $lastCheck < self::SECTOR_RELOAD_INTERVAL) {
+                            return;
+                        }
+                        $lastCheck = time();
+
+                        $newFingerprint = $this->sectorFingerprint();
+                        if ($newFingerprint !== $lastFingerprint) {
+                            $this->info('🔄 Konfigurasi sektor berubah, memuat ulang...');
+                            $needsReload = true;
+                            $client->interrupt(); // hentikan loop secara bersih
+                        }
+                    }
+                );
+
                 $mqtt->loop(true);
                 $mqtt->disconnect();
 
+                // Jika loop berhenti karena reload, keluar dari while(true) ini
+                if ($needsReload) {
+                    return;
+                }
+
             } catch (Exception $e) {
+                // Jangan reconnect jika berhenti karena reload
+                if ($needsReload) {
+                    return;
+                }
                 $this->error("❌ MQTT Error [{$fingerprint}]: " . $e->getMessage());
                 $this->info('🔄 Reconnecting in 5 seconds...');
                 sleep(5);

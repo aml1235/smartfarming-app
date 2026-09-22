@@ -74,9 +74,8 @@ class SectorController extends Controller
         $sector = Sector::where('sector_id', $sector_id)->firstOrFail();
         $sectorName = $sector->name;
 
-        // Hapus data turunan milik sektor
-        SensorLog::where('sector_id', $sector->sector_id)->delete();
-        Notification::where('sector_id', $sector->sector_id)->delete();
+        // Catatan: sensor_logs & notifications dihapus otomatis oleh
+        // foreign key CASCADE DELETE — tidak perlu hapus manual di sini.
 
         // Hapus sektor dari daftar penugasan setiap pengguna
         User::whereJsonContains('assigned_sectors', $sector->sector_id)

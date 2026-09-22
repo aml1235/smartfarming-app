@@ -20,18 +20,19 @@ class CleanupOldSensorLogs extends Command
      *
      * @var string
      */
-    protected $description = 'Menghapus data riwayat sensor yang lebih tua dari 7 hari';
+    protected $description = 'Menghapus data riwayat sensor yang lebih tua dari masa simpan yang dikonfigurasi (SENSOR_LOG_RETENTION_DAYS)';
 
     /**
      * Execute the console command.
      */
     public function handle()
     {
-        $thresholdDate = Carbon::now()->subDays(7);
-        
-        $deletedLogs = SensorLog::where('created_at', '<', $thresholdDate)->delete();
-        $deletedNotifs = \App\Models\Notification::where('created_at', '<', $thresholdDate)->delete();
-        
-        $this->info("Berhasil menghapus {$deletedLogs} data sensor lama dan {$deletedNotifs} notifikasi lama.");
+        $days = config('smartfarming.retention_days', 30);
+        $batas = now()->subDays($days);
+
+        $deletedLogs   = SensorLog::where('created_at', '<', $batas)->delete();
+        $deletedNotifs = \App\Models\Notification::where('created_at', '<', $batas)->delete();
+
+        $this->info("Berhasil menghapus {$deletedLogs} data sensor dan {$deletedNotifs} notifikasi yang lebih lama dari {$days} hari.");
     }
 }
