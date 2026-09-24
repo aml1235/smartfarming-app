@@ -3,7 +3,7 @@
 namespace App\Events;
 
 use App\Models\Sector;
-use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 
 /**
@@ -12,6 +12,10 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
  * Menggunakan ShouldBroadcastNow (bukan ShouldBroadcast) agar event
  * dikirim langsung tanpa melalui queue — karena mqtt:listen sudah
  * berjalan sebagai daemon, tidak perlu overhead queue tambahan.
+ *
+ * Keamanan: menggunakan PrivateChannel per-sektor sehingga hanya
+ * pengguna yang berhak atas sektor tersebut yang dapat berlangganan.
+ * Otorisasi dilakukan di routes/channels.php via canAccessSector().
  */
 class SectorUpdated implements ShouldBroadcastNow
 {
@@ -29,11 +33,12 @@ class SectorUpdated implements ShouldBroadcastNow
     }
 
     /**
-     * Channel publik 'sectors' — semua client bisa subscribe.
+     * Kanal privat per-sektor — hanya subscriber yang diotorisasi
+     * (via canAccessSector) yang bisa menerima event ini.
      */
-    public function broadcastOn(): Channel
+    public function broadcastOn(): array
     {
-        return new Channel('sectors');
+        return [new PrivateChannel('sector.' . $this->sector->sector_id)];
     }
 
     /**

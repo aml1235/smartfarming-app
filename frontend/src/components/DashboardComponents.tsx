@@ -42,35 +42,41 @@ export function OverviewMetrics({ sector }: { sector: any }) {
 
           const res = await fetch(`${API_URL}/api/sectors/${id}/logs`)
           const data = await res.json()
+          
+          let temp = latest.temperature || 0;
+          let hum = latest.humidity || 0;
+          let ammonia = latest.ammonia || latest.mq135 || 0;
+          let waterLevel = latest.waterLevel || latest.water_level || 0;
+          let lightLevel = latest.lightLevel || latest.light_level || 0;
+
           if (data && data.length > 0) {
             const reversedData = [...data].reverse();
-            const temp = reversedData.find((d: any) => d.temperature && Number(d.temperature) > 0)?.temperature || latest.temperature || 0;
-            const hum = reversedData.find((d: any) => d.humidity && Number(d.humidity) > 0)?.humidity || latest.humidity || 0;
+            temp = reversedData.find((d: any) => d.temperature && Number(d.temperature) > 0)?.temperature || temp;
+            hum = reversedData.find((d: any) => d.humidity && Number(d.humidity) > 0)?.humidity || hum;
             const validAmonia = reversedData.find((d: any) => (d.ammonia && Number(d.ammonia) > 0) || (d.mq135 && Number(d.mq135) > 0));
-            const ammonia = validAmonia?.ammonia || validAmonia?.mq135 || latest.ammonia || latest.mq135 || 0;
+            if (validAmonia) ammonia = validAmonia.ammonia || validAmonia.mq135;
+            
             const validWater = reversedData.find((d: any) => (d.waterLevel && Number(d.waterLevel) > 0) || (d.water_level && Number(d.water_level) > 0));
-            let waterLevel = latest.waterLevel || latest.water_level || 0;
-            if (Number(waterLevel) === 0 && validWater) {
-               waterLevel = validWater.waterLevel || validWater.water_level;
-            }
+            if (validWater && Number(waterLevel) === 0) waterLevel = validWater.waterLevel || validWater.water_level;
+            
             const validLight = reversedData.find((d: any) => d.lightLevel || d.light_level);
-            const lightLevel = validLight?.lightLevel || validLight?.light_level || latest.lightLevel || latest.light_level || 0;
+            if (validLight) lightLevel = validLight.lightLevel || validLight.light_level;
+          }
 
-            if (effectiveId === 'hidroponik') {
-              setHydroData({ waterLevel, temp, humidity: hum, light: lightLevel })
-            } else if (effectiveId === 'kandang') {
-              setKandangData({ 
-                temp, 
-                humidity: hum, 
-                waterLevel, 
-                ammonia,
-                aki: latest.aki || 0,
-                soc: latest.soc || 0,
-                lvd: latest.lvd || '',
-                pakan: latest.level || 0,
-                tangki: latest.tangki || ''
-              })
-            }
+          if (effectiveId === 'hidroponik') {
+            setHydroData({ waterLevel, temp, humidity: hum, light: lightLevel })
+          } else if (effectiveId === 'kandang') {
+            setKandangData({ 
+              temp, 
+              humidity: hum, 
+              waterLevel, 
+              ammonia,
+              aki: latest.aki || 0,
+              soc: latest.soc || 0,
+              lvd: latest.lvd || '',
+              pakan: latest.level || 0,
+              tangki: latest.tangki || ''
+            })
           }
         } catch (err) {
           console.error(err)

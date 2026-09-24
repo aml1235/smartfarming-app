@@ -147,7 +147,7 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
 
   const ctrl = async (target: string, command: string) => { lastAction.current = Date.now(); try { await fetch(`${API_URL}/api/sector/${sectorId}/control`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ command, target, user_name: loggedInUser?.name }) }) } catch (e) { console.error(e) } }
   const cfg  = async (target: string, value: string)   => { lastAction.current = Date.now(); try { await fetch(`${API_URL}/api/sector/${sectorId}/config`,  { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ target, value, user_name: loggedInUser?.name })   }) } catch (e) { console.error(e) } }
-  const logA = (action: string) => { if (!loggedInUser) return; fetch(`${API_URL}/api/activities`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_name: loggedInUser.name, action, target: sector.name }) }).catch(() => {}) }
+  // Catatan: aktivitas dicatat otomatis di backend (Activity::record) oleh setiap controller.
 
   // Wrapper cfg() dengan indikator sinkronisasi: kirim jadwal lalu poll konfirmasi dari DB
   const cfgWithSync = async (target: string, value: string) => {
@@ -177,11 +177,11 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
     }, 8000)
   }
 
-  const toggleLamp   = () => { const n = !lampOn;   setLampOn(n);   ctrl('lamp',  n ? 'ON' : 'OFF'); logA(n ? 'Menyalakan Lampu'  : 'Mematikan Lampu')  }
-  const togglePompa  = () => { if (pompaAuto) return; const n = !pompaOn;  setPompaOn(n);  ctrl('pompa', n ? 'ON' : 'OFF'); logA(n ? 'Menyalakan Pompa'  : 'Mematikan Pompa')  }
-  const toggleFeeder = () => { const n = !feederOn; setFeederOn(n); ctrl('feeder',n ? 'ON' : 'OFF'); logA(n ? 'Buka Pakan' : 'Tutup Pakan') }
-  const startConv = () => { setConvOn(true);  setConvPhase('Maju'); ctrl('conveyor', 'ON');  logA('Menjalankan Conveyor') }
-  const stopConv  = () => { setConvOn(false); setConvPhase('Diam'); ctrl('conveyor', 'OFF'); logA('Stop Conveyor') }
+  const toggleLamp   = () => { const n = !lampOn;   setLampOn(n);   ctrl('lamp',  n ? 'ON' : 'OFF') }
+  const togglePompa  = () => { if (pompaAuto) return; const n = !pompaOn;  setPompaOn(n);  ctrl('pompa', n ? 'ON' : 'OFF') }
+  const toggleFeeder = () => { const n = !feederOn; setFeederOn(n); ctrl('feeder',n ? 'ON' : 'OFF') }
+  const startConv = () => { setConvOn(true);  setConvPhase('Maju'); ctrl('conveyor', 'ON')  }
+  const stopConv  = () => { setConvOn(false); setConvPhase('Diam'); ctrl('conveyor', 'OFF') }
   const jogConv   = async (dir: 'fwd' | 'rev' | 'stop') => { setJogSending(true); setConvPhase(dir === 'fwd' ? 'Maju' : dir === 'rev' ? 'Mundur' : 'Diam'); await ctrl('convjog', dir); setJogSending(false) }
   const toggleLampAuto  = () => { const n = !lampAuto;  setLampAuto(n);  ctrl('lampauto',  n ? 'ON' : 'OFF') }
   const togglePompaAuto = () => { const n = !pompaAuto; setPompaAuto(n); ctrl('pompaauto', n ? 'ON' : 'OFF') }
@@ -638,7 +638,7 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   }
   const toggleControl = async (ctrlKey: string, cur: boolean) => {
     const n = !cur; setUserOverrides(p => ({ ...p, [ctrlKey]: { isOn: n, time: Date.now() } })); setControls(p => p.map(c => c.key === ctrlKey ? { ...c, isOn: n } : c))
-    if (loggedInUser) fetch(`${API_URL}/api/activities`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_name: loggedInUser.name, action: n ? 'mengaktifkan' : 'mematikan', target: `${ctrlKey} (${sector.name})` }) }).catch(() => {})
+    if (loggedInUser) { /* aktivitas dicatat di backend via ActivityController */ }
     try { await fetch(`${API_URL}/api/sector/${sector.sector_id || sector.id}/control`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ command: n ? 'ON' : 'OFF', target: ctrlKey, user_name: loggedInUser?.name }) }) }
     catch { setControls(p => p.map(c => c.key === ctrlKey ? { ...c, isOn: cur } : c)) }
   }
@@ -670,30 +670,30 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
           <>
             <div style={{ background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
-                <AnimatedThermometer temperature={metricsData.find(m => m.key.includes('suhu'))?.value || '--'} size={56} />
+                <AnimatedThermometer temperature={metricsData.find(m => m.key.includes('suhu'))?.value ?? '--'} size={56} />
               </div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Suhu</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#E65100' }}>{metricsData.find(m => m.key.includes('suhu'))?.value || '--'}<span style={{ fontSize: 14 }}>°C</span></div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#E65100' }}>{metricsData.find(m => m.key.includes('suhu'))?.value ?? '--'}<span style={{ fontSize: 14 }}>°C</span></div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Normal: 20-30°C</div>
             </div>
             <div style={{ background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px', textAlign: 'center' }}>
               <div style={{ fontSize: 26, marginBottom: 4 }}>💧</div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Kelembapan</div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: '#1565C0' }}>{metricsData.find(m => m.key.includes('kelembapan'))?.value || '--'}<span style={{ fontSize: 13 }}>%</span></div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: '#1565C0' }}>{metricsData.find(m => m.key.includes('kelembapan'))?.value ?? '--'}<span style={{ fontSize: 13 }}>%</span></div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: 50-70%</div>
             </div>
             <div style={{ background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px', textAlign: 'center' }}>
               <div style={{ fontSize: 26, marginBottom: 4 }}>☀️</div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Intensitas Cahaya</div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: '#F59E0B' }}>{metricsData.find(m => m.key.includes('cahaya'))?.value || '--'}</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: '#F59E0B' }}>{metricsData.find(m => m.key.includes('cahaya'))?.value ?? '--'}</div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: &gt; 200</div>
             </div>
             <div style={{ background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
-                <AnimatedWaterTank percentage={Number(metricsData.find(m => m.key.toLowerCase().includes('water') || m.key.toLowerCase().includes('air'))?.value || 0)} status="Tersedia" size={56} />
+                <AnimatedWaterTank percentage={Number(metricsData.find(m => m.key.toLowerCase().includes('water') || m.key.toLowerCase().includes('air'))?.value ?? 0)} status="Tersedia" size={56} />
               </div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Level Air</div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: '#1565C0' }}>{metricsData.find(m => m.key.toLowerCase().includes('water') || m.key.toLowerCase().includes('air'))?.value || '--'}<span style={{ fontSize: 13 }}>%</span></div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: '#1565C0' }}>{metricsData.find(m => m.key.toLowerCase().includes('water') || m.key.toLowerCase().includes('air'))?.value ?? '--'}<span style={{ fontSize: 13 }}>%</span></div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Normal: &gt; 50%</div>
             </div>
           </>

@@ -101,20 +101,10 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
     fetchUsers();
   }, [onUpdateUsers]);
 
-  const addActivity = useCallback((action: string, target: string) => {
-    fetch(`${API_URL}/api/activities`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_name: loggedInUser.name,
-        action,
-        target,
-      })
-    })
-      .then(res => res.json())
-      .then(() => fetchActivities())
-      .catch(err => console.error('Gagal menambah aktivitas', err));
-  }, [loggedInUser.name, fetchActivities]);
+  // Aktivitas dicatat otomatis di backend via Activity::record() — cukup refresh tampilan.
+  const addActivity = useCallback((_action: string, _target: string) => {
+    fetchActivities();
+  }, [fetchActivities]);
 
   const openEditModal = (user: User) => {
     setEditUserId(user.id);

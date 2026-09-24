@@ -142,14 +142,20 @@ class SectorController extends Controller
             'Anda tidak memiliki akses ke sektor ini.'
         );
 
-        $latestLog = SensorLog::where('sector_id', $id)->latest('created_at')->first();
+        // Dukung parameter ?start=...&end=... dari request; default: 24 jam terakhir
+        if ($request->filled('start') && $request->filled('end')) {
+            $startTime = \Carbon\Carbon::parse($request->query('start'));
+            $endTime   = \Carbon\Carbon::parse($request->query('end'));
+        } else {
+            $latestLog = SensorLog::where('sector_id', $id)->latest('created_at')->first();
 
-        if (!$latestLog) {
-            return response()->json([]);
+            if (!$latestLog) {
+                return response()->json([]);
+            }
+
+            $endTime   = $latestLog->created_at;
+            $startTime = (clone $endTime)->subHours(24);
         }
-
-        $endTime = $latestLog->created_at;
-        $startTime = (clone $endTime)->subHours(24);
 
         $logs = SensorLog::where('sector_id', $id)
             ->where('created_at', '>=', $startTime)

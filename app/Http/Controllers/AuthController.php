@@ -26,7 +26,14 @@ class AuthController extends Controller
             ]);
         }
 
-        // Catat aktivitas login
+        // Tolak akun yang dinonaktifkan oleh admin
+        if (! $user->is_active) {
+            return response()->json([
+                'message' => 'Akun Anda telah dinonaktifkan. Hubungi administrator.',
+            ], 403);
+        }
+
+        // Catat aktivitas login berhasil
         Activity::record($user, 'Login', 'Sistem');
 
         return response()->json([

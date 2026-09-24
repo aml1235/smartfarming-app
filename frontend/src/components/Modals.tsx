@@ -240,7 +240,7 @@ export function GenericDetail({ sector, onBack, loggedInUser }: { sector: Sector
 
   const handlePumpChange = async (newState: boolean) => {
     setPump(newState)
-    if (loggedInUser) fetch(`${API_URL}/api/activities`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_name: loggedInUser.name, action: newState ? 'mengaktifkan' : 'mematikan', target: `pump (${sector.name})` }) }).catch(() => {})
+    // Aktivitas dicatat otomatis di backend via SectorController::control()
     try {
       await fetch(`${API_URL}/api/sector/${sector.id}/control`, {
         method: 'POST',
@@ -290,7 +290,7 @@ export function GenericDetail({ sector, onBack, loggedInUser }: { sector: Sector
 
   const handleAutoChange = async (newState: boolean) => {
     setAuto(newState)
-    if (loggedInUser) fetch(`${API_URL}/api/activities`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user_name: loggedInUser.name, action: newState ? 'mengaktifkan' : 'mematikan', target: `auto (${sector.name})` }) }).catch(() => {})
+    // Aktivitas dicatat otomatis di backend via SectorController::control()
     try {
       await fetch(`${API_URL}/api/sector/${sector.id}/control`, {
         method: 'POST',

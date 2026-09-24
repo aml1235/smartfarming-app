@@ -2,11 +2,13 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Broadcast;
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ActivityController;
 
 // ── Rute Publik (tanpa auth) ────────────────────────────────────────────
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
@@ -16,7 +18,7 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middle
 // ── Rute Terproteksi (membutuhkan token auth) ───────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
-    
+
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
@@ -47,8 +49,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::put('/notifications/{id}/read', [NotificationController::class, 'markAsRead']);
 
-    // Log aktivitas (read-only, tersedia untuk semua user yang login)
-    Route::get('/activities', function () {
-        return response()->json(\App\Models\Activity::orderBy('created_at', 'desc')->take(50)->get());
+    // Log aktivitas (ActivityController::index mendukung ?limit=N dan ?user_id=X (admin only))
+    Route::get('/activities', [ActivityController::class, 'index']);
+
+    // ── Otorisasi Pusher Private Channel via Sanctum ──────────────────────
+    // Endpoint ini digunakan Pusher JS saat subscribe ke private-sector.{id}.
+    // Menggunakan auth:sanctum (Bearer token) — bukan web middleware default.
+    // authEndpoint di frontend: ${API_URL}/api/broadcasting/auth
+    Route::post('/broadcasting/auth', function (Request $request) {
+        return Broadcast::auth($request);
     });
 });

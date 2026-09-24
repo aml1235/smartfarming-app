@@ -1,5 +1,5 @@
 import { API_URL } from './constants'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Sector, SectorId, PageId, AppView, User, AppNotification } from './types'
 import { SECTORS } from './constants'
 import { Sidebar } from './components/Sidebar'
@@ -29,7 +29,10 @@ export default function App() {
   const [loggedInUser, setLoggedInUser] = useState<User | null>(null)
   const [notifications, setNotifications] = useState<AppNotification[]>([])
 
-  // ── Realtime: menerima update sektor via Pusher WebSocket ──
+  // ── Realtime: menerima update sektor via Pusher private channel ──
+  // Daftar sector_id yang di-subscribe diturunkan dari state sectors
+  const sectorIds = useMemo(() => sectors.map(s => String(s.sector_id || s.id)), [sectors])
+
   useRealtimeUpdates(useCallback((data) => {
     setSectors(prev => prev.map(s => {
       if (String(s.id) !== data.sector_id) return s
@@ -46,7 +49,7 @@ export default function App() {
         colorLight: metricsParsed.color ? `${metricsParsed.color}20` : s.colorLight,
       }
     }))
-  }, []))
+  }, []), sectorIds)
   
   const fetchNotifications = () => {
     fetch(`${API_URL}/api/notifications`)

@@ -65,6 +65,9 @@ export function LoginPage({ onLogin, onBack }: LoginPageProps) {
         setCountdown(seconds);
         localStorage.setItem('loginUnlockTime', (Date.now() + seconds * 1000).toString());
         setMessage(`Terlalu banyak percobaan. Silakan coba lagi dalam ${seconds} detik.`);
+      } else if (response.status === 403) {
+        // Akun dinonaktifkan oleh admin
+        setMessage(data.message || 'Akun Anda telah dinonaktifkan. Hubungi administrator.');
       } else if (response.ok) {
         localStorage.setItem('token', data.token);
         onLogin(data.user);

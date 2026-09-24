@@ -67,17 +67,8 @@ export function SettingsPage({ darkMode, setDarkMode, user, onUpdateUser }: Sett
     setOpenSection(openSection === id ? null : id)
   }
 
-  const logActivity = (action: string) => {
-    fetch(`${API_URL}/api/activities`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_name: user?.name || 'User',
-        action,
-        target: 'Pengaturan Akun'
-      })
-    }).catch(err => console.error(err));
-  };
+  // Aktivitas dicatat otomatis di backend via UserController (updateProfile/updatePassword)
+  const logActivity = (_action: string) => { /* no-op: dicatat di server */ };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
