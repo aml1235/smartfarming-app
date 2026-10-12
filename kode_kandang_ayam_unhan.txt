@@ -1,0 +1,1613 @@
+/*
+  ============================================================================
+  SMART CHICKEN COOP  —  v6.1
+  Expansion board polos · ADC internal · tanpa ADS1115 · tanpa LVD
+  ============================================================================
+
+  BARU DI v6.1
+
+    1. URUTAN SIKLUS PAKAN DIPERBAIKI
+         Motor maju DULU, servo baru membuka setelah jeda.
+         1. Motor maju
+         2. Tunggu jeda detik  (dudukan menempuh jarak awal)
+         3. Servo buka
+         4. Servo tutup: timer "lama buka" habis ATAU limit A tercapai
+         5. Motor terus sampai limit A
+         6. Jeda 2 detik
+         7. Motor mundur sampai limit B
+
+    2. LOGIKA PELAMPUNG TIGA TINGKAT
+         bawah=0 atas=0  ->  KOSONG   (pompa menyala)
+         bawah=1 atas=0  ->  SEDANG   (pompa lanjut mengisi)
+         bawah=1 atas=1  ->  PENUH    (pompa berhenti)
+         bawah=0 atas=1  ->  ERROR    (mustahil — pelampung macet)
+
+       Histeresis alami: mengisi dari KOSONG sampai PENUH, lalu diam sampai
+       benar-benar KOSONG lagi. Tidak berkedut di posisi SEDANG.
+
+       Kondisi ERROR memblokir pompa dan mengirim alarm. Air tidak mungkin
+       menyentuh pelampung atas tanpa melewati yang bawah, jadi pembacaan itu
+       berarti ada pelampung tersangkut.
+
+  PIN RELAI
+    Lampu = GPIO 21   ·   Pompa = GPIO 47
+
+  PENGAWATAN
+    Buck 1 : 12 V -> 5,0 V  masuk lewat PIN 5V + GND header expansion.
+    Buck 2 : 12 V -> 6,0 V  ke servo MG996R. Elko 1000 uF di terminal servo.
+    Perangkat I2C mengambil VCC dari 3V3, BUKAN 5V (tanpa level shifter).
+    Sensor tegangan -> GPIO 1. MQ-135 AO -> pembagi 2:1 -> GPIO 2.
+    HC-SR04 ECHO -> pembagi 1k/2k -> GPIO 38.
+    BTS7960: RPWM 4, LPWM 5, R_EN+L_EN 6, VCC 3V3, GND perfboard.
+
+  PERINTAH SERIAL
+    s status    d diagnostik   i pindai I2C   B pulihkan bus   N sinkron NTP
+    c konfig    D status daya  m status MQTT  u uji relai
+    w pompa isi / berhenti (toggle)     W pompa berhenti
+    r reset kunci pompa
+    1 lampu ON  0 lampu OFF    a lampu AUTO
+    f siklus pakan   > maju   < mundur   x STOP DARURAT
+    [ servo buka     ] servo tutup       k reset kunci motor
+    P kalibrasi jarak PENUH   K kalibrasi jarak KOSONG
+    Q kalibrasi R0 MQ-135     M hidup/matikan MQ-135
+    v12.73 kalibrasi tegangan · S12.15 simulasi tegangan · S hentikan
+    T uji Telegram            Z hapus NVS
+
+  PUSTAKA
+    Adafruit SHT31 · RTClib · LiquidCrystal I2C · ESP32Servo · PubSubClient
+  ============================================================================
+*/
+
+#include <Wire.h>
+#include <Adafruit_SHT31.h>
+#include <RTClib.h>
+#include <LiquidCrystal_I2C.h>
+#include <ESP32Servo.h>
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
+#include <PubSubClient.h>
+#include <time.h>
+#include <Preferences.h>
+
+// ===========================================================================
+//  KREDENSIAL
+// ===========================================================================
+const char* WIFI_SSID     = "SMARTFARM";
+const char* WIFI_PASSWORD = "KADETUNHAN";
+
+const char* MQTT_HOST     = "e8d98b46c66448469bd969da39a11bd8.s1.eu.hivemq.cloud";
+const int   MQTT_PORT     = 8883;
+const char* MQTT_USER     = "amel";
+const char* MQTT_PASS     = "amelpw123";
+
+const char* TG_TOKEN      = "8930722298:AAFv0SEVsrA7yu4dvZjZCAE8uM4p6F_cG10";
+// PERIKSA: nilai ini sama dengan angka di depan token, artinya ID BOT bukan
+// ID Anda. Dapatkan yang benar dari @userinfobot, ubah lewat dashboard.
+const char* TG_CHAT_BAWAAN = "1183670801";
+
+// ---------------------------------------------------------------------------
+// PIN
+// ---------------------------------------------------------------------------
+#define PIN_SDA               8
+#define PIN_SCL               9
+#define PIN_RELAI_LAMPU      21
+#define PIN_RELAI_POMPA      47
+#define PIN_PELAMPUNG_ATAS   41      // pelampung PENUH, di bagian atas tangki
+#define PIN_PELAMPUNG_BAWAH  42      // pelampung KOSONG, di bagian bawah
+#define PIN_MOTOR_RPWM        4
+#define PIN_MOTOR_LPWM        5
+#define PIN_MOTOR_EN          6
+#define PIN_SERVO             7
+#define PIN_LIMIT_A          17
+#define PIN_LIMIT_B          18
+#define PIN_TRIG             39
+#define PIN_ECHO             38      // WAJIB lewat pembagi 1k/2k
+#define PIN_SENSOR_V          1      // ADC1_CH0
+#define PIN_MQ135             2      // ADC1_CH1, lewat pembagi 2:1
+#define PIN_MQ_HEATER        10
+
+// Default untuk modul relai LOW TRIGGER. Tukar bila modul Anda high trigger.
+#define RELAI_NYALA LOW
+#define RELAI_MATI  HIGH
+
+#define PELAMPUNG_AKTIF HIGH         // aktif = air menyentuh pelampung
+#define LIMIT_TERSENTUH HIGH         // tipe NC: membuka saat tertekan
+
+// ---------------------------------------------------------------------------
+// KONSTANTA
+// ---------------------------------------------------------------------------
+const uint32_t I2C_FREQ = 50000UL;
+const uint8_t ALAMAT_SHT31_A=0x44, ALAMAT_SHT31_B=0x45;
+const uint8_t ALAMAT_LCD_A=0x27, ALAMAT_LCD_B=0x3F;
+const uint8_t ALAMAT_EEPROM=0x50, ALAMAT_RTC=0x68;
+
+const long    OFFSET_WIB=25200; const int OFFSET_DST=0;
+const char*   NTP_SERVER_1="pool.ntp.org";
+const char*   NTP_SERVER_2="time.google.com";
+const int32_t AMBANG_KOREKSI=30, BATAS_KOREKSI_WAJAR=31536000L;
+
+const uint32_t POMPA_BATAS_WAKTU=90000UL, POMPA_JEDA_SIKLUS=60000UL;
+const uint8_t  POMPA_MAKS_GAGAL=3;
+const uint32_t DEBOUNCE_PELAMPUNG=1000UL;
+const uint32_t POMPA_MANUAL_MAKS=15000UL;   // batas saat tangki sudah penuh
+
+const uint32_t JEDA_UJUNG=2000, WAKTU_SERVO=600;
+
+const uint32_t INTERVAL_UKUR_PAKAN=10000UL, JEDA_ANTAR_PING=60;
+const uint32_t TIMEOUT_ECHO=30000UL;
+const float    JARAK_MIN_SAH=2.0, JARAK_MAKS_SAH=400.0;
+
+const bool     PERINGATAN_AKI    = true;
+const float    AMBANG_PERINGATAN = 12.20;
+const uint8_t  SAMPEL_TEGANGAN   = 10;
+const uint32_t INTERVAL_TEGANGAN = 1000UL;
+const float    RASIO_PEMBAGI     = 5.0;
+const uint8_t  SAMPEL_ADC        = 32;
+
+const float    MQ_PEMBAGI=2.0, MQ_RL=10.0, MQ_VCC=5.0, MQ_RASIO_BERSIH=3.6;
+const uint32_t MQ_PEMANASAN=180000UL, INTERVAL_MQ=5000UL;
+
+const uint32_t LAMPU_BATAS_MANUAL=7200000UL;
+const uint32_t INTERVAL_SENSOR=2000, INTERVAL_HALAMAN=5000;
+const uint32_t INTERVAL_CEK_WIFI=30000, INTERVAL_NTP=3600000UL;
+const uint32_t INTERVAL_TERBIT=5000, INTERVAL_MQTT_ULANG=5000;
+const uint8_t  GAGAL_SEBELUM_PULIH=5, JUMLAH_HALAMAN=5;
+const uint32_t JEDA_ALARM=300000UL;
+
+// ---------------------------------------------------------------------------
+// PETA NVRAM DS1307
+// ---------------------------------------------------------------------------
+#define NV_BOOT_HI 0
+#define NV_BOOT_LO 1
+#define NV_DRIFT_HI 2
+#define NV_DRIFT_LO 3
+#define NV_SIKLUS_HI 4
+#define NV_SIKLUS_LO 5
+#define NV_GAGAL_POMPA 6
+#define NV_KUNCI_POMPA 7
+#define NV_ISI_JAM 8
+#define NV_ISI_MENIT 9
+#define NV_KUNCI_MOTOR 10
+#define NV_PAKAN_JAM 11
+#define NV_PAKAN_MENIT 12
+#define NV_PAKAN_HI 13
+#define NV_PAKAN_LO 14
+
+// ---------------------------------------------------------------------------
+// SETPOINT
+// ---------------------------------------------------------------------------
+struct Periode { uint8_t jamOn,menitOn,jamOff,menitOff; bool aktif; };
+Periode lampu1={4,0,6,0,true}, lampu2={18,0,20,0,true};
+
+#define MAKS_JADWAL_PAKAN 6
+struct JadwalPakan { uint8_t jam,menit; bool aktif; };
+JadwalPakan jadwalPakan[MAKS_JADWAL_PAKAN];
+
+uint8_t  sudutBuka=90, sudutTutup=0;
+uint16_t jedaAwalDtk=2, lamaBukaDtk=20, batasMotorDtk=30;
+float    jarakPenuh=5.0, jarakKosong=30.0, kalTegangan=1.0;
+float    mq135R0=10.0, ambangNh3=25.0;
+bool     mq135Aktif=false;
+
+// Saklar mode otomatis — dapat dimatikan dari dashboard.
+// Mematikan hanya menghentikan PEMICU. Proteksi keselamatan tetap bekerja.
+bool otoPompa=true, otoLampu=true, otoPakan=true;
+
+String tgChat = TG_CHAT_BAWAAN;
+
+// ---------------------------------------------------------------------------
+// OBJEK
+// ---------------------------------------------------------------------------
+Adafruit_SHT31 sht31=Adafruit_SHT31();
+RTC_DS1307 rtc;
+LiquidCrystal_I2C* lcd=nullptr;
+Servo servoPakan;
+Preferences nvs;
+WiFiClientSecure netTls;
+PubSubClient mqtt(netTls);
+
+bool adaSht31=false, adaLcd=false, adaRtc=false, rtcSehat=false;
+uint8_t alamatSht31=0, alamatLcd=0;
+
+float suhu=NAN, kelembapan=NAN;
+DateTime waktuKini;
+uint16_t jumlahBoot=0; int16_t driftTerakhir=0;
+bool ntpPernahSukses=false;
+uint16_t gagalRtc=0,gagalSht=0,gagalNvram=0,pemulihanBus=0,gagalSonar=0,gagalMqtt=0;
+uint8_t gagalRtcBeruntun=0;
+
+// ---- TANGKI ----
+enum StatusTangki { TANGKI_KOSONG, TANGKI_SEDANG, TANGKI_PENUH, TANGKI_ERROR };
+StatusTangki statusTangki = TANGKI_SEDANG;
+bool pelAtas=false, pelBawah=false, rawAtas=false, rawBawah=false;
+uint32_t tsDebAtas=0, tsDebBawah=0;
+
+// ---- POMPA ----
+enum StatusPompa { POMPA_SIAP,POMPA_JALAN,POMPA_JEDA,POMPA_KUNCI };
+StatusPompa statusPompa=POMPA_SIAP;
+uint32_t tsPompaMulai=0,tsPompaBerhenti=0;
+uint16_t siklusPompa=0; uint8_t gagalPompaBeruntun=0,isiJam=99,isiMenit=99;
+bool pompaManual=false;
+uint32_t tsAlarmTangki=0;
+
+// ---- LAMPU ----
+enum ModeLampu { LAMPU_AUTO,LAMPU_MANUAL_ON,LAMPU_MANUAL_OFF };
+ModeLampu modeLampu=LAMPU_AUTO;
+bool lampuNyala=false,jadwalSebelumnya=false;
+uint32_t tsManualLampu=0;
+
+// ---- PAKAN ----
+enum FasePakan { PAKAN_IDLE, PAKAN_MAJU, PAKAN_TAHAN_UJUNG, PAKAN_MUNDUR, PAKAN_KUNCI };
+FasePakan fasePakan=PAKAN_IDLE;
+uint32_t tsFase=0,tsServoBuka=0,tsMotorMulai=0;
+bool servoSudahBuka=false, servoSudahTutup=false;
+bool limitA=false,limitB=false;
+uint16_t siklusPakan=0; uint8_t pakanJam=99,pakanMenit=99;
+int8_t menitTerakhirPakan=-1;
+const char* sebabKunciMotor="";
+
+enum ArahManual { MANUAL_DIAM,MANUAL_MAJU,MANUAL_MUNDUR };
+ArahManual arahManual=MANUAL_DIAM;
+
+float jarakPakan=NAN; int8_t persenPakan=-1; uint32_t tsUkurPakan=0;
+
+float bufTegangan[SAMPEL_TEGANGAN];
+uint8_t idxTegangan=0, isiTegangan=0;
+float teganganKini=NAN, teganganRata=NAN, simulasiTegangan=NAN;
+uint32_t tsTegangan=0, tsAlarmAki=0;
+
+float nh3Ppm=NAN, mqRs=NAN;
+uint32_t tsMq=0, tsMqNyala=0;
+
+uint32_t tsSensor=0,tsHalaman=0,tsCekWifi=0,tsNtp=0,tsTerbit=0,tsMqttUlang=0;
+uint32_t tsAlarmPompa=0,tsAlarmMotor=0,tsAlarmNh3=0;
+uint8_t halaman=0;
+
+const char* NAMA_HARI[]={"Min","Sen","Sel","Rab","Kam","Jum","Sab"};
+
+void kirimTelegram(const String&);
+bool tulisNvramAman(uint8_t,uint8_t);
+bool bacaNvramAman(uint8_t,uint8_t&);
+
+
+// ===========================================================================
+//  SETUP
+// ===========================================================================
+void setup() {
+  // Aktuator dimatikan lebih dulu, sebelum apa pun
+  pinMode(PIN_RELAI_LAMPU,OUTPUT); digitalWrite(PIN_RELAI_LAMPU,RELAI_MATI);
+  pinMode(PIN_RELAI_POMPA,OUTPUT); digitalWrite(PIN_RELAI_POMPA,RELAI_MATI);
+  pinMode(PIN_MOTOR_EN,OUTPUT);    digitalWrite(PIN_MOTOR_EN,LOW);
+  pinMode(PIN_MOTOR_RPWM,OUTPUT);  digitalWrite(PIN_MOTOR_RPWM,LOW);
+  pinMode(PIN_MOTOR_LPWM,OUTPUT);  digitalWrite(PIN_MOTOR_LPWM,LOW);
+  pinMode(PIN_MQ_HEATER,OUTPUT);   digitalWrite(PIN_MQ_HEATER,LOW);
+
+  pinMode(PIN_PELAMPUNG_ATAS,INPUT_PULLUP);
+  pinMode(PIN_PELAMPUNG_BAWAH,INPUT_PULLUP);
+  pinMode(PIN_LIMIT_A,INPUT_PULLUP);
+  pinMode(PIN_LIMIT_B,INPUT_PULLUP);
+  pinMode(PIN_TRIG,OUTPUT); digitalWrite(PIN_TRIG,LOW);
+  pinMode(PIN_ECHO,INPUT);
+
+  analogReadResolution(12);
+  analogSetAttenuation(ADC_11db);
+
+  Serial.begin(115200); Serial.setTimeout(50); delay(300);
+  Serial.println(F("\n\n=== SMART CHICKEN COOP v6.1 ==="));
+  Serial.println(F("Relai: LAMPU=GPIO21  POMPA=GPIO47"));
+
+  Wire.begin(PIN_SDA,PIN_SCL,I2C_FREQ); Wire.setTimeOut(100); delay(50);
+  pindaiI2C(); siapkanLcd(); siapkanSht31(); siapkanRtc();
+
+  nvs.begin("smartcoop",false);
+  muatKonfigurasi();
+  muatStatusTersimpan();
+  if (mq135Aktif) { digitalWrite(PIN_MQ_HEATER,HIGH); tsMqNyala=millis(); }
+
+  mulaiWifi();
+  netTls.setInsecure();
+  mqtt.setServer(MQTT_HOST,MQTT_PORT);
+  mqtt.setCallback(mqttPesanMasuk);
+  mqtt.setBufferSize(1024);
+  mqtt.setKeepAlive(30);
+
+  // Baca pelampung apa adanya supaya tidak ada lonjakan saat start
+  rawAtas  = (digitalRead(PIN_PELAMPUNG_ATAS)==PELAMPUNG_AKTIF);
+  rawBawah = (digitalRead(PIN_PELAMPUNG_BAWAH)==PELAMPUNG_AKTIF);
+  pelAtas=rawAtas; pelBawah=rawBawah; hitungStatusTangki();
+
+  bacaLimit();
+  if (limitA&&limitB) Serial.println(F("[LIMIT] KEDUA limit aktif — periksa kabel"));
+  if (statusPompa==POMPA_KUNCI) Serial.println(F("[POMPA] TERKUNCI dari sesi lalu — ketik 'r'"));
+  if (fasePakan==PAKAN_KUNCI)   Serial.println(F("[PAKAN] TERKUNCI dari sesi lalu — ketik 'k'"));
+
+  Serial.printf("\nTangki    : %s (bawah=%d atas=%d)\n",
+    namaTangki(), pelBawah, pelAtas);
+  Serial.printf("Mode otomatis: pompa=%s lampu=%s pakan=%s\n",
+    otoPompa?"ON":"OFF", otoLampu?"ON":"OFF", otoPakan?"ON":"OFF");
+  Serial.println(F("*** LVD TIDAK AKTIF · DETEKSI MACET NONAKTIF ***"));
+  Serial.printf("Batas waktu motor %u detik — setel ke waktu tempuh + 3.\n\n", batasMotorDtk);
+
+  tsSensor=tsHalaman=tsCekWifi=tsPompaBerhenti=tsTegangan=tsTerbit=millis();
+  bacaSensor(); gambarHalaman(); cetakStatus();
+}
+
+
+// ===========================================================================
+//  LOOP
+// ===========================================================================
+void loop() {
+  uint32_t kini=millis();
+
+  urusSerial(); bacaPelampung(); bacaLimit();
+  urusPompa(); urusLampu(); urusPakan();
+  if (mqtt.connected()) mqtt.loop();
+
+  if (kini-tsTegangan>=INTERVAL_TEGANGAN) { tsTegangan=kini; bacaTegangan(); }
+  if (kini-tsMq>=INTERVAL_MQ)             { tsMq=kini;       bacaMq135(); }
+  if (kini-tsSensor>=INTERVAL_SENSOR)     { tsSensor=kini;   bacaSensor(); }
+  if (kini-tsHalaman>=INTERVAL_HALAMAN)   { tsHalaman=kini;  halaman=(halaman+1)%JUMLAH_HALAMAN; gambarHalaman(); }
+  if (kini-tsCekWifi>=INTERVAL_CEK_WIFI)  { tsCekWifi=kini;  jagaWifi(); }
+  if (kini-tsTerbit>=INTERVAL_TERBIT)     { tsTerbit=kini;   terbitkanStatus(); }
+
+  // Sonar memblokir ~300 ms — hanya saat mekanisme diam
+  if (kini-tsUkurPakan>=INTERVAL_UKUR_PAKAN && fasePakan==PAKAN_IDLE
+      && arahManual==MANUAL_DIAM) { tsUkurPakan=kini; ukurLevelPakan(); }
+
+  if (WiFi.status()==WL_CONNECTED) {
+    if (!mqtt.connected() && kini-tsMqttUlang>=INTERVAL_MQTT_ULANG) {
+      tsMqttUlang=kini; sambungMqtt();
+    }
+    if (!ntpPernahSukses || kini-tsNtp>=INTERVAL_NTP) { tsNtp=kini; sinkronkanNtp(); }
+  }
+}
+
+
+// ===========================================================================
+//  PELAMPUNG — logika tiga tingkat
+// ===========================================================================
+/*
+  bawah=0 atas=0  ->  KOSONG   air belum menyentuh pelampung bawah
+  bawah=1 atas=0  ->  SEDANG   air di antara kedua pelampung
+  bawah=1 atas=1  ->  PENUH    air menyentuh pelampung atas
+  bawah=0 atas=1  ->  ERROR    mustahil secara fisik, pelampung macet
+
+  Histeresis alami: pompa menyala di KOSONG, berhenti di PENUH, dan diam
+  sepanjang SEDANG. Tidak ada kedutan di sekitar satu titik ambang.
+*/
+void hitungStatusTangki() {
+  if      (!pelBawah && !pelAtas) statusTangki = TANGKI_KOSONG;
+  else if ( pelBawah && !pelAtas) statusTangki = TANGKI_SEDANG;
+  else if ( pelBawah &&  pelAtas) statusTangki = TANGKI_PENUH;
+  else                            statusTangki = TANGKI_ERROR;
+}
+
+const char* namaTangki() {
+  switch (statusTangki) {
+    case TANGKI_KOSONG: return "KOSONG";
+    case TANGKI_SEDANG: return "SEDANG";
+    case TANGKI_PENUH:  return "PENUH";
+    default:            return "ERROR";
+  }
+}
+
+void bacaPelampung() {
+  uint32_t kini=millis();
+
+  bool ba=(digitalRead(PIN_PELAMPUNG_ATAS)==PELAMPUNG_AKTIF);
+  if (ba!=rawAtas) { rawAtas=ba; tsDebAtas=kini; }
+  else if (kini-tsDebAtas>=DEBOUNCE_PELAMPUNG) pelAtas=rawAtas;
+
+  bool bb=(digitalRead(PIN_PELAMPUNG_BAWAH)==PELAMPUNG_AKTIF);
+  if (bb!=rawBawah) { rawBawah=bb; tsDebBawah=kini; }
+  else if (kini-tsDebBawah>=DEBOUNCE_PELAMPUNG) pelBawah=rawBawah;
+
+  StatusTangki lama = statusTangki;
+  hitungStatusTangki();
+
+  if (statusTangki==TANGKI_ERROR && lama!=TANGKI_ERROR) {
+    Serial.println(F("[TANGKI] ERROR — pelampung atas aktif tapi bawah tidak."));
+    Serial.println(F("[TANGKI] Air tidak mungkin begitu. Periksa pelampung macet."));
+    alarm(tsAlarmTangki,"Pelampung tangki bermasalah: atas aktif tapi bawah tidak. "
+                        "Pompa diblokir sampai diperbaiki.");
+  }
+}
+
+
+// ===========================================================================
+//  POMPA
+// ===========================================================================
+void urusPompa() {
+  uint32_t kini=millis();
+  switch (statusPompa) {
+
+    case POMPA_SIAP:
+      // Menyala hanya saat benar-benar KOSONG. Pemicu otomatis dapat
+      // dimatikan dari dashboard; manual tetap bisa.
+      if (otoPompa && statusTangki==TANGKI_KOSONG) nyalakanPompa();
+      break;
+
+    case POMPA_JALAN:
+      /*
+        Mode manual: pelampung diabaikan, hanya batas waktu yang berlaku.
+        Tidak dihitung sebagai kegagalan, jadi kunci dry-run tidak terpicu
+        oleh demonstrasi manual.
+      */
+      if (pompaManual) {
+        if (kini-tsPompaMulai >= POMPA_MANUAL_MAKS) {
+          matikanPompa();
+          Serial.println(F("[POMPA] Batas manual habis"));
+        }
+        break;
+      }
+
+      if (statusTangki==TANGKI_PENUH) {
+        matikanPompa(); gagalPompaBeruntun=0; tsAlarmPompa=0;
+        simpanU8("gagalP",NV_GAGAL_POMPA,0);
+        siklusPompa++;
+        simpanU16("sikPompa",NV_SIKLUS_HI,NV_SIKLUS_LO,siklusPompa);
+        if (rtcSehat) {
+          isiJam=waktuKini.hour(); isiMenit=waktuKini.minute();
+          simpanU8("isiJ",NV_ISI_JAM,isiJam);
+          simpanU8("isiM",NV_ISI_MENIT,isiMenit);
+        }
+        Serial.printf("[POMPA] Selesai, siklus ke-%u\n",siklusPompa);
+        terbitkanStatus();
+      } else if (kini-tsPompaMulai>=POMPA_BATAS_WAKTU) {
+        // Proteksi dry-run — TETAP bekerja meski mode otomatis dimatikan
+        matikanPompa(); gagalPompaBeruntun++;
+        simpanU8("gagalP",NV_GAGAL_POMPA,gagalPompaBeruntun);
+        Serial.printf("[POMPA] BATAS WAKTU — gagal ke-%u\n",gagalPompaBeruntun);
+        if (gagalPompaBeruntun>=POMPA_MAKS_GAGAL) {
+          statusPompa=POMPA_KUNCI;
+          simpanU8("kunciP",NV_KUNCI_POMPA,1);
+          Serial.println(F("[POMPA] TERKUNCI"));
+          alarm(tsAlarmPompa,"Pompa terkunci setelah 3 kali gagal mengisi. Periksa sumber air.");
+        }
+      }
+      break;
+
+    case POMPA_JEDA:
+      if (kini-tsPompaBerhenti>=POMPA_JEDA_SIKLUS) statusPompa=POMPA_SIAP;
+      break;
+
+    case POMPA_KUNCI: break;
+  }
+}
+
+void nyalakanPompa() {
+  digitalWrite(PIN_RELAI_POMPA,RELAI_NYALA);
+  statusPompa=POMPA_JALAN; tsPompaMulai=millis();
+  Serial.println(F("[POMPA] Menyala"));
+}
+
+void matikanPompa() {
+  digitalWrite(PIN_RELAI_POMPA,RELAI_MATI);
+  statusPompa=POMPA_JEDA; tsPompaBerhenti=millis();
+  pompaManual=false;
+}
+
+// Toggle: menekan saat berjalan akan menghentikan
+void isiSekarang() {
+  if (statusPompa==POMPA_KUNCI) { Serial.println(F("[POMPA] Terkunci — ketik 'r'")); return; }
+  if (statusPompa==POMPA_JALAN) {
+    matikanPompa(); Serial.println(F("[POMPA] Dihentikan manual")); return;
+  }
+  if (statusTangki==TANGKI_ERROR) {
+    Serial.println(F("[POMPA] Diblokir — pelampung bermasalah")); return;
+  }
+  pompaManual = (statusTangki==TANGKI_PENUH);
+  if (pompaManual)
+    Serial.printf("[POMPA] Tangki PENUH — mode manual, berhenti otomatis %lu detik\n",
+                  (unsigned long)(POMPA_MANUAL_MAKS/1000));
+  nyalakanPompa();
+}
+
+void hentikanPompa() {
+  if (statusPompa==POMPA_JALAN) { matikanPompa(); Serial.println(F("[POMPA] Dihentikan")); }
+}
+
+void resetKunciPompa() {
+  gagalPompaBeruntun=0; statusPompa=POMPA_SIAP; tsAlarmPompa=0;
+  simpanU8("gagalP",NV_GAGAL_POMPA,0);
+  simpanU8("kunciP",NV_KUNCI_POMPA,0);
+  tsPompaBerhenti=millis();
+  Serial.println(F("[POMPA] Kunci direset"));
+}
+
+
+// ===========================================================================
+//  MOTOR
+// ===========================================================================
+void motorBerhenti() {
+  analogWrite(PIN_MOTOR_RPWM,0); analogWrite(PIN_MOTOR_LPWM,0);
+  digitalWrite(PIN_MOTOR_EN,LOW);
+}
+
+// Soft-start 300 ms — mencegah lonjakan yang bisa mereset ESP32
+void motorJalan(bool maju) {
+  motorBerhenti(); delay(30);
+  digitalWrite(PIN_MOTOR_EN,HIGH);
+  uint8_t pin = maju?PIN_MOTOR_RPWM:PIN_MOTOR_LPWM;
+  for (int d=0;d<=255;d+=15) { analogWrite(pin,d); delay(18); }
+  analogWrite(pin,255);
+  tsMotorMulai=millis();
+}
+
+void bacaLimit() {
+  limitA=(digitalRead(PIN_LIMIT_A)==LIMIT_TERSENTUH);
+  limitB=(digitalRead(PIN_LIMIT_B)==LIMIT_TERSENTUH);
+}
+
+void kunciMotor(const char* sebab) {
+  motorBerhenti();
+  if (servoPakan.attached()) { servoPakan.write(sudutTutup); delay(WAKTU_SERVO); servoPakan.detach(); }
+  fasePakan=PAKAN_KUNCI; arahManual=MANUAL_DIAM; sebabKunciMotor=sebab;
+  simpanU8("kunciM",NV_KUNCI_MOTOR,1);
+  Serial.printf("[PAKAN] TERKUNCI — %s\n",sebab);
+  alarm(tsAlarmMotor,"Unit pakan terkunci: "+String(sebab)+". Periksa mekanisme.");
+}
+
+
+// ===========================================================================
+//  SIKLUS PAKAN
+//  Urutan: motor maju -> jeda -> servo buka -> servo tutup -> limit A ->
+//          jeda 2 detik -> motor mundur -> limit B
+// ===========================================================================
+void mulaiSiklusPakan() {
+  if (fasePakan==PAKAN_KUNCI) { Serial.println(F("[PAKAN] Terkunci")); return; }
+  if (fasePakan!=PAKAN_IDLE)  { Serial.println(F("[PAKAN] Siklus berjalan")); return; }
+  if (limitA&&limitB)         { Serial.println(F("[PAKAN] Kedua limit aktif")); return; }
+
+  arahManual=MANUAL_DIAM;
+  servoPakan.attach(PIN_SERVO,500,2500);      // rentang pulsa MG996R
+  servoPakan.write(sudutTutup);
+  servoSudahBuka=false; servoSudahTutup=false;
+
+  if (limitA) {
+    // Sudah di ujung jauh — tidak ada yang perlu ditempuh, langsung mundur
+    Serial.println(F("[PAKAN] Sudah di limit A — langsung fase mundur"));
+    servoSudahBuka=true; servoSudahTutup=true;
+    fasePakan=PAKAN_TAHAN_UJUNG; tsFase=millis();
+    return;
+  }
+
+  motorJalan(true);
+  fasePakan=PAKAN_MAJU; tsFase=millis();
+  Serial.printf("[PAKAN] Motor maju — servo buka setelah %u detik\n", jedaAwalDtk);
+}
+
+void urusPakan() {
+  uint32_t kini=millis();
+
+  // Pemicu jadwal dapat dimatikan dari dashboard. Manual tetap bisa.
+  if (otoPakan && fasePakan==PAKAN_IDLE && rtcSehat
+      && waktuKini.minute()!=menitTerakhirPakan) {
+    for (uint8_t i=0;i<MAKS_JADWAL_PAKAN;i++)
+      if (jadwalPakan[i].aktif && jadwalPakan[i].jam==waktuKini.hour()
+          && jadwalPakan[i].menit==waktuKini.minute()) {
+        menitTerakhirPakan=waktuKini.minute();
+        Serial.printf("[PAKAN] Jadwal %02d:%02d memicu siklus\n",jadwalPakan[i].jam,jadwalPakan[i].menit);
+        mulaiSiklusPakan(); break;
+      }
+  }
+
+  if (arahManual!=MANUAL_DIAM) {
+    if ((arahManual==MANUAL_MAJU&&limitA)||(arahManual==MANUAL_MUNDUR&&limitB)) {
+      motorBerhenti(); arahManual=MANUAL_DIAM; Serial.println(F("[MOTOR] Berhenti di limit"));
+    } else if (kini-tsMotorMulai>=(uint32_t)batasMotorDtk*1000UL) {
+      motorBerhenti(); arahManual=MANUAL_DIAM; Serial.println(F("[MOTOR] Batas waktu manual"));
+    }
+  }
+
+  switch (fasePakan) {
+    case PAKAN_IDLE: case PAKAN_KUNCI: break;
+
+    case PAKAN_MAJU:
+      /*
+        Servo BUKA setelah jeda dihitung dari saat motor mulai bergerak.
+        Ujung bukaan pakan tidak langsung berada di atas tempat pakan, jadi
+        dudukan perlu menempuh jarak awal sebelum pintu dibuka.
+      */
+      if (!servoSudahBuka && kini-tsMotorMulai >= (uint32_t)jedaAwalDtk*1000UL) {
+        servoPakan.write(sudutBuka);
+        servoSudahBuka=true; tsServoBuka=kini;
+        Serial.printf("[PAKAN] Servo buka %u derajat\n",sudutBuka);
+      }
+
+      // Servo TUTUP pada mana pun yang lebih dulu: timer habis ATAU limit A
+      if (servoSudahBuka && !servoSudahTutup &&
+          (limitA || kini-tsServoBuka >= (uint32_t)lamaBukaDtk*1000UL)) {
+        servoPakan.write(sudutTutup); servoSudahTutup=true;
+        Serial.println(F("[PAKAN] Servo tutup"));
+      }
+
+      if (kini-tsMotorMulai>=(uint32_t)batasMotorDtk*1000UL) {
+        kunciMotor("batas waktu maju — limit A tidak tercapai"); break;
+      }
+      if (limitA) {
+        motorBerhenti();
+        if (!servoSudahTutup) { servoPakan.write(sudutTutup); servoSudahTutup=true; }
+        fasePakan=PAKAN_TAHAN_UJUNG; tsFase=kini;
+        Serial.println(F("[PAKAN] Limit A — jeda 2 detik"));
+      }
+      break;
+
+    case PAKAN_TAHAN_UJUNG:
+      if (!servoSudahTutup) { servoPakan.write(sudutTutup); servoSudahTutup=true; }
+      if (kini-tsFase>=JEDA_UJUNG) {
+        if (limitB) { selesaikanSiklus(); break; }
+        motorJalan(false); fasePakan=PAKAN_MUNDUR; tsFase=kini;
+        Serial.println(F("[PAKAN] Motor mundur"));
+      }
+      break;
+
+    case PAKAN_MUNDUR:
+      if (kini-tsMotorMulai>=(uint32_t)batasMotorDtk*1000UL) {
+        kunciMotor("batas waktu mundur — limit B tidak tercapai"); break;
+      }
+      if (limitB) { motorBerhenti(); selesaikanSiklus(); }
+      break;
+  }
+}
+
+void selesaikanSiklus() {
+  motorBerhenti();
+  servoPakan.write(sudutTutup); delay(WAKTU_SERVO);
+  servoPakan.detach();                 // hemat daya, hilangkan jitter MG996R
+  fasePakan=PAKAN_IDLE; siklusPakan++;
+  servoSudahBuka=false; servoSudahTutup=false;
+  if (rtcSehat) {
+    pakanJam=waktuKini.hour(); pakanMenit=waktuKini.minute();
+    simpanU8("pkJ",NV_PAKAN_JAM,pakanJam);
+    simpanU8("pkM",NV_PAKAN_MENIT,pakanMenit);
+  }
+  simpanU16("sikPakan",NV_PAKAN_HI,NV_PAKAN_LO,siklusPakan);
+  Serial.printf("[PAKAN] Siklus selesai — total %u\n",siklusPakan);
+  tsUkurPakan=0;
+  terbitkanStatus();
+}
+
+void resetKunciMotor() {
+  fasePakan=PAKAN_IDLE; sebabKunciMotor=""; tsAlarmMotor=0;
+  servoSudahBuka=false; servoSudahTutup=false;
+  simpanU8("kunciM",NV_KUNCI_MOTOR,0);
+  Serial.println(F("[PAKAN] Kunci direset"));
+}
+
+void stopDarurat() {
+  motorBerhenti(); arahManual=MANUAL_DIAM;
+  if (fasePakan!=PAKAN_KUNCI) fasePakan=PAKAN_IDLE;
+  if (servoPakan.attached()) { servoPakan.write(sudutTutup); delay(WAKTU_SERVO); servoPakan.detach(); }
+  servoSudahBuka=false; servoSudahTutup=false;
+  digitalWrite(PIN_RELAI_POMPA,RELAI_MATI);
+  digitalWrite(PIN_RELAI_LAMPU,RELAI_MATI);
+  statusPompa=POMPA_JEDA; tsPompaBerhenti=millis(); pompaManual=false;
+  lampuNyala=false; modeLampu=LAMPU_MANUAL_OFF; tsManualLampu=millis();
+  Serial.println(F("\n*** STOP DARURAT ***\n"));
+  terbitkanStatus();
+}
+
+
+// ===========================================================================
+//  LAMPU
+// ===========================================================================
+bool dalamPeriode(uint16_t m, const Periode& p) {
+  if (!p.aktif) return false;
+  uint16_t a=p.jamOn*60+p.menitOn, b=p.jamOff*60+p.menitOff;
+  if (a==b) return false;
+  if (a<b) return (m>=a&&m<b);
+  return (m>=a||m<b);                       // melewati tengah malam
+}
+
+void urusLampu() {
+  bool minta=false;
+
+  if (otoLampu && (rtcSehat || ntpPernahSukses)) {
+    uint16_t m=waktuKini.hour()*60+waktuKini.minute();
+    minta = dalamPeriode(m,lampu1)||dalamPeriode(m,lampu2);
+
+    if (minta!=jadwalSebelumnya) {
+      jadwalSebelumnya=minta;
+      if (modeLampu!=LAMPU_AUTO) { modeLampu=LAMPU_AUTO;
+        Serial.println(F("[LAMPU] Transisi jadwal — kembali AUTO")); }
+    }
+    if (modeLampu!=LAMPU_AUTO && millis()-tsManualLampu>=LAMPU_BATAS_MANUAL) {
+      modeLampu=LAMPU_AUTO; Serial.println(F("[LAMPU] Batas 2 jam habis — AUTO"));
+    }
+  }
+
+  bool target;
+  if (!otoLampu) target = (modeLampu==LAMPU_MANUAL_ON);   // hanya manual
+  else target = (modeLampu==LAMPU_MANUAL_ON)?true:(modeLampu==LAMPU_MANUAL_OFF)?false:minta;
+
+  if (target!=lampuNyala) {
+    lampuNyala=target;
+    digitalWrite(PIN_RELAI_LAMPU,lampuNyala?RELAI_NYALA:RELAI_MATI);
+    Serial.printf("[LAMPU] %s\n",lampuNyala?"NYALA":"MATI");
+  }
+}
+
+void setLampuManual(bool nyala) {
+  modeLampu=nyala?LAMPU_MANUAL_ON:LAMPU_MANUAL_OFF;
+  tsManualLampu=millis();
+  Serial.printf("[LAMPU] Manual %s%s\n", nyala?"NYALA":"MATI",
+    otoLampu?" (batas 2 jam)":"");
+}
+
+
+// ===========================================================================
+//  ADC INTERNAL — oversampling
+// ===========================================================================
+float bacaAdcVolt(uint8_t pin) {
+  uint32_t total=0;
+  for (uint8_t i=0;i<SAMPEL_ADC;i++) { total+=analogReadMilliVolts(pin); delayMicroseconds(120); }
+  return (float)total/SAMPEL_ADC/1000.0;
+}
+
+void bacaTegangan() {
+  if (!isnan(simulasiTegangan)) teganganKini = simulasiTegangan;
+  else teganganKini = bacaAdcVolt(PIN_SENSOR_V) * RASIO_PEMBAGI * kalTegangan;
+
+  bufTegangan[idxTegangan]=teganganKini;
+  idxTegangan=(idxTegangan+1)%SAMPEL_TEGANGAN;
+  if (isiTegangan<SAMPEL_TEGANGAN) isiTegangan++;
+
+  // Perataan 10 detik — motor menjatuhkan tegangan sesaat saat start
+  float total=0;
+  for (uint8_t i=0;i<isiTegangan;i++) total+=bufTegangan[i];
+  teganganRata=total/isiTegangan;
+
+  if (PERINGATAN_AKI && isiTegangan>=SAMPEL_TEGANGAN && teganganRata<AMBANG_PERINGATAN)
+    alarm(tsAlarmAki, "Tegangan aki rendah: " + String(teganganRata,2) +
+                      " V. Sistem TIDAK melepas beban otomatis — periksa segera.");
+}
+
+// Kurva aki timbal cukup linear, berbeda dari LiFePO4 yang hampir datar
+int8_t estimasiSoc(float v) {
+  if (isnan(v)) return -1;
+  if (v>=12.70) return 100;
+  if (v>=12.40) return (int8_t)(75+(v-12.40)/0.30*25);
+  if (v>=12.20) return (int8_t)(50+(v-12.20)/0.20*25);
+  if (v>=12.00) return (int8_t)(25+(v-12.00)/0.20*25);
+  if (v>=11.80) return (int8_t)((v-11.80)/0.20*25);
+  return 0;
+}
+
+const char* statusAki() {
+  if (isnan(teganganRata)) return "NORMAL";
+  return (teganganRata < AMBANG_PERINGATAN) ? "WASPADA" : "NORMAL";
+}
+
+
+// ===========================================================================
+//  MQ-135
+// ===========================================================================
+void bacaMq135() {
+  if (!mq135Aktif) { nh3Ppm=NAN; return; }
+  if (millis()-tsMqNyala < MQ_PEMANASAN) { nh3Ppm=NAN; return; }
+
+  float v = bacaAdcVolt(PIN_MQ135) * MQ_PEMBAGI;
+  if (v<=0.02 || v>=MQ_VCC-0.02) { nh3Ppm=NAN; return; }
+
+  // Rangkaian MQ: VCC - RS - node - RL - GND, keluaran diukur di node
+  mqRs = MQ_RL*(MQ_VCC/v - 1.0);
+  if (mq135R0<=0.01) { nh3Ppm=NAN; return; }
+
+  nh3Ppm = 102.2*pow(mqRs/mq135R0, -2.473);
+  if (nh3Ppm<0 || nh3Ppm>1000) nh3Ppm=NAN;
+
+  if (!isnan(nh3Ppm) && nh3Ppm>ambangNh3)
+    alarm(tsAlarmNh3,"Amonia tinggi: "+String(nh3Ppm,1)+" ppm. Periksa ventilasi kandang.");
+}
+
+void kalibrasiMq135() {
+  if (!mq135Aktif) { Serial.println(F("[MQ]    Nyalakan dulu dengan 'M'")); return; }
+  if (millis()-tsMqNyala<MQ_PEMANASAN) {
+    Serial.printf("[MQ]    Masih memanaskan, tunggu %lu detik\n",
+      (unsigned long)((MQ_PEMANASAN-(millis()-tsMqNyala))/1000));
+    return;
+  }
+  float total=0; uint8_t n=0;
+  for (uint8_t i=0;i<10;i++) {
+    float v=bacaAdcVolt(PIN_MQ135)*MQ_PEMBAGI;
+    if (v>0.02&&v<MQ_VCC-0.02) { total+=MQ_RL*(MQ_VCC/v-1.0); n++; }
+    delay(200);
+  }
+  if (n<5) { Serial.println(F("[MQ]    Kalibrasi gagal — pembacaan tidak stabil")); return; }
+  mq135R0=(total/n)/MQ_RASIO_BERSIH;    // datasheet: RS/R0 udara bersih ~3,6
+  nvs.putFloat("mqR0",mq135R0);
+  Serial.printf("[MQ]    R0 = %.2f kOhm disimpan\n",mq135R0);
+  Serial.println(F("[MQ]    Pastikan tadi sensor di UDARA BERSIH."));
+}
+
+
+// ===========================================================================
+//  PENYIMPANAN — DS1307 NVRAM bila ada, NVS bila tidak
+// ===========================================================================
+void simpanU8(const char* kunci, uint8_t alamat, uint8_t nilai) {
+  if (adaRtc) tulisNvramAman(alamat,nilai);
+  else        nvs.putUChar(kunci,nilai);
+}
+
+uint8_t muatU8(const char* kunci, uint8_t alamat, uint8_t bawaan) {
+  uint8_t v;
+  if (adaRtc && bacaNvramAman(alamat,v)) return v;
+  return nvs.getUChar(kunci,bawaan);
+}
+
+void simpanU16(const char* kunci, uint8_t aHi, uint8_t aLo, uint16_t nilai) {
+  if (adaRtc) { tulisNvramAman(aHi,nilai>>8); tulisNvramAman(aLo,nilai&0xFF); }
+  else        nvs.putUShort(kunci,nilai);
+}
+
+uint16_t muatU16(const char* kunci, uint8_t aHi, uint8_t aLo, uint16_t bawaan) {
+  uint8_t hi,lo;
+  if (adaRtc && bacaNvramAman(aHi,hi) && bacaNvramAman(aLo,lo))
+    return ((uint16_t)hi<<8)|lo;
+  return nvs.getUShort(kunci,bawaan);
+}
+
+void muatStatusTersimpan() {
+  siklusPompa        = muatU16("sikPompa",NV_SIKLUS_HI,NV_SIKLUS_LO,0);
+  siklusPakan        = muatU16("sikPakan",NV_PAKAN_HI,NV_PAKAN_LO,0);
+  gagalPompaBeruntun = muatU8 ("gagalP",NV_GAGAL_POMPA,0);
+  isiJam             = muatU8 ("isiJ",NV_ISI_JAM,99);
+  isiMenit           = muatU8 ("isiM",NV_ISI_MENIT,0);
+  pakanJam           = muatU8 ("pkJ",NV_PAKAN_JAM,99);
+  pakanMenit         = muatU8 ("pkM",NV_PAKAN_MENIT,0);
+
+  // Kunci sengaja bertahan melewati restart
+  if (muatU8("kunciP",NV_KUNCI_POMPA,0)==1) statusPompa=POMPA_KUNCI;
+  if (muatU8("kunciM",NV_KUNCI_MOTOR,0)==1) {
+    fasePakan=PAKAN_KUNCI; sebabKunciMotor="dari sesi lalu";
+  }
+  jumlahBoot = muatU16("boot",NV_BOOT_HI,NV_BOOT_LO,0)+1;
+  simpanU16("boot",NV_BOOT_HI,NV_BOOT_LO,jumlahBoot);
+}
+
+
+// ===========================================================================
+//  HC-SR04
+// ===========================================================================
+float pingSekali() {
+  digitalWrite(PIN_TRIG,LOW);  delayMicroseconds(4);
+  digitalWrite(PIN_TRIG,HIGH); delayMicroseconds(10);
+  digitalWrite(PIN_TRIG,LOW);
+  uint32_t d=pulseIn(PIN_ECHO,HIGH,TIMEOUT_ECHO);
+  if (d==0) return NAN;
+  float t=isnan(suhu)?27.0:suhu;
+  float v=331.3+0.606*t;                     // kompensasi suhu, m/s
+  return (float)d*v/20000.0;                 // cm
+}
+
+void ukurLevelPakan() {
+  float s[5]; uint8_t n=0;
+  for (uint8_t i=0;i<5;i++) {
+    float d=pingSekali();
+    if (!isnan(d)&&d>=JARAK_MIN_SAH&&d<=JARAK_MAKS_SAH) s[n++]=d;
+    delay(JEDA_ANTAR_PING);
+  }
+  if (n<3) { gagalSonar++; jarakPakan=NAN; persenPakan=-1; return; }
+
+  for (uint8_t i=0;i+1<n;i++) for (uint8_t j=i+1;j<n;j++)
+    if (s[j]<s[i]) { float t=s[i]; s[i]=s[j]; s[j]=t; }
+
+  jarakPakan=(n>=5)?(s[1]+s[2]+s[3])/3.0:s[n/2];   // buang ekstrem
+
+  if (jarakKosong>jarakPenuh) {
+    float p=(jarakKosong-jarakPakan)/(jarakKosong-jarakPenuh)*100.0;
+    persenPakan=(int8_t)constrain(p,0.0f,100.0f);
+  } else persenPakan=-1;
+}
+
+void kalibrasiJarak(bool penuh) {
+  ukurLevelPakan();
+  if (isnan(jarakPakan)) { Serial.println(F("[PAKAN] Pengukuran gagal")); return; }
+  if (penuh) { jarakPenuh=jarakPakan;  nvs.putFloat("jPenuh",jarakPenuh); }
+  else       { jarakKosong=jarakPakan; nvs.putFloat("jKosong",jarakKosong); }
+  Serial.printf("[PAKAN] Jarak %s = %.1f cm disimpan\n",penuh?"PENUH":"KOSONG",jarakPakan);
+  if (jarakKosong<=jarakPenuh)
+    Serial.println(F("[PAKAN] PERINGATAN: jarak kosong harus LEBIH BESAR dari penuh"));
+  ukurLevelPakan();
+}
+
+
+// ===========================================================================
+//  MQTT
+// ===========================================================================
+void sambungMqtt() {
+  String id="smartcoop-"+String((uint32_t)ESP.getEfuseMac(),HEX);
+  Serial.print(F("[MQTT]  Menyambung... "));
+  // Last Will: dashboard tahu bedanya sistem mati dan sistem yang diam
+  if (mqtt.connect(id.c_str(),MQTT_USER,MQTT_PASS,"smartcoop/online",0,true,"0")) {
+    Serial.println(F("tersambung"));
+    mqtt.publish("smartcoop/online","1",true);
+    mqtt.subscribe("smartcoop/control/+");
+    mqtt.subscribe("smartcoop/config/+");
+    terbitkanStatus();
+  } else { gagalMqtt++; Serial.printf("gagal, rc=%d\n",mqtt.state()); }
+}
+
+void uraiJam(const String& s, uint8_t& jam, uint8_t& menit) {
+  int t=s.indexOf(':');
+  if (t<1) return;
+  jam=constrain(s.substring(0,t).toInt(),0,23);
+  menit=constrain(s.substring(t+1).toInt(),0,59);
+}
+
+void mqttPesanMasuk(char* topik, byte* data, unsigned int panjang) {
+  String t=String(topik), p; p.reserve(panjang);
+  for (unsigned int i=0;i<panjang;i++) p+=(char)data[i];
+  p.trim();
+  Serial.printf("[MQTT]  %s = %s\n",topik,p.c_str());
+
+  if (t=="smartcoop/control/stop")  { stopDarurat(); return; }
+
+  if (t=="smartcoop/control/pompa") {
+    if      (p=="isi")  isiSekarang();
+    else if (p=="stop") hentikanPompa();
+    return;
+  }
+  if (t=="smartcoop/control/lampu") {
+    if (p=="on") setLampuManual(true);
+    else if (p=="off") setLampuManual(false);
+    else if (p=="auto") { modeLampu=LAMPU_AUTO; Serial.println(F("[LAMPU] AUTO")); }
+    return;
+  }
+  if (t=="smartcoop/control/pakan") { if (p=="mulai") mulaiSiklusPakan(); return; }
+  if (t=="smartcoop/control/reset") {
+    if (p=="pompa") resetKunciPompa(); else if (p=="motor") resetKunciMotor();
+    return;
+  }
+  if (t=="smartcoop/control/servo") {
+    if (fasePakan!=PAKAN_IDLE) return;
+    servoPakan.attach(PIN_SERVO,500,2500);
+    if (p=="buka") servoPakan.write(sudutBuka);
+    else { servoPakan.write(sudutTutup); delay(WAKTU_SERVO); servoPakan.detach(); }
+    return;
+  }
+  if (t=="smartcoop/control/motor") {
+    if (p=="stop") { motorBerhenti(); arahManual=MANUAL_DIAM; return; }
+    if (fasePakan!=PAKAN_IDLE) return;
+    if (p=="maju"   && !limitA) { arahManual=MANUAL_MAJU;   motorJalan(true); }
+    if (p=="mundur" && !limitB) { arahManual=MANUAL_MUNDUR; motorJalan(false); }
+    return;
+  }
+
+  if (!t.startsWith("smartcoop/config/")) return;
+  String k=t.substring(17);
+
+  if      (k=="oto_pompa") { otoPompa=(p=="1"); nvs.putBool("otoP",otoPompa);
+                             Serial.printf("[MODE]  Pompa otomatis %s\n",otoPompa?"ON":"OFF"); }
+  else if (k=="oto_lampu") { otoLampu=(p=="1"); nvs.putBool("otoL",otoLampu);
+                             Serial.printf("[MODE]  Lampu otomatis %s\n",otoLampu?"ON":"OFF"); }
+  else if (k=="oto_pakan") { otoPakan=(p=="1"); nvs.putBool("otoF",otoPakan);
+                             Serial.printf("[MODE]  Pakan otomatis %s\n",otoPakan?"ON":"OFF"); }
+
+  else if (k=="tg_chat") {
+    if (p.length()>=4 && p.length()<=32) {
+      tgChat=p; nvs.putString("tgChat",tgChat);
+      Serial.printf("[TG]    Chat ID diubah ke %s\n",tgChat.c_str());
+      kirimTelegram("Chat ID berhasil diatur. Notifikasi kandang aktif.");
+    } else Serial.println(F("[TG]    Chat ID tidak masuk akal, diabaikan"));
+  }
+
+  else if (k=="sudut_buka")   { sudutBuka=constrain(p.toInt(),0,180);    nvs.putUChar("sBuka",sudutBuka); }
+  else if (k=="sudut_tutup")  { sudutTutup=constrain(p.toInt(),0,180);   nvs.putUChar("sTutup",sudutTutup); }
+  else if (k=="jeda")         { jedaAwalDtk=constrain(p.toInt(),0,60);   nvs.putUShort("jeda",jedaAwalDtk); }
+  else if (k=="lama_buka")    { lamaBukaDtk=constrain(p.toInt(),1,120);  nvs.putUShort("lama",lamaBukaDtk); }
+  else if (k=="batas_motor")  { batasMotorDtk=constrain(p.toInt(),5,60); nvs.putUShort("batas",batasMotorDtk); }
+  else if (k=="jarak_penuh")  { jarakPenuh=p.toFloat();  nvs.putFloat("jPenuh",jarakPenuh); }
+  else if (k=="jarak_kosong") { jarakKosong=p.toFloat(); nvs.putFloat("jKosong",jarakKosong); }
+  else if (k=="kal_v")        { kalTegangan=p.toFloat(); nvs.putFloat("kalV",kalTegangan); }
+  else if (k=="mq_r0")        { mq135R0=p.toFloat();     nvs.putFloat("mqR0",mq135R0); }
+  else if (k=="ambang_nh3")   { ambangNh3=p.toFloat();   nvs.putFloat("nh3",ambangNh3); }
+  else if (k=="mq_aktif") {
+    mq135Aktif=(p=="1"); nvs.putBool("mqAkt",mq135Aktif);
+    digitalWrite(PIN_MQ_HEATER,mq135Aktif?HIGH:LOW);
+    if (mq135Aktif) tsMqNyala=millis(); else nh3Ppm=NAN;
+  }
+  else if (k=="lampu1_on")    { uraiJam(p,lampu1.jamOn,lampu1.menitOn);   nvs.putUChar("l1jOn",lampu1.jamOn);   nvs.putUChar("l1mOn",lampu1.menitOn); }
+  else if (k=="lampu1_off")   { uraiJam(p,lampu1.jamOff,lampu1.menitOff); nvs.putUChar("l1jOff",lampu1.jamOff); nvs.putUChar("l1mOff",lampu1.menitOff); }
+  else if (k=="lampu2_on")    { uraiJam(p,lampu2.jamOn,lampu2.menitOn);   nvs.putUChar("l2jOn",lampu2.jamOn);   nvs.putUChar("l2mOn",lampu2.menitOn); }
+  else if (k=="lampu2_off")   { uraiJam(p,lampu2.jamOff,lampu2.menitOff); nvs.putUChar("l2jOff",lampu2.jamOff); nvs.putUChar("l2mOff",lampu2.menitOff); }
+  else if (k=="lampu1_aktif") { lampu1.aktif=(p=="1"); nvs.putBool("l1akt",lampu1.aktif); }
+  else if (k=="lampu2_aktif") { lampu2.aktif=(p=="1"); nvs.putBool("l2akt",lampu2.aktif); }
+  else if (k.startsWith("pakan")) {
+    uint8_t i=k.substring(5).toInt();
+    if (i>=MAKS_JADWAL_PAKAN) return;
+    char kn[16];
+    if (p=="off"||p.length()<4) {
+      jadwalPakan[i].aktif=false;
+      snprintf(kn,sizeof(kn),"pk%ua",i); nvs.putBool(kn,false);
+    } else {
+      uraiJam(p,jadwalPakan[i].jam,jadwalPakan[i].menit);
+      jadwalPakan[i].aktif=true;
+      snprintf(kn,sizeof(kn),"pk%uj",i); nvs.putUChar(kn,jadwalPakan[i].jam);
+      snprintf(kn,sizeof(kn),"pk%um",i); nvs.putUChar(kn,jadwalPakan[i].menit);
+      snprintf(kn,sizeof(kn),"pk%ua",i); nvs.putBool(kn,true);
+    }
+  }
+}
+
+void terbitkanStatus() {
+  if (!mqtt.connected()) return;
+  char buf[1000], jam[8]="--:--", isi[8]="--:--", akhir[8]="--:--";
+  if (rtcSehat||ntpPernahSukses) snprintf(jam,sizeof(jam),"%02d:%02d",waktuKini.hour(),waktuKini.minute());
+  if (isiJam<=23)   snprintf(isi,sizeof(isi),"%02d:%02d",isiJam,isiMenit);
+  if (pakanJam<=23) snprintf(akhir,sizeof(akhir),"%02d:%02d",pakanJam,pakanMenit);
+
+  snprintf(buf,sizeof(buf),
+    "{\"suhu\":%.1f,\"rh\":%.1f,\"jam\":\"%s\",\"rtc\":%d,"
+    "\"tangki\":\"%s\",\"pelBawah\":%d,\"pelAtas\":%d,"
+    "\"pompa\":\"%s\",\"pompaManual\":%d,\"siklusPompa\":%u,"
+    "\"isi\":\"%s\",\"kunciPompa\":%d,"
+    "\"pakan\":\"%s\",\"siklusPakan\":%u,\"akhir\":\"%s\",\"level\":%d,\"kunciMotor\":%d,"
+    "\"limitA\":%d,\"limitB\":%d,\"lampu\":%d,\"modeLampu\":\"%s\","
+    "\"otoPompa\":%d,\"otoLampu\":%d,\"otoPakan\":%d,\"tgChat\":\"%s\","
+    "\"aki\":%.2f,\"soc\":%d,\"lvd\":\"%s\",\"nh3\":%.1f,\"mqAktif\":%d,"
+    "\"boot\":%u,\"gagalI2C\":%u,"
+    "\"sudutBuka\":%u,\"sudutTutup\":%u,\"jeda\":%u,\"lamaBuka\":%u,\"batasMotor\":%u,"
+    "\"l1\":\"%02d:%02d-%02d:%02d\",\"l2\":\"%02d:%02d-%02d:%02d\"}",
+    isnan(suhu)?0.0:suhu, isnan(kelembapan)?0.0:kelembapan, jam,
+    (rtcSehat||ntpPernahSukses)?1:0,
+    namaTangki(), pelBawah?1:0, pelAtas?1:0,
+    namaPompa(), pompaManual?1:0, siklusPompa, isi, statusPompa==POMPA_KUNCI?1:0,
+    namaPakan(), siklusPakan, akhir, persenPakan, fasePakan==PAKAN_KUNCI?1:0,
+    limitA?1:0, limitB?1:0, lampuNyala?1:0, modeLampu==LAMPU_AUTO?"AUTO":"MANUAL",
+    otoPompa?1:0, otoLampu?1:0, otoPakan?1:0, tgChat.c_str(),
+    isnan(teganganRata)?0.0:teganganRata, estimasiSoc(teganganRata), statusAki(),
+    isnan(nh3Ppm)?-1.0:nh3Ppm, mq135Aktif?1:0,
+    jumlahBoot, (unsigned)(gagalRtc+gagalSht),
+    sudutBuka, sudutTutup, jedaAwalDtk, lamaBukaDtk, batasMotorDtk,
+    lampu1.jamOn,lampu1.menitOn,lampu1.jamOff,lampu1.menitOff,
+    lampu2.jamOn,lampu2.menitOn,lampu2.jamOff,lampu2.menitOff);
+
+  mqtt.publish("smartcoop/status",buf);
+}
+
+
+// ===========================================================================
+//  TELEGRAM — berbatas laju 5 menit per kategori
+// ===========================================================================
+String urlEncode(const String& s) {
+  String h="0123456789ABCDEF", o="";
+  for (uint16_t i=0;i<s.length();i++) {
+    char c=s.charAt(i);
+    if (isalnum(c)) o+=c;
+    else if (c==' ') o+='+';
+    else { o+='%'; o+=h[(c>>4)&0xF]; o+=h[c&0xF]; }
+  }
+  return o;
+}
+
+void kirimTelegram(const String& pesan) {
+  if (WiFi.status()!=WL_CONNECTED) return;
+  if (strlen(TG_TOKEN)<10 || tgChat.length()<4) return;
+
+  WiFiClientSecure klien; klien.setInsecure();
+  HTTPClient http;
+  String url="https://api.telegram.org/bot"+String(TG_TOKEN)+
+             "/sendMessage?chat_id="+tgChat+"&text="+urlEncode(pesan);
+  http.setTimeout(5000);
+  int kode=-1;
+  if (http.begin(klien,url)) { kode=http.GET(); http.end(); }
+
+  Serial.printf("[TG]    (%d) %s\n",kode,pesan.c_str());
+  if (kode!=200)
+    Serial.println(F("[TG]    GAGAL — periksa chat ID. Dapatkan dari @userinfobot."));
+}
+
+void alarm(uint32_t& penanda, const String& pesan) {
+  uint32_t kini=millis();
+  if (penanda!=0 && kini-penanda<JEDA_ALARM) return;
+  penanda=kini;
+  kirimTelegram(pesan);
+}
+
+
+// ===========================================================================
+//  I2C · RTC · NVRAM
+// ===========================================================================
+void pulihkanI2C() {
+  Serial.println(F("[I2C]   Memulihkan bus..."));
+  pemulihanBus++;
+  Wire.end();
+  pinMode(PIN_SCL,OUTPUT); pinMode(PIN_SDA,INPUT_PULLUP);
+  for (uint8_t i=0;i<9;i++) {              // bebaskan slave yang menahan SDA
+    digitalWrite(PIN_SCL,HIGH); delayMicroseconds(10);
+    digitalWrite(PIN_SCL,LOW);  delayMicroseconds(10);
+  }
+  digitalWrite(PIN_SCL,HIGH); delayMicroseconds(10);
+  pinMode(PIN_SDA,OUTPUT);
+  digitalWrite(PIN_SDA,LOW);  delayMicroseconds(10);
+  digitalWrite(PIN_SDA,HIGH); delayMicroseconds(10);
+  Wire.begin(PIN_SDA,PIN_SCL,I2C_FREQ); Wire.setTimeOut(100); delay(20);
+}
+
+void pindaiI2C() {
+  Serial.println(F("\n--- Memindai bus I2C ---"));
+  uint8_t n=0;
+  for (uint8_t a=1;a<127;a++) {
+    Wire.beginTransmission(a);
+    if (Wire.endTransmission()==0) {
+      n++; Serial.printf("  0x%02X  ",a);
+      if (a==ALAMAT_SHT31_A||a==ALAMAT_SHT31_B){adaSht31=true;alamatSht31=a;Serial.println(F("SHT31"));}
+      else if (a==ALAMAT_LCD_A||a==ALAMAT_LCD_B){adaLcd=true;alamatLcd=a;Serial.println(F("LCD 20x4"));}
+      else if (a==ALAMAT_EEPROM){Serial.println(F("EEPROM AT24C32 (modul RTC)"));}
+      else if (a==ALAMAT_RTC){adaRtc=true;Serial.println(F("DS1307"));}
+      else Serial.println(F("tidak dikenali"));
+    }
+  }
+  if (n==0) Serial.println(F("  TIDAK ADA PERANGKAT — periksa SDA/SCL, GND, VCC 3V3."));
+  if (!adaRtc) {
+    Serial.println(F("  DS1307 tidak muncul. Wajar bila disuplai 3,3 V."));
+    Serial.println(F("  Sistem tetap jalan memakai waktu NTP dan penyimpanan NVS."));
+  }
+  Serial.printf("--- Selesai, %u perangkat ---\n\n",n);
+}
+
+bool waktuMasukAkal(const DateTime& t) {
+  return (t.year()>=2020&&t.year()<=2099&&t.month()>=1&&t.month()<=12&&
+          t.day()>=1&&t.day()<=31&&t.hour()<=23&&t.minute()<=59&&t.second()<=59);
+}
+
+bool bacaWaktuAman(DateTime& keluar) {
+  if (!adaRtc) return false;
+  for (uint8_t c=0;c<3;c++) {
+    DateTime t=rtc.now();
+    if (waktuMasukAkal(t)) { keluar=t; return true; }
+    delay(20);
+  }
+  return false;
+}
+
+bool bacaNvramAman(uint8_t alamat, uint8_t& keluar) {
+  if (!adaRtc) return false;
+  for (uint8_t c=0;c<3;c++) {
+    uint8_t a=rtc.readnvram(alamat); delayMicroseconds(300);
+    uint8_t b=rtc.readnvram(alamat);
+    if (a==b) { keluar=a; return true; }
+    delay(10);
+  }
+  gagalNvram++; return false;
+}
+
+bool tulisNvramAman(uint8_t alamat, uint8_t nilai) {
+  if (!adaRtc) return false;
+  for (uint8_t c=0;c<3;c++) {
+    rtc.writenvram(alamat,nilai); delay(5);
+    uint8_t cek;
+    if (bacaNvramAman(alamat,cek)&&cek==nilai) return true;
+  }
+  gagalNvram++; return false;
+}
+
+void siapkanLcd() {
+  if (!adaLcd) { Serial.println(F("[LCD]   tidak terdeteksi")); return; }
+  lcd=new LiquidCrystal_I2C(alamatLcd,20,4);
+  lcd->init();                   // sebagian versi pustaka memakai begin()
+  lcd->backlight(); lcd->clear();
+  lcd->setCursor(0,0); lcd->print(F("SMART CHICKEN COOP"));
+  lcd->setCursor(0,1); lcd->print(F("v6.1"));
+  Serial.printf("[LCD]   siap di 0x%02X\n",alamatLcd);
+}
+
+void siapkanSht31() {
+  if (!adaSht31) { Serial.println(F("[SHT31] tidak terdeteksi")); return; }
+  if (!sht31.begin(alamatSht31)) { adaSht31=false; Serial.println(F("[SHT31] gagal init")); return; }
+  sht31.heater(false);
+  Serial.printf("[SHT31] siap di 0x%02X\n",alamatSht31);
+}
+
+void siapkanRtc() {
+  if (!adaRtc) { Serial.println(F("[RTC]   tidak ada — memakai NTP dan NVS")); return; }
+  if (!rtc.begin()) { adaRtc=false; Serial.println(F("[RTC]   gagal init")); return; }
+  if (!rtc.isrunning()) {
+    Serial.println(F("[RTC]   osilator berhenti — diisi waktu kompilasi"));
+    rtc.adjust(DateTime(F(__DATE__),F(__TIME__))); delay(20);
+  }
+  DateTime t;
+  if (!bacaWaktuAman(t)) {
+    // Bus tidak dapat dipercaya — sengaja TIDAK menulis apa pun ke RTC
+    rtcSehat=false; gagalRtc++;
+    Serial.println(F("[RTC]   PEMBACAAN AWAL RUSAK — tidak ada penulisan"));
+    return;
+  }
+  rtcSehat=true; waktuKini=t;
+  uint8_t hi,lo;
+  if (bacaNvramAman(NV_DRIFT_HI,hi)&&bacaNvramAman(NV_DRIFT_LO,lo))
+    driftTerakhir=(int16_t)(((uint16_t)hi<<8)|lo);
+  Serial.printf("[RTC]   siap — %02d/%02d/%04d %02d:%02d\n",
+    waktuKini.day(),waktuKini.month(),waktuKini.year(),waktuKini.hour(),waktuKini.minute());
+}
+
+
+// ===========================================================================
+//  SENSOR · WIFI · NTP
+// ===========================================================================
+void bacaSensor() {
+  if (adaSht31) {
+    float t=sht31.readTemperature(),h=sht31.readHumidity();
+    if (!isnan(t)&&t>-40&&t<125&&!isnan(h)&&h>=0&&h<=100) { suhu=t; kelembapan=h; }
+    else gagalSht++;
+  }
+  if (adaRtc) {
+    DateTime t;
+    if (bacaWaktuAman(t)) { waktuKini=t; rtcSehat=true; gagalRtcBeruntun=0; }
+    else {
+      rtcSehat=false; gagalRtc++; gagalRtcBeruntun++;
+      if (gagalRtcBeruntun==GAGAL_SEBELUM_PULIH) {
+        Serial.println(F("[RTC]   Gagal 5x beruntun — memulihkan bus"));
+        pulihkanI2C();
+      }
+      // Waktu lama DIPERTAHANKAN — tidak menebak, tidak menulis
+    }
+  }
+}
+
+void mulaiWifi() {
+  WiFi.mode(WIFI_STA); WiFi.setAutoReconnect(true);
+  WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
+  Serial.println(F("[WiFi]  menyambung di latar belakang..."));
+}
+
+void jagaWifi() {
+  if (WiFi.status()==WL_CONNECTED) return;
+  WiFi.disconnect(); WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
+}
+
+void sinkronkanNtp() {
+  configTime(OFFSET_WIB,OFFSET_DST,NTP_SERVER_1,NTP_SERVER_2);
+  struct tm tn;
+  if (!getLocalTime(&tn,5000)) { Serial.println(F("[NTP]   gagal")); return; }
+  ntpPernahSukses=true;
+  DateTime dtNtp(tn.tm_year+1900,tn.tm_mon+1,tn.tm_mday,tn.tm_hour,tn.tm_min,tn.tm_sec);
+
+  if (!adaRtc) { waktuKini=dtNtp; return; }
+
+  DateTime dtRtc;
+  if (!bacaWaktuAman(dtRtc)) {
+    Serial.println(F("[NTP]   RTC tidak terbaca — penulisan DIBATALKAN"));
+    waktuKini=dtNtp; return;
+  }
+  int32_t sel=(int32_t)dtNtp.unixtime()-(int32_t)dtRtc.unixtime();
+  int32_t mut=(sel<0)?-sel:sel;
+  if (mut>BATAS_KOREKSI_WAJAR) {
+    Serial.printf("[NTP]   Koreksi %+ld dtk DITOLAK\n",(long)sel); return;
+  }
+  if (mut>AMBANG_KOREKSI) {
+    rtc.adjust(dtNtp); delay(20);
+    DateTime cek;
+    if (bacaWaktuAman(cek)) {
+      driftTerakhir=(int16_t)constrain(sel,-32000L,32000L);
+      tulisNvramAman(NV_DRIFT_HI,(driftTerakhir>>8)&0xFF);
+      tulisNvramAman(NV_DRIFT_LO,driftTerakhir&0xFF);
+      waktuKini=cek; rtcSehat=true;
+      Serial.printf("[NTP]   RTC dikoreksi %+ld detik\n",(long)sel);
+    } else { Serial.println(F("[NTP]   Verifikasi gagal")); rtcSehat=false; }
+  } else {
+    Serial.printf("[NTP]   RTC akurat (%+ld dtk)\n",(long)sel);
+    waktuKini=dtRtc; rtcSehat=true;
+  }
+}
+
+
+// ===========================================================================
+//  KONFIGURASI NVS — default dari nilai variabel, satu sumber kebenaran
+// ===========================================================================
+void muatKonfigurasi() {
+  lampu1.jamOn=nvs.getUChar("l1jOn",lampu1.jamOn);
+  lampu1.menitOn=nvs.getUChar("l1mOn",lampu1.menitOn);
+  lampu1.jamOff=nvs.getUChar("l1jOff",lampu1.jamOff);
+  lampu1.menitOff=nvs.getUChar("l1mOff",lampu1.menitOff);
+  lampu1.aktif=nvs.getBool("l1akt",lampu1.aktif);
+  lampu2.jamOn=nvs.getUChar("l2jOn",lampu2.jamOn);
+  lampu2.menitOn=nvs.getUChar("l2mOn",lampu2.menitOn);
+  lampu2.jamOff=nvs.getUChar("l2jOff",lampu2.jamOff);
+  lampu2.menitOff=nvs.getUChar("l2mOff",lampu2.menitOff);
+  lampu2.aktif=nvs.getBool("l2akt",lampu2.aktif);
+
+  sudutBuka=nvs.getUChar("sBuka",sudutBuka);
+  sudutTutup=nvs.getUChar("sTutup",sudutTutup);
+  jedaAwalDtk=nvs.getUShort("jeda",jedaAwalDtk);
+  lamaBukaDtk=nvs.getUShort("lama",lamaBukaDtk);
+  batasMotorDtk=nvs.getUShort("batas",batasMotorDtk);
+  jarakPenuh=nvs.getFloat("jPenuh",jarakPenuh);
+  jarakKosong=nvs.getFloat("jKosong",jarakKosong);
+  kalTegangan=nvs.getFloat("kalV",kalTegangan);
+  mq135R0=nvs.getFloat("mqR0",mq135R0);
+  ambangNh3=nvs.getFloat("nh3",ambangNh3);
+  mq135Aktif=nvs.getBool("mqAkt",false);
+
+  otoPompa=nvs.getBool("otoP",otoPompa);
+  otoLampu=nvs.getBool("otoL",otoLampu);
+  otoPakan=nvs.getBool("otoF",otoPakan);
+  tgChat  =nvs.getString("tgChat",TG_CHAT_BAWAAN);
+
+  char k[16];
+  for (uint8_t i=0;i<MAKS_JADWAL_PAKAN;i++) {
+    snprintf(k,sizeof(k),"pk%uj",i); jadwalPakan[i].jam=nvs.getUChar(k,99);
+    snprintf(k,sizeof(k),"pk%um",i); jadwalPakan[i].menit=nvs.getUChar(k,0);
+    snprintf(k,sizeof(k),"pk%ua",i); jadwalPakan[i].aktif=nvs.getBool(k,false);
+  }
+  if (!jadwalPakan[0].aktif && jadwalPakan[0].jam==99) {
+    jadwalPakan[0]={7,0,true}; jadwalPakan[1]={16,0,true};
+  }
+}
+
+void cetakKonfigurasi() {
+  Serial.println(F("\n------ KONFIGURASI ------"));
+  Serial.printf("Mode otomatis     : pompa=%s lampu=%s pakan=%s\n",
+    otoPompa?"ON":"OFF", otoLampu?"ON":"OFF", otoPakan?"ON":"OFF");
+  Serial.printf("Chat ID Telegram  : %s\n",tgChat.c_str());
+  Serial.printf("Sudut buka/tutup  : %u / %u\n",sudutBuka,sudutTutup);
+  Serial.printf("Jeda sebelum servo: %u dtk (dihitung dari motor mulai)\n",jedaAwalDtk);
+  Serial.printf("Lama buka         : %u dtk\n",lamaBukaDtk);
+  Serial.printf("Batas waktu motor : %u dtk  <-- proteksi motor SATU-SATUNYA\n",batasMotorDtk);
+  Serial.printf("Jarak penuh/kosong: %.1f / %.1f cm\n",jarakPenuh,jarakKosong);
+  Serial.printf("Kalibrasi tegangan: %.4f\n",kalTegangan);
+  Serial.printf("MQ-135 R0 / aktif : %.2f kOhm / %s\n",mq135R0,mq135Aktif?"ya":"tidak");
+  for (uint8_t i=0;i<MAKS_JADWAL_PAKAN;i++)
+    if (jadwalPakan[i].aktif)
+      Serial.printf("Jadwal pakan %u    : %02d:%02d\n",i,jadwalPakan[i].jam,jadwalPakan[i].menit);
+  Serial.println(F("-------------------------\n"));
+}
+
+
+// ===========================================================================
+//  PERINTAH SERIAL
+// ===========================================================================
+void urusSerial() {
+  if (!Serial.available()) return;
+  String baris=Serial.readStringUntil('\n'); baris.trim();
+  if (baris.length()==0) return;
+  char c=baris.charAt(0);
+  String arg=baris.substring(1); arg.trim();
+
+  switch (c) {
+    case 's': cetakStatus(); break;
+    case 'd': cetakDiagnostik(); break;
+    case 'i': pindaiI2C(); break;
+    case 'B': pulihkanI2C(); break;
+    case 'N': sinkronkanNtp(); break;
+    case 'c': cetakKonfigurasi(); break;
+    case 'D': cetakDaya(); break;
+    case 'm': cetakMqtt(); break;
+    case 'u': ujiRelai(); break;
+    case 'w': isiSekarang(); break;
+    case 'W': hentikanPompa(); break;
+    case 'r': resetKunciPompa(); break;
+    case '1': setLampuManual(true); break;
+    case '0': setLampuManual(false); break;
+    case 'a': modeLampu=LAMPU_AUTO; Serial.println(F("[LAMPU] AUTO")); break;
+    case 'f': mulaiSiklusPakan(); break;
+    case 'k': resetKunciMotor(); break;
+    case 'x': stopDarurat(); break;
+    case 'P': kalibrasiJarak(true); break;
+    case 'K': kalibrasiJarak(false); break;
+    case 'Q': kalibrasiMq135(); break;
+    case 'T': kirimTelegram("Uji koneksi Smart Chicken Coop. Sistem tersambung."); break;
+    case 'Z': nvs.clear(); Serial.println(F("[NVS]   Dihapus — restart untuk default")); break;
+
+    case 'M':
+      mq135Aktif=!mq135Aktif; nvs.putBool("mqAkt",mq135Aktif);
+      digitalWrite(PIN_MQ_HEATER,mq135Aktif?HIGH:LOW);
+      if (mq135Aktif) { tsMqNyala=millis(); Serial.println(F("[MQ]    NYALA — pemanasan 3 menit")); }
+      else { nh3Ppm=NAN; Serial.println(F("[MQ]    MATI")); }
+      break;
+
+    case 'v': {
+      float ukur=arg.toFloat();
+      if (ukur<5.0||ukur>20.0) { Serial.println(F("[KAL]   Format: v12.73")); break; }
+      if (isnan(teganganKini)||teganganKini<1.0) { Serial.println(F("[KAL]   Belum ada pembacaan")); break; }
+      kalTegangan=kalTegangan*(ukur/teganganKini);
+      nvs.putFloat("kalV",kalTegangan);
+      Serial.printf("[KAL]   Faktor tegangan = %.4f\n",kalTegangan);
+      break;
+    }
+
+    case 'S':
+      if (arg.length()==0) { simulasiTegangan=NAN; Serial.println(F("[SIM]   Dihentikan")); }
+      else { simulasiTegangan=arg.toFloat();
+             Serial.printf("[SIM]   Tegangan disimulasikan %.2f V\n",simulasiTegangan); }
+      break;
+
+    case '>':
+      if (fasePakan!=PAKAN_IDLE||limitA) break;
+      arahManual=MANUAL_MAJU; motorJalan(true); Serial.println(F("[MOTOR] Maju"));
+      break;
+
+    case '<':
+      if (fasePakan!=PAKAN_IDLE||limitB) break;
+      arahManual=MANUAL_MUNDUR; motorJalan(false); Serial.println(F("[MOTOR] Mundur"));
+      break;
+
+    case '[':
+      if (fasePakan!=PAKAN_IDLE) break;
+      servoPakan.attach(PIN_SERVO,500,2500); servoPakan.write(sudutBuka);
+      Serial.printf("[SERVO] Buka %u\n",sudutBuka);
+      break;
+
+    case ']':
+      if (fasePakan!=PAKAN_IDLE) break;
+      servoPakan.attach(PIN_SERVO,500,2500); servoPakan.write(sudutTutup);
+      delay(WAKTU_SERVO); servoPakan.detach();
+      Serial.printf("[SERVO] Tutup %u\n",sudutTutup);
+      break;
+
+    default: break;
+  }
+}
+
+void ujiRelai() {
+  Serial.println(F("[UJI] LEPAS BEBAN DULU."));
+  Serial.println(F("[UJI] LAMPU di GPIO 21, POMPA di GPIO 47."));
+  Serial.println(F("[UJI] Klik harus terjadi saat status NYALA.\n"));
+  Serial.println(F("[UJI] Lampu NYALA..."));
+  digitalWrite(PIN_RELAI_LAMPU,RELAI_NYALA); delay(1500);
+  Serial.println(F("[UJI] Lampu MATI"));
+  digitalWrite(PIN_RELAI_LAMPU,RELAI_MATI); delay(800);
+  Serial.println(F("[UJI] Pompa NYALA..."));
+  digitalWrite(PIN_RELAI_POMPA,RELAI_NYALA); delay(1500);
+  Serial.println(F("[UJI] Pompa MATI"));
+  digitalWrite(PIN_RELAI_POMPA,RELAI_MATI);
+  lampuNyala=false; statusPompa=POMPA_JEDA; tsPompaBerhenti=millis(); pompaManual=false;
+}
+
+const char* namaPompa() {
+  switch (statusPompa) {
+    case POMPA_SIAP:return "SIAP"; case POMPA_JALAN:return "JALAN";
+    case POMPA_JEDA:return "JEDA"; default:return "TERKUNCI";
+  }
+}
+
+const char* namaPakan() {
+  switch (fasePakan) {
+    case PAKAN_IDLE: return "SIAP";
+    case PAKAN_MAJU:
+      if (!servoSudahBuka)  return "JEDA SERVO";
+      if (!servoSudahTutup) return "SERVO BUKA";
+      return "MOTOR MAJU";
+    case PAKAN_TAHAN_UJUNG: return "DI UJUNG";
+    case PAKAN_MUNDUR:      return "MOTOR MUNDUR";
+    default:                return "TERKUNCI";
+  }
+}
+
+void cetakStatus() {
+  Serial.println(F("\n--------- STATUS ---------"));
+  Serial.printf("Waktu     : %s %s\n",teksWaktu().c_str(),rtcSehat?"":"(tanpa RTC)");
+  if (adaSht31&&!isnan(suhu)) Serial.printf("Suhu      : %.1f C   RH: %.1f %%\n",suhu,kelembapan);
+  Serial.printf("Otomatis  : pompa=%s lampu=%s pakan=%s\n",
+    otoPompa?"ON":"OFF", otoLampu?"ON":"OFF", otoPakan?"ON":"OFF");
+  Serial.printf("Tangki    : %s  (bawah=%d atas=%d)\n",namaTangki(),pelBawah,pelAtas);
+  Serial.printf("Pompa     : %s%s siklus=%u gagal=%u\n",namaPompa(),
+    pompaManual?" (MANUAL)":"", siklusPompa, gagalPompaBeruntun);
+  Serial.printf("Lampu     : %s mode=%s\n",lampuNyala?"NYALA":"MATI",
+    modeLampu==LAMPU_AUTO?"AUTO":"MANUAL");
+  Serial.printf("Limit     : A=%d B=%d\n",limitA,limitB);
+  Serial.printf("Pakan     : %s siklus=%u\n",namaPakan(),siklusPakan);
+  if (fasePakan==PAKAN_KUNCI) Serial.printf("Sebab kunci: %s\n",sebabKunciMotor);
+  if (!isnan(jarakPakan)) Serial.printf("Level pakan: %.1f cm = %d %%\n",jarakPakan,persenPakan);
+  Serial.printf("Aki       : %.2f V  SoC ~%d %%  (%s)\n",
+    teganganRata,estimasiSoc(teganganRata),statusAki());
+  if (mq135Aktif) {
+    if (isnan(nh3Ppm)) Serial.println(F("Amonia    : memanaskan / tidak terbaca"));
+    else Serial.printf("Amonia    : %.1f ppm (RS %.1f kOhm)\n",nh3Ppm,mqRs);
+  }
+  Serial.printf("WiFi/MQTT : %s / %s  boot ke-%u\n",
+    teksKoneksi().c_str(), mqtt.connected()?"OK":"putus", jumlahBoot);
+  Serial.println(F("--------------------------\n"));
+}
+
+void cetakDaya() {
+  Serial.println(F("\n---------- DAYA ----------"));
+  Serial.printf("Tegangan kini    : %.2f V\n",teganganKini);
+  Serial.printf("Rata-rata 10 dtk : %.2f V\n",teganganRata);
+  Serial.printf("Estimasi SoC     : %d %%\n",estimasiSoc(teganganRata));
+  Serial.printf("Status           : %s\n",statusAki());
+  Serial.printf("Faktor kalibrasi : %.4f\n",kalTegangan);
+  if (!isnan(simulasiTegangan)) Serial.println(F("*** MODE SIMULASI AKTIF ***"));
+  Serial.println(F("\nLVD TIDAK AKTIF — beban tidak dilepas otomatis."));
+  Serial.printf("Peringatan Telegram di bawah %.2f V: %s\n",
+    AMBANG_PERINGATAN, PERINGATAN_AKI?"aktif":"nonaktif");
+  Serial.println(F("--------------------------\n"));
+}
+
+void cetakDiagnostik() {
+  Serial.println(F("\n------- DIAGNOSTIK -------"));
+  Serial.printf("Relai              : LAMPU=GPIO%d POMPA=GPIO%d\n",
+    PIN_RELAI_LAMPU, PIN_RELAI_POMPA);
+  Serial.printf("Pelampung bawah/atas: %d / %d  -> %s\n",pelBawah,pelAtas,namaTangki());
+  Serial.printf("Bus I2C            : %lu Hz\n",(unsigned long)I2C_FREQ);
+  Serial.printf("Gagal RTC/SHT/NVRAM: %u / %u / %u\n",gagalRtc,gagalSht,gagalNvram);
+  Serial.printf("Gagal sonar        : %u\n",gagalSonar);
+  Serial.printf("Pemulihan bus      : %u\n",pemulihanBus);
+  Serial.printf("Gagal sambung MQTT : %u\n",gagalMqtt);
+  Serial.printf("RTC                : %s\n",adaRtc?(rtcSehat?"SEHAT":"ERROR"):"TIDAK ADA (pakai NVS)");
+  Serial.printf("ADC mentah sensor V: %.3f V\n",bacaAdcVolt(PIN_SENSOR_V));
+  Serial.printf("Chat ID Telegram   : %s\n",tgChat.c_str());
+  Serial.printf("Heap bebas         : %u byte\n",(unsigned)ESP.getFreeHeap());
+  Serial.println(F("LVD                : TIDAK AKTIF"));
+  Serial.println(F("Deteksi macet motor: NONAKTIF"));
+  Serial.println(F("--------------------------\n"));
+}
+
+void cetakMqtt() {
+  Serial.println(F("\n--------- MQTT ---------"));
+  Serial.printf("Broker : %s:%d\n",MQTT_HOST,MQTT_PORT);
+  Serial.printf("Status : %s (rc=%d)\n",mqtt.connected()?"TERSAMBUNG":"PUTUS",mqtt.state());
+  Serial.printf("Gagal  : %u kali\n",gagalMqtt);
+  Serial.println(F("------------------------\n"));
+}
+
+
+// ===========================================================================
+//  TAMPILAN LCD
+// ===========================================================================
+void barisLcd(uint8_t b, const String& t) {
+  if (!lcd) return;
+  String s=t;
+  if (s.length()>20) s=s.substring(0,20);
+  while (s.length()<20) s+=' ';
+  lcd->setCursor(0,b); lcd->print(s);
+}
+
+String teksWaktu() {
+  if (!rtcSehat && !ntpPernahSukses) return "-- JAM BELUM ADA --";
+  char b[24];
+  snprintf(b,sizeof(b),"%s %02d/%02d %02d:%02d",NAMA_HARI[waktuKini.dayOfTheWeek()],
+    waktuKini.day(),waktuKini.month(),waktuKini.hour(),waktuKini.minute());
+  return String(b);
+}
+
+String teksKoneksi() { return (WiFi.status()==WL_CONNECTED)?"ONLINE":"OFFLINE"; }
+
+void gambarHalaman() {
+  if (!lcd) return;
+  char b[24];
+  switch (halaman) {
+    case 0:
+      barisLcd(0,teksWaktu());
+      if (adaSht31&&!isnan(suhu)) {
+        barisLcd(1,"Suhu  : "+String(suhu,1)+" C");
+        barisLcd(2,"Lembap: "+String(kelembapan,1)+" %");
+      } else { barisLcd(1,"Suhu  : ERR"); barisLcd(2,"Lembap: ERR"); }
+      barisLcd(3,"Net   : "+teksKoneksi()+(mqtt.connected()?" MQ":""));
+      break;
+
+    case 1:
+      barisLcd(0,"== AIR ==");
+      barisLcd(1,"Tangki: "+String(namaTangki()));
+      barisLcd(2,"Pompa : "+String(namaPompa())+(pompaManual?" MAN":""));
+      barisLcd(3,"Pelamp: bwh"+String(pelBawah?1:0)+" ats"+String(pelAtas?1:0)
+                 +"  "+String(otoPompa?"OTO":"MAN"));
+      break;
+
+    case 2:
+      barisLcd(0,"== PAKAN ==");
+      barisLcd(1,String(namaPakan()));
+      barisLcd(2,"Level : "+String(persenPakan>=0?String(persenPakan)+" %":"--"));
+      if (pakanJam<=23) { snprintf(b,sizeof(b),"%02d:%02d",pakanJam,pakanMenit);
+        barisLcd(3,"Akhir : "+String(b)+" x"+String(siklusPakan)); }
+      else barisLcd(3,"Akhir : belum");
+      break;
+
+    case 3:
+      barisLcd(0,"== DAYA ==");
+      barisLcd(1,"Aki   : "+String(isnan(teganganRata)?"-- ":String(teganganRata,2))+" V");
+      barisLcd(2,"SoC   : "+String(estimasiSoc(teganganRata))+" %");
+      barisLcd(3,"Status: "+String(statusAki()));
+      break;
+
+    case 4:
+      barisLcd(0,"== MODE ==");
+      barisLcd(1,"Pompa : "+String(otoPompa?"OTOMATIS":"MANUAL"));
+      barisLcd(2,"Lampu : "+String(otoLampu?"OTOMATIS":"MANUAL"));
+      barisLcd(3,"Pakan : "+String(otoPakan?"OTOMATIS":"MANUAL"));
+      break;
+  }
+}

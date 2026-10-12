@@ -42,10 +42,10 @@
 char ssid[] = "SMARTFARM";
 char pass[] = "KADETUNHAN";
 
-const char* mqtt_server = "7953ca21897d4be78141b6206bf9c205.s1.eu.hivemq.cloud";
+const char* mqtt_server = "e8d98b46c66448469bd969da39a11bd8.s1.eu.hivemq.cloud";
 const int   mqtt_port   = 8883;           // TLS port
-const char* mqtt_user   = "rendi";
-const char* mqtt_pass   = "12345678";
+const char* mqtt_user   = "amel";
+const char* mqtt_pass   = "amelpw123";
 const char* client_id   = "esp32_bengpuskomlek_001";
 
 /* ============================================================================
@@ -625,18 +625,19 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   message.trim();
   Serial.print(F("[MQTT] RX [")); Serial.print(topic); Serial.print(F("]: ")); Serial.println(message);
 
-  if (strncmp(topic, "smartcoop_bengpuskomlek/config/", 32) == 0) {
+  if (strncmp(topic, "smartcoop_bengpuskomlek/config/", 31) == 0) {
     handleTimerConfig(topic, message);
     return;
   }
 
   if (strcmp(topic, TOPIC_CTRL_LAMP) == 0) {
     lampManualState = (message == "1" || message == "ON" || message == "true");
-    if (!lampAutoMode) {
-      lampStatus = lampManualState;
-      digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH);
-      mqtt.publish(TOPIC_LAMP, lampStatus ? "1" : "0", true);
-    }
+    lampAutoMode = false; // Pengontrolan manual otomatis mematikan mode otomatisasi
+    lampStatus = lampManualState;
+    digitalWrite(RELAY_LAMP, lampStatus ? LOW : HIGH);
+    mqtt.publish(TOPIC_LAMP, lampStatus ? "1" : "0", true);
+    mqtt.publish(TOPIC_LAMPAUTO, "0", true);
+    Serial.print(F("[LAMPU] Manual -> ")); Serial.println(lampStatus ? F("ON") : F("OFF"));
   }
   else if (strcmp(topic, TOPIC_CTRL_CONVJOG) == 0) {
     if (message == "fwd" || message == "maju")       convStartJog(true);
@@ -649,14 +650,12 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   }
   else if (strcmp(topic, TOPIC_CTRL_POMPA) == 0) {
     pompaManualState = (message == "1" || message == "ON" || message == "true");
-    if (!pompaAutoMode) {
-      pompaStatus = pompaManualState;
-      digitalWrite(RELAY_POMPA, pompaStatus ? LOW : HIGH);
-      mqtt.publish(TOPIC_POMPA, pompaStatus ? "1" : "0", true);
-      Serial.print(F("[POMPA] Manual -> ")); Serial.println(pompaStatus ? F("ON") : F("OFF"));
-    } else {
-      Serial.println(F("[POMPA] Diabaikan: masih mode AUTO. Matikan mode auto dulu."));
-    }
+    pompaAutoMode = false; // Pengontrolan manual otomatis mematikan mode otomatisasi
+    pompaStatus = pompaManualState;
+    digitalWrite(RELAY_POMPA, pompaStatus ? LOW : HIGH);
+    mqtt.publish(TOPIC_POMPA, pompaStatus ? "1" : "0", true);
+    mqtt.publish(TOPIC_POMPAAUTO, "0", true);
+    Serial.print(F("[POMPA] Manual -> ")); Serial.println(pompaStatus ? F("ON") : F("OFF"));
   }
   else if (strcmp(topic, TOPIC_CTRL_POMPAAUTO) == 0) {
     pompaAutoMode = (message == "1" || message == "ON" || message == "true");
@@ -1224,7 +1223,7 @@ void setup() {
   }
 
   analogSetAttenuation(ADC_11db);
-  analogSetWidth(12);
+  analogReadResolution(12);
   pinMode(MQ135_PIN, INPUT);
   pinMode(WATER_PIN, INPUT);
   Serial.println(F("[INIT] MQ135 & Water Sensor OK"));

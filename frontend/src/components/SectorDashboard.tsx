@@ -4,7 +4,7 @@ import { Sector } from '../types'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Toggle, ProgressBar, ChartTooltip } from './UIComponents'
 import { IcActivity, IcRefresh, IcX } from './Icons'
-import { AnimatedWaterTank, AnimatedBatteryTank, AnimatedThermometer } from './AnimatedTanks'
+import { AnimatedWaterTank, AnimatedBatteryTank, AnimatedThermometer, AnimatedSun, AnimatedDroplet, AnimatedWind } from './AnimatedTanks'
 import { useLanguage } from '../i18n'
 
 interface SectorDashboardProps {
@@ -218,74 +218,58 @@ function KandangDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
         </div>
       </div>
 
-      {/* 5 Metric Cards */}
+      {/* Metric Cards */}
       <div className="kandang-metrics-grid">
-        {sectorId === 'sec-03' || sectorId === 'sec-01' ? (
-          <div style={{ ...card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
-              <AnimatedThermometer temperature={suhu} size={56} />
-            </div>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Suhu</div>
-            <div style={{ fontSize: 24, fontWeight: 800, color: suhuColor }}>{suhu}<span style={{ fontSize: 14 }}>°C</span></div>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Normal: 28-32°C</div>
+        <div style={{ ...card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
+            <AnimatedThermometer temperature={suhu} size={56} />
           </div>
-        ) : (
-          <div style={{ ...card, textAlign: 'center' }}>
-            <div style={{ fontSize: 26, marginBottom: 4 }}>🌡️</div>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Suhu</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: suhuColor }}>{suhu}<span style={{ fontSize: 13 }}>°C</span></div>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: 28-32°C</div>
-          </div>
-        )}
-        <div style={{ ...card, textAlign: 'center' }}>
-          <div style={{ fontSize: 26, marginBottom: 4 }}>💧</div>
-          <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Kelembapan</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: '#1565C0' }}>{lembap}<span style={{ fontSize: 13 }}>%</span></div>
-          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: 50-70%</div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Suhu</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: suhuColor }}>{suhu}<span style={{ fontSize: 14 }}>°C</span></div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Normal: 28-32°C</div>
         </div>
-        <div style={{ ...card, textAlign: 'center' }}>
-          <div style={{ fontSize: 26, marginBottom: 4 }}>🌬️</div>
-          <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Amonia</div>
-          <div style={{ fontSize: 26, fontWeight: 800, color: amoniaColor }}>{amonia}</div>
-          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: &lt; 250</div>
-        </div>
-        {tangki !== '--' ? (
-          <div style={{ ...card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
-              <AnimatedWaterTank status={tangki} percentage={levelAir > 0 ? levelAir : undefined} size={56} />
-            </div>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Status Tangki</div>
-            <div style={{ fontSize: 26, fontWeight: 800, textTransform: 'capitalize', color: tangki.toUpperCase() === 'KOSONG' ? '#dc2626' : tangki.toUpperCase() === 'SEDANG' ? '#0284c7' : '#1565C0' }}>{tangki.toLowerCase()}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Air Untuk Minum</div>
-          </div>
-        ) : (
-          <div style={{ ...card, textAlign: 'center' }}>
-            <div style={{ fontSize: 26, marginBottom: 4 }}>🌊</div>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Level Air</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: levelAir < 20 ? '#dc2626' : '#1565C0' }}>{levelAir}<span style={{ fontSize: 13 }}>%</span></div>
-            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: &gt; 20%</div>
-          </div>
-        )}
-        
-        {sectorId === 'sec-03' && (
-          <>
-            <div style={{ ...card, textAlign: 'center' }}>
-              <div style={{ fontSize: 26, marginBottom: 4 }}>☀️</div>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>{t('solar_panel_info')}</div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: '#059669' }}>{aki !== '--' ? aki : '--'}<span style={{ fontSize: 13 }}>W</span></div>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>{t('power_generated')}</div>
-            </div>
-            <div style={{ ...card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
-                <AnimatedBatteryTank soc={soc} aki={aki} size={56} lvd={lvd} />
-              </div>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Status Baterai (Aki)</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: Number(soc) < 20 || String(soc).toUpperCase() === 'KOSONG' ? '#dc2626' : '#059669' }}>{soc !== '--' ? `${soc}%` : '--'}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{lvd !== '--' ? lvd : 'Normal: > 20%'}</div>
-            </div>
-          </>
-        )}
 
+        <div style={{ ...card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
+            <AnimatedDroplet value={lembap} size={56} />
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Kelembapan</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: '#1565C0' }}>{lembap}<span style={{ fontSize: 14 }}>%</span></div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Normal: 50-70%</div>
+        </div>
+
+        <div style={{ ...card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
+            <AnimatedWind value={amonia} size={56} />
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Amonia (NH3)</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: amoniaColor }}>{amonia}</div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Normal: &lt; 250 ppm</div>
+        </div>
+
+        <div style={{ ...card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
+            <AnimatedWaterTank status={tangki !== '--' ? tangki : undefined} percentage={levelAir > 0 ? levelAir : undefined} size={56} />
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Status Tangki Air</div>
+          <div style={{ fontSize: 24, fontWeight: 800, textTransform: 'capitalize', color: tangki.toUpperCase() === 'KOSONG' ? '#dc2626' : tangki.toUpperCase() === 'SEDANG' ? '#0284c7' : '#1565C0' }}>
+            {tangki !== '--' ? tangki.toLowerCase() : `${levelAir}%`}
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Level Air Minum Ternak</div>
+        </div>
+        
+        {(String(sectorId).toLowerCase().includes('unhan') || String(sectorId).toLowerCase().includes('sec-03') || String(sector.name).toLowerCase().includes('unhan')) && (
+          <div style={{ ...card, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
+              <AnimatedBatteryTank soc={soc} aki={aki} size={56} lvd={lvd} />
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Status Baterai / Solar</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: Number(soc) < 20 || String(soc).toUpperCase() === 'KOSONG' ? '#dc2626' : '#059669' }}>
+              {soc !== '--' ? `${soc}%` : (aki !== '--' ? `${aki}V` : '--')}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>{lvd !== '--' ? lvd : 'Normal: > 20%'}</div>
+          </div>
+        )}
       </div>
 
       {/* Chart + Control Panel */}
@@ -654,6 +638,10 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
   if (sector.unit?.toLowerCase() === 'tanaman') translatedUnit = t('unit_tanaman');
   else if (sector.unit?.toLowerCase() === 'peternakan') translatedUnit = t('unit_peternakan');
 
+  const secIdStr = String(sector.sector_id || sector.id || '').toLowerCase();
+  const secNameStr = String(sector.name || '').toLowerCase();
+  const isHidro = secIdStr.includes('hidro') || secIdStr.includes('sec-010') || secNameStr.includes('hidro');
+
   return (
     <div className="sector-dash fade-up">
       <div className="sector-dash-header">
@@ -665,41 +653,63 @@ function GenericDashboard({ sector, loggedInUser, tempData, setTempData, lastRef
           <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{lastRefresh.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
       </div>
-      <div className={sector.id === 'hidroponik' ? "kandang-metrics-grid" : "sector-dash-grid"}>
-        {sector.id === 'hidroponik' ? (
+      <div className={isHidro ? "kandang-metrics-grid" : "sector-dash-grid"}>
+        {isHidro ? (
           <>
             <div style={{ background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
-                <AnimatedThermometer temperature={metricsData.find(m => m.key.includes('suhu'))?.value ?? '--'} size={56} />
+                <AnimatedThermometer temperature={metricsData.find(m => m.key.toLowerCase().includes('suhu') || m.key.toLowerCase().includes('temp'))?.value ?? '--'} size={56} />
               </div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Suhu</div>
-              <div style={{ fontSize: 24, fontWeight: 800, color: '#E65100' }}>{metricsData.find(m => m.key.includes('suhu'))?.value ?? '--'}<span style={{ fontSize: 14 }}>°C</span></div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: '#E65100' }}>{metricsData.find(m => m.key.toLowerCase().includes('suhu') || m.key.toLowerCase().includes('temp'))?.value ?? '--'}<span style={{ fontSize: 14 }}>°C</span></div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Normal: 20-30°C</div>
             </div>
-            <div style={{ background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px', textAlign: 'center' }}>
-              <div style={{ fontSize: 26, marginBottom: 4 }}>💧</div>
+            <div style={{ background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
+                <AnimatedDroplet value={metricsData.find(m => m.key.toLowerCase().includes('kelembapan') || m.key.toLowerCase().includes('humid'))?.value} size={56} />
+              </div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Kelembapan</div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: '#1565C0' }}>{metricsData.find(m => m.key.includes('kelembapan'))?.value ?? '--'}<span style={{ fontSize: 13 }}>%</span></div>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: 50-70%</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: '#1565C0' }}>{metricsData.find(m => m.key.toLowerCase().includes('kelembapan') || m.key.toLowerCase().includes('humid'))?.value ?? '--'}<span style={{ fontSize: 13 }}>%</span></div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Normal: 50-70%</div>
             </div>
-            <div style={{ background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px', textAlign: 'center' }}>
-              <div style={{ fontSize: 26, marginBottom: 4 }}>☀️</div>
+            <div style={{ background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
+                <AnimatedSun value={metricsData.find(m => m.key.toLowerCase().includes('cahaya') || m.key.toLowerCase().includes('light'))?.value} size={56} />
+              </div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Intensitas Cahaya</div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: '#F59E0B' }}>{metricsData.find(m => m.key.includes('cahaya'))?.value ?? '--'}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>Normal: &gt; 200</div>
+              <div style={{ fontSize: 26, fontWeight: 800, color: '#F59E0B' }}>{metricsData.find(m => m.key.toLowerCase().includes('cahaya') || m.key.toLowerCase().includes('light'))?.value ?? '--'}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Normal: &gt; 200 lux</div>
             </div>
             <div style={{ background: 'var(--bg-surface)', borderRadius: 12, border: '1px solid var(--border-color)', padding: '16px 18px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ marginBottom: 4, transform: 'scale(1.05)' }}>
                 <AnimatedWaterTank percentage={Number(metricsData.find(m => m.key.toLowerCase().includes('water') || m.key.toLowerCase().includes('air'))?.value ?? 0)} status="Tersedia" size={56} />
               </div>
-              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Level Air</div>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 2 }}>Level Air Nutrisi</div>
               <div style={{ fontSize: 26, fontWeight: 800, color: '#1565C0' }}>{metricsData.find(m => m.key.toLowerCase().includes('water') || m.key.toLowerCase().includes('air'))?.value ?? '--'}<span style={{ fontSize: 13 }}>%</span></div>
               <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>Normal: &gt; 50%</div>
             </div>
           </>
         ) : (
-          metricsData.length > 0 ? metricsData.map(m => (<div key={m.key} className="sector-dash-metric"><div className="metric-label">{m.icon} {m.label}</div><div className="metric-value" style={{ color: m.color }}>{m.value} {m.isProgress ? '%' : (m.key.toLowerCase().includes('temp') ? '°C' : '')}</div></div>))
-          : <div style={{ padding: 20, color: 'var(--text-secondary)' }}>Menunggu data sensor...</div>
+          metricsData.length > 0 ? metricsData.map(m => {
+            const k = m.key.toLowerCase();
+            let animWidget = <span style={{ fontSize: 24 }}>{m.icon}</span>;
+            if (k.includes('suhu') || k.includes('temp')) animWidget = <AnimatedThermometer temperature={m.value} size={42} />;
+            else if (k.includes('kelembapan') || k.includes('humid')) animWidget = <AnimatedDroplet value={m.value} size={42} />;
+            else if (k.includes('cahaya') || k.includes('light')) animWidget = <AnimatedSun value={m.value} size={42} />;
+            else if (k.includes('air') || k.includes('water')) animWidget = <AnimatedWaterTank percentage={Number(m.value) || 0} size={42} />;
+            else if (k.includes('aki') || k.includes('baterai') || k.includes('soc')) animWidget = <AnimatedBatteryTank soc={m.value} size={42} />;
+            else if (k.includes('amonia') || k.includes('nh3')) animWidget = <AnimatedWind value={m.value} size={42} />;
+
+            return (
+              <div key={m.key} className="sector-dash-metric" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px' }}>
+                <div style={{ flexShrink: 0 }}>{animWidget}</div>
+                <div>
+                  <div className="metric-label">{m.label}</div>
+                  <div className="metric-value" style={{ color: m.color, fontSize: 20 }}>{m.value} {m.isProgress ? '%' : (k.includes('temp') || k.includes('suhu') ? '°C' : '')}</div>
+                </div>
+              </div>
+            );
+          }) : <div style={{ padding: 20, color: 'var(--text-secondary)' }}>Menunggu data sensor...</div>
         )}
       </div>
       <div className="sector-dash-main-grid">

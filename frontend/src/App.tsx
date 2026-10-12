@@ -271,7 +271,7 @@ export default function App() {
     }
   }, [])
 
-  const handleEditSector = useCallback(async (sectorId: string, name: string, unit: string, icon: string, color: string, mqttConfig?: any) => {
+  const handleEditSector = useCallback(async (sectorId: string, name: string, unit: string, icon: string, color: string, mqttConfig?: any, newSectorId?: string) => {
     const token = localStorage.getItem('token');
     try {
       const res = await fetch(`${API_URL}/api/sectors/${sectorId}`, {
@@ -281,6 +281,7 @@ export default function App() {
           'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ 
+          sector_id: newSectorId || sectorId,
           name, 
           unit, 
           metrics: { icon, color },
@@ -290,10 +291,12 @@ export default function App() {
       if (res.ok) {
         const updated = await res.json();
         const metricsParsed = typeof updated.metrics === 'string' ? JSON.parse(updated.metrics) : (updated.metrics || {});
+        const finalId = updated.sector_id || sectorId;
         setSectors(prev => prev.map(s =>
           String(s.id) === sectorId
             ? { 
                 ...s, 
+                id: finalId as SectorId,
                 name: updated.name, 
                 unit: updated.unit,
                 icon: metricsParsed.icon || s.icon,
@@ -413,8 +416,11 @@ export default function App() {
           onOpenSector={setDetailSector}
         />
         {renderLogoutModal()}
-        {detailSector && (String(detailSector.id).startsWith('kandang') || String(detailSector.id).startsWith('sec-')) && <KandangDetail sector={detailSector} onBack={closeDetail} loggedInUser={loggedInUser!} />}
-        {detailSector && !(String(detailSector.id).startsWith('kandang') || String(detailSector.id).startsWith('sec-')) && <GenericDetail sector={detailSector} onBack={closeDetail} loggedInUser={loggedInUser!} />}
+        {detailSector && (
+          (detailSector.unit?.toLowerCase() === 'peternakan' || detailSector.name.toLowerCase().includes('kandang') || String(detailSector.id).toLowerCase().includes('kandang') || String(detailSector.id).toLowerCase().includes('sec-') || String(detailSector.id).toLowerCase().includes('smartcoop'))
+            ? <KandangDetail sector={detailSector} onBack={closeDetail} loggedInUser={loggedInUser!} />
+            : <GenericDetail sector={detailSector} onBack={closeDetail} loggedInUser={loggedInUser!} />
+        )}
       </>
     )
   }
@@ -592,8 +598,11 @@ export default function App() {
       </div>
 
       {/* Modals */}
-      {detailSector && (String(detailSector.id).startsWith('kandang') || String(detailSector.id).startsWith('sec-')) && <KandangDetail sector={detailSector} onBack={closeDetail} loggedInUser={loggedInUser} />}
-      {detailSector && !(String(detailSector.id).startsWith('kandang') || String(detailSector.id).startsWith('sec-')) && <GenericDetail sector={detailSector} onBack={closeDetail} loggedInUser={loggedInUser} />}
+      {detailSector && (
+        (detailSector.unit?.toLowerCase() === 'peternakan' || detailSector.name.toLowerCase().includes('kandang') || String(detailSector.id).toLowerCase().includes('kandang') || String(detailSector.id).toLowerCase().includes('sec-') || String(detailSector.id).toLowerCase().includes('smartcoop'))
+          ? <KandangDetail sector={detailSector} onBack={closeDetail} loggedInUser={loggedInUser} />
+          : <GenericDetail sector={detailSector} onBack={closeDetail} loggedInUser={loggedInUser} />
+      )}
       {showAddModal && <AddSectorModal onClose={() => setShowAddModal(false)} onAdd={(name: string, type: string, mqttConfig?: any) => {
         const iconMap: Record<string, string> = { kandang: '🐓', kolam: '🐟', hidroponik: '🌿', irigasi: '🌱' }
         const colorMap: Record<string, string> = { kandang: '#E65100', kolam: '#1565C0', hidroponik: '#2E7D32', irigasi: '#795548' }

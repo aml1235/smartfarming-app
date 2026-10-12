@@ -274,18 +274,18 @@ export function GenericDetail({ sector, onBack, loggedInUser }: { sector: Sector
     },
     irigasi: {
       metrics: [
-        { label: 'Kelembapan Tanah', value: '0%', color: '#E65100' },
-        { label: 'Status', value: '-', color: '#C62828' },
-        { label: 'Lahan Total', value: '0 Ha', color: 'var(--text-secondary)' },
-        { label: 'Terakhir Irigasi', value: '-', color: '#6B7280' },
+        { label: 'Status Perangkat', value: 'Aktif', color: '#059669' },
+        { label: 'Koneksi MQTT', value: 'Online', color: '#1565C0' },
+        { label: 'Kategori Sektor', value: sector.unit || 'IoT Farming', color: 'var(--text-secondary)' },
+        { label: 'Pembaruan Terakhir', value: 'Baru saja', color: '#6B7280' },
       ],
-      ctrl1: 'Sprinkler Otomatis', ctrl2: 'Irigasi Tetes',
+      ctrl1: 'Saklar Daya Sektor', ctrl2: 'Mode Otomatis',
     },
   }
   const effectiveId = String(sector.id).toLowerCase().includes('sec-010') || String(sector.id).toLowerCase().includes('hidro') ? 'hidroponik' 
                     : String(sector.id).toLowerCase().includes('sec-011') || String(sector.id).toLowerCase().includes('kandang') ? 'kandang'
                     : String(sector.id).toLowerCase().includes('kolam') ? 'kolam'
-                    : String(sector.id).split('_')[0];
+                    : 'irigasi';
   const cfg = configs[effectiveId as SectorId] || configs['irigasi']
 
   const handleAutoChange = async (newState: boolean) => {

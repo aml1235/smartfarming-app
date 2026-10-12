@@ -22,7 +22,15 @@ class SectorController extends Controller
             $query->whereIn('sector_id', $user->assigned_sectors ?? []);
         }
 
-        return response()->json($query->get());
+        $sectors = $query->get()->map(function ($sector) {
+            $data = $sector->toArray();
+            if (empty($data['mqtt_broker_config'])) {
+                $data['mqtt_broker_config'] = $sector->getMqttConnectionConfig();
+            }
+            return $data;
+        });
+
+        return response()->json($sectors);
     }
 
     public function store(Request $request)
@@ -105,9 +113,10 @@ class SectorController extends Controller
         $sector = Sector::where('sector_id', $sector_id)->firstOrFail();
 
         $validated = $request->validate([
+            'sector_id'          => 'sometimes|string|max:50|unique:sectors,sector_id,' . $sector->id,
             'name'               => 'sometimes|string|max:255',
             'unit'               => 'sometimes|string|max:100',
-            'status'             => 'sometimes|in:baik,normal,perigatan,kritis',
+            'status'             => 'sometimes|in:baik,normal,peringatan,kritis',
             'metrics'            => 'sometimes|array',
             'mqtt_topic_pattern' => 'sometimes|nullable|string|max:255',
             'mqtt_broker_config' => 'sometimes|nullable|array',
@@ -115,6 +124,27 @@ class SectorController extends Controller
             'mqtt_control_topic' => 'sometimes|nullable|string|max:255',
             'alert_thresholds'   => 'sometimes|nullable|array',
         ]);
+
+        if (isset($validated['sector_id']) && $validated['sector_id'] !== $sector->sector_id) {
+            $oldId = $sector->sector_id;
+            $newId = $validated['sector_id'];
+
+            // Update penugasan user jika ID sektor berubah
+            User::all()->each(function (User $user) use ($oldId, $newId) {
+                if (in_array($oldId, $user->assigned_sectors ?? [])) {
+                    $assigned = array_values(array_diff($user->assigned_sectors, [$oldId]));
+                    $assigned[] = $newId;
+                    $user->assigned_sectors = $assigned;
+                    $user->save();
+                }
+            });
+
+            // Update log sensor & notifikasi terkait
+            SensorLog::where('sector_id', $oldId)->update(['sector_id' => $newId]);
+            Notification::where('sector_id', $oldId)->update(['sector_id' => $newId]);
+
+            $sector->sector_id = $newId;
+        }
 
         if (isset($validated['name']))               $sector->name               = $validated['name'];
         if (isset($validated['unit']))               $sector->unit               = $validated['unit'];
@@ -163,7 +193,7 @@ class SectorController extends Controller
                 // Status aktuator (bukan angka sensor)
                 'lastSync', 'systemStatus',
                 'lampStatus', 'conveyorStatus', 'conveyorPhase', 'pumpStatus',
-                'lampAutoMode', 'pompaAutoMode',
+                'lampAutoMode', 'pompaAutoMode', 'lampu', 'pump', 'pompa', 'lamp', 'motor',
                 // Tegangan/ADC mentah
                 'mq135Voltage', 'waterVoltage', 'waterAdc',
                 // Jadwal lampu
@@ -425,6 +455,9 @@ class SectorController extends Controller
         $target  = $validated['target'] ?? 'pump';
         
         $sectorModel = Sector::where('sector_id', $sector_id)->first();
+        if (!$sectorModel && strtolower($sector_id) === 'hidroponik') {
+            $sectorModel = Sector::where('sector_id', 'SEC-010')->first();
+        }
         $sectorName = $sectorModel ? $sectorModel->name : $sector_id;
         
         // Catat aktivitas
@@ -456,52 +489,55 @@ class SectorController extends Controller
             $controlBaseTopic = $sectorModel?->mqtt_control_topic
                 ?? "smartfarming/hydroponic/cmd";
 
+            // Bersihkan wildcard /+ atau /# dari base topic jika ada
+            $cleanBaseTopic = preg_replace('#/[+\#]+$#', '', $controlBaseTopic);
+            $cleanBaseTopic = rtrim($cleanBaseTopic, '/');
+
             // Deteksi apakah ini broker smartcoop (berdasarkan control topic)
-            $isSmartcoop = str_starts_with($controlBaseTopic, 'smartcoop');
+            $isSmartcoop = str_starts_with($cleanBaseTopic, 'smartcoop');
 
             if ($isSmartcoop) {
-                // Format kontrol smartcoop: 1/0 atau string khusus
+                $isBengpus = (strtolower($sector_id) === 'smartcoop_bengpuskomlek') || str_contains($cleanBaseTopic, 'bengpus');
+                $isOn = (strtoupper($command) === 'ON' || $command === '1');
+
                 if ($target === 'convjog') {
-                    $mqtt->publish("{$controlBaseTopic}/convjog", $command, 1);
-
+                    $mqtt->publish("{$cleanBaseTopic}/convjog", $command, 0);
                 } else {
-                    $smartcoopTarget = $target;
-                    $payload = (strtoupper($command) === 'ON' || $command === '1') ? '1' : '0'; // default
-
-                    if ($target === 'lamp') {
-                        $smartcoopTarget = 'lampu';
-                        $payload = (strtoupper($command) === 'ON' || $command === '1') ? 'on' : 'off';
-                    } elseif ($target === 'pompa') {
-                        $smartcoopTarget = 'pompa';
-                        $payload = (strtoupper($command) === 'ON' || $command === '1') ? 'isi' : 'stop';
+                    if ($target === 'lamp' || $target === 'lampu') {
+                        $mqtt->publish("{$cleanBaseTopic}/lamp", $isOn ? '1' : '0', 0);
+                        $mqtt->publish("{$cleanBaseTopic}/lamp", $isOn ? 'ON' : 'OFF', 0);
+                        $mqtt->publish("{$cleanBaseTopic}/lampu", $isOn ? 'on' : 'off', 0);
+                        $mqtt->publish("{$cleanBaseTopic}/lampu", $isOn ? '1' : '0', 0);
+                    } elseif ($target === 'pompa' || $target === 'pump') {
+                        $mqtt->publish("{$cleanBaseTopic}/pompa", $isOn ? '1' : '0', 0);
+                        $mqtt->publish("{$cleanBaseTopic}/pompa", $isOn ? 'ON' : 'OFF', 0);
+                        $mqtt->publish("{$cleanBaseTopic}/pompa", $isOn ? 'isi' : 'stop', 0);
+                        $mqtt->publish("{$cleanBaseTopic}/pump", $isOn ? '1' : '0', 0);
                     } elseif ($target === 'feeder') {
-                        $smartcoopTarget = 'servo';
-                        $payload = (strtoupper($command) === 'ON' || $command === '1') ? 'buka' : 'tutup';
+                        $mqtt->publish("{$cleanBaseTopic}/servo", $isOn ? 'buka' : 'tutup', 0);
                     } elseif ($target === 'conveyor') {
-                        $smartcoopTarget = 'pakan';
-                        $payload = 'mulai';
-                        if (strtoupper($command) === 'OFF' || $command === '0') {
-                            $smartcoopTarget = 'motor';
-                            $payload = 'stop';
+                        if ($isOn) {
+                            $mqtt->publish("{$cleanBaseTopic}/pakan", 'mulai', 0);
+                            $mqtt->publish("{$cleanBaseTopic}/conveyor", '1', 0);
+                            $mqtt->publish("{$cleanBaseTopic}/conveyor", 'ON', 0);
+                        } else {
+                            $mqtt->publish("{$cleanBaseTopic}/motor", 'stop', 0);
+                            $mqtt->publish("{$cleanBaseTopic}/conveyor", '0', 0);
+                            $mqtt->publish("{$cleanBaseTopic}/conveyor", 'OFF', 0);
                         }
-                    } elseif ($target === 'convjog') {
-                        $smartcoopTarget = 'motor';
-                        if ($command === 'fwd' || $command === 'maju') $payload = 'maju';
-                        elseif ($command === 'rev' || $command === 'mundur') $payload = 'mundur';
-                        else $payload = 'stop';
-                    } elseif ($target === 'lampauto' || $target === 'pompaauto') {
-                        $smartcoopTarget = ($target === 'lampauto') ? '../config/oto_lampu' : '../config/oto_pompa';
-                        $payload = (strtoupper($command) === 'ON' || $command === '1') ? '1' : '0';
+                    } elseif ($target === 'lampauto') {
+                        $topic = $isBengpus ? "{$cleanBaseTopic}/lampauto" : str_replace('control', 'config', $cleanBaseTopic) . '/oto_lampu';
+                        $mqtt->publish($topic, $isOn ? '1' : '0', 0);
+                        $mqtt->publish("{$cleanBaseTopic}/lampauto", $isOn ? '1' : '0', 0);
+                    } elseif ($target === 'pompaauto') {
+                        $topic = $isBengpus ? "{$cleanBaseTopic}/pompaauto" : str_replace('control', 'config', $cleanBaseTopic) . '/oto_pompa';
+                        $mqtt->publish($topic, $isOn ? '1' : '0', 0);
+                        $mqtt->publish("{$cleanBaseTopic}/pompaauto", $isOn ? '1' : '0', 0);
                     } elseif ($target === 'reset') {
-                        // Support reset motor/pompa if needed
-                        $smartcoopTarget = 'reset';
-                        $payload = $command;
+                        $mqtt->publish("{$cleanBaseTopic}/reset", $command, 0);
+                    } else {
+                        $mqtt->publish("{$cleanBaseTopic}/{$target}", $isOn ? '1' : '0', 0);
                     }
-
-                    $topic = "{$controlBaseTopic}/{$smartcoopTarget}";
-                    $topic = str_replace('control/../config', 'config', $topic);
-
-                    $mqtt->publish($topic, $payload, 1);
 
                     // Update optimistis di DB
                     if (in_array($target, ['lampauto', 'pompaauto']) && $sectorModel) {
@@ -509,7 +545,7 @@ class SectorController extends Controller
                             ? json_decode($sectorModel->metrics, true)
                             : ($sectorModel->metrics ?? []);
                         $key = $target === 'lampauto' ? 'lampAutoMode' : 'pompaAutoMode';
-                        $metrics[$key] = $payload;
+                        $metrics[$key] = $isOn ? '1' : '0';
                         $sectorModel->metrics = $metrics;
                         $sectorModel->save();
                     }
@@ -519,14 +555,18 @@ class SectorController extends Controller
                     $v3Target = $target;
                     if ($target === 'conveyor') $v3Target = 'motor';
                     if ($target === 'lampauto') $v3Target = 'lampAutoMode';
-                    $mqtt->publish($v3Topic, json_encode([$v3Target => strtoupper($command) === 'ON' ? 'ON' : 'OFF']), 0);
+                    $mqtt->publish($v3Topic, json_encode([$v3Target => $isOn ? 'ON' : 'OFF']), 0);
                 }
             } else {
-                // Format kontrol umum — JSON
-                $actual_id = ($sector_id === 'hidroponik') ? 'SEC-010' : $sector_id;
-                $topic   = "{$controlBaseTopic}/{$actual_id}";
-                $payload = json_encode(['status' => $command]);
+                // Format kontrol umum — JSON & Raw String (misal Hidroponik)
+                $topic = $cleanBaseTopic;
+                if (!str_contains($topic, 'SEC-') && !str_contains($topic, $sector_id)) {
+                    $actual_id = ($sector_id === 'hidroponik') ? 'SEC-010' : $sector_id;
+                    $topic = rtrim($topic, '/') . '/' . $actual_id;
+                }
+                $payload = json_encode(['status' => strtoupper($command)]);
                 $mqtt->publish($topic, $payload, 0);
+                $mqtt->publish($topic, strtoupper($command), 0); // Raw string fallback ("ON" / "OFF")
             }
 
             $mqtt->disconnect();
@@ -582,6 +622,8 @@ class SectorController extends Controller
 
             // Derive config topic dari control topic (ganti 'control' → 'config')
             $controlBase  = $sectorModel->mqtt_control_topic ?? 'smartcoop/control';
+            // Bersihkan wildcard /+ atau /# (topik publish tidak boleh mengandung wildcard)
+            $controlBase  = rtrim(preg_replace('#/[+\#]+$#', '', $controlBase), '/');
             $configBase   = str_replace('/control', '/config', $controlBase);
             $topic        = "{$configBase}/{$target}";
             $mqtt->publish($topic, $value, 1);

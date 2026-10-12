@@ -620,3 +620,146 @@ function AnimatedThermometerSvg({ temp, fillY, theme, clipId, size, isHot }: any
     </svg>
   )
 }
+
+// ─── ANIMATED SUN (INTENSITAS CAHAYA) COMPONENT ─────────────────────────────
+export function AnimatedSun({ value, size = 64 }: { value?: number | string, size?: number }) {
+  const uniqueId = React.useId().replace(/:/g, '_')
+  const clipId = `sun-${uniqueId}`
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" style={{ overflow: 'visible' }}>
+      <style>{`
+        @keyframes sunRotate_${clipId} {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes sunPulse_${clipId} {
+          0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px #f59e0b); }
+          50% { transform: scale(1.08); filter: drop-shadow(0 0 12px #fbbf24); }
+        }
+      `}</style>
+      <defs>
+        <radialGradient id={`sunGrad-${clipId}`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#fef08a" />
+          <stop offset="60%" stopColor="#f59e0b" />
+          <stop offset="100%" stopColor="#d97706" />
+        </radialGradient>
+      </defs>
+      <g style={{ transformOrigin: '50px 50px', animation: `sunRotate_${clipId} 20s linear infinite` }}>
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => (
+          <line
+            key={i}
+            x1="50" y1="14" x2="50" y2="24"
+            stroke="#f59e0b"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            transform={`rotate(${angle} 50 50)`}
+            opacity="0.95"
+          />
+        ))}
+      </g>
+      <circle
+        cx="50" cy="50" r="20"
+        fill={`url(#sunGrad-${clipId})`}
+        stroke="#d97706"
+        strokeWidth="2"
+        style={{ transformOrigin: '50px 50px', animation: `sunPulse_${clipId} 3s ease-in-out infinite` }}
+      />
+    </svg>
+  )
+}
+
+// ─── ANIMATED DROPLET (KELEMBAPAN) COMPONENT ─────────────────────────────────
+export function AnimatedDroplet({ value, size = 64 }: { value?: number | string, size?: number }) {
+  const uniqueId = React.useId().replace(/:/g, '_')
+  const clipId = `drop-${uniqueId}`
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" style={{ overflow: 'visible' }}>
+      <style>{`
+        @keyframes dropFloat_${clipId} {
+          0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 2px 4px rgba(21,101,192,0.3)); }
+          50% { transform: translateY(-4px) scale(1.04); filter: drop-shadow(0 6px 12px rgba(21,101,192,0.5)); }
+        }
+        @keyframes dropShimmer_${clipId} {
+          0% { opacity: 0.3; }
+          50% { opacity: 0.8; }
+          100% { opacity: 0.3; }
+        }
+      `}</style>
+      <defs>
+        <linearGradient id={`dropGrad-${clipId}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#60a5fa" />
+          <stop offset="60%" stopColor="#1d4ed8" />
+          <stop offset="100%" stopColor="#1e40af" />
+        </linearGradient>
+      </defs>
+      <g style={{ transformOrigin: '50px 50px', animation: `dropFloat_${clipId} 3s ease-in-out infinite` }}>
+        <path
+          d="M 50 16 C 50 16 26 48 26 66 C 26 79.25 36.75 90 50 90 C 63.25 90 74 79.25 74 66 C 74 48 50 16 50 16 Z"
+          fill={`url(#dropGrad-${clipId})`}
+          stroke="#1e3a8a"
+          strokeWidth="2.5"
+        />
+        {/* Highlight sheen */}
+        <path
+          d="M 40 32 C 34 44 32 56 34 66"
+          fill="none"
+          stroke="#ffffff"
+          strokeWidth="3.5"
+          strokeLinecap="round"
+          opacity="0.75"
+          style={{ animation: `dropShimmer_${clipId} 2.5s ease-in-out infinite` }}
+        />
+      </g>
+    </svg>
+  )
+}
+
+// ─── ANIMATED WIND / GAS (AMONIA NH3) COMPONENT ─────────────────────────────
+export function AnimatedWind({ value, size = 64 }: { value?: number | string, size?: number }) {
+  const uniqueId = React.useId().replace(/:/g, '_')
+  const clipId = `wind-${uniqueId}`
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100" style={{ overflow: 'visible' }}>
+      <style>{`
+        @keyframes windStream_${clipId} {
+          0% { stroke-dashoffset: 60; }
+          100% { stroke-dashoffset: -60; }
+        }
+        @keyframes gasPulse_${clipId} {
+          0%, 100% { transform: scale(1); opacity: 0.85; }
+          50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 8px #10b981); }
+        }
+      `}</style>
+      <g style={{ transformOrigin: '50px 50px', animation: `gasPulse_${clipId} 3s ease-in-out infinite` }}>
+        <path
+          d="M 20 35 Q 45 25 70 35 T 85 32"
+          fill="none"
+          stroke="#10b981"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray="30 15"
+          style={{ animation: `windStream_${clipId} 3s linear infinite` }}
+        />
+        <path
+          d="M 15 50 Q 40 40 65 50 T 80 48"
+          fill="none"
+          stroke="#059669"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray="25 15"
+          style={{ animation: `windStream_${clipId} 2.2s linear infinite` }}
+        />
+        <path
+          d="M 25 65 Q 50 55 75 65 T 90 62"
+          fill="none"
+          stroke="#34d399"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeDasharray="35 15"
+          style={{ animation: `windStream_${clipId} 3.8s linear infinite` }}
+        />
+      </g>
+    </svg>
+  )
+}
+

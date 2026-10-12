@@ -41,7 +41,7 @@ class UpdateSectorsMqttConfig extends Seeder
         // Metric map: mapping lengkap dari topic-suffix ke field DB
         // -------------------------------------------------------
         DB::table('sectors')
-            ->where('sector_id', 'sec-01')
+            ->whereIn('sector_id', ['sec01', 'sec-01'])
             ->update([
                 'mqtt_topic_pattern' => 'smartcoop/#',
                 'mqtt_broker_config' => json_encode([
@@ -98,7 +98,66 @@ class UpdateSectorsMqttConfig extends Seeder
                 'mqtt_control_topic' => 'smartcoop/control',
             ]);
 
-        $this->command->info('✅ sec01 (Kandang Ayam): MQTT config updated (broker kustom)');
+        $this->command->info('✅ sec-01 (Kandang Ayam Bengpuskomlek): MQTT config updated');
+
+        // -------------------------------------------------------
+        // SEKTOR KANDANG AYAM UNHAN (sec-02)
+        // -------------------------------------------------------
+        DB::table('sectors')
+            ->where('sector_id', 'sec-02')
+            ->update([
+                'mqtt_topic_pattern' => 'smartcoop_unhan/#',
+                'mqtt_broker_config' => json_encode([
+                    'host'     => '7953ca21897d4be78141b6206bf9c205.s1.eu.hivemq.cloud',
+                    'port'     => 8883,
+                    'tls'      => true,
+                    'username' => 'rendi',
+                    'password' => '12345678',
+                ]),
+                'mqtt_metric_map' => json_encode([
+                    'temp'            => 'temperature',
+                    'humidity'        => 'humidity',
+                    'mq135'           => 'ammonia',
+                    'mq135volt'       => 'mq135Voltage',
+                    'wateradc'        => 'waterAdc',
+                    'watervoltage'    => 'waterVoltage',
+                    'waterlevel'      => 'waterLevel',
+                    'lamp'            => 'lampStatus',
+                    'conveyor'        => 'conveyorStatus',
+                    'conveyorphase'   => 'conveyorPhase',
+                    'pompa'           => 'pumpStatus',
+                    'lampauto'        => 'lampAutoMode',
+                    'pompaauto'       => 'pompaAutoMode',
+                    'time'            => 'lastSync',
+                    'system'          => 'systemStatus',
+                    'lampon'          => 'lampOn',
+                    'lampoff'         => 'lampOff',
+                    'conveyoron'      => 'cv1On',
+                    'conveyor2on'     => 'cv2On',
+                    'conveyor2en'     => 'cv2En',
+                    'convrun'         => 'convRun',
+                    'convpause'       => 'convPause',
+                    'convspeed'       => 'convSpeed',
+                    'feeddistance'    => 'feedDistance',
+                    'feedlevel'       => 'feedLevel',
+                    'feeder'          => 'feederStatus',
+                    'lastfeed'        => 'lastFeed',
+                    'feedersystem'    => 'feederSystemStatus',
+                    'feedtime1'       => 'feedTime1',
+                    'feedtime2'       => 'feedTime2',
+                    'feedtime2en'     => 'feedTime2En',
+                    'feedduration'    => 'feedDuration',
+                    'feedangleopen'   => 'feedAngleOpen',
+                    'feedangleclose'  => 'feedAngleClose',
+                    'feedangleopen2'  => 'feedAngleOpen2',
+                    'feedangleclose2' => 'feedAngleClose2',
+                    'feeddistfull'    => 'feedDistFull',
+                    'feeddistempty'   => 'feedDistEmpty',
+                ]),
+                'mqtt_control_topic' => 'smartcoop_unhan/control',
+            ]);
+
+        $this->command->info('✅ sec-02 (Kandang Ayam Unhan): MQTT config updated');
 
         $this->command->line('');
         $this->command->info('🎉 Seeder selesai! Sektor baru dapat ditambah melalui UI tanpa mengubah code.');

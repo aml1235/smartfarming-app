@@ -18,8 +18,8 @@
 // ========================================
 // CONFIGURATION
 // ========================================
-String WIFI_SSID = "iPhone";         
-String WIFI_PASSWORD = "elma5321";   
+String WIFI_SSID = "SMARTFARM";         
+String WIFI_PASSWORD = "KADETUNHAN";   
 const char* AP_SSID = "Lab Modern Alkomlek";     
 const char* AP_PASSWORD = "prc_1077";       
 const char* SECTOR_ID = "SEC-010";  

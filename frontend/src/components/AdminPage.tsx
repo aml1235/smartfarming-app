@@ -23,7 +23,7 @@ interface AdminPageProps {
   onUpdateUser: (user: User) => void;
   onAddSector: (name: string, unit: string, sectorId: string, icon: string, color: string) => Promise<void>;
   onDeleteSector: (sectorId: string) => Promise<void>;
-  onEditSector: (sectorId: string, name: string, unit: string, icon: string, color: string, mqttConfig?: any) => Promise<void>;
+  onEditSector: (sectorId: string, name: string, unit: string, icon: string, color: string, mqttConfig?: any, newSectorId?: string) => Promise<void>;
   onOpenSector?: (sector: Sector) => void;
 }
 
@@ -36,6 +36,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
   const [showAddSectorModal, setShowAddSectorModal] = useState(false);
   const [sectorToDelete, setSectorToDelete] = useState<string | null>(null);
   const [sectorToEdit, setSectorToEdit] = useState<Sector | null>(null);
+  const [editSectorId, setEditSectorId] = useState('');
   const [editSectorName, setEditSectorName] = useState('');
   const [editSectorUnit, setEditSectorUnit] = useState('');
   const [editSectorIcon, setEditSectorIcon] = useState('📋');
@@ -106,6 +107,15 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
     fetchActivities();
   }, [fetchActivities]);
 
+  const openAddUserModal = () => {
+    setEditUserId(null);
+    setNewUserName('');
+    setNewUserEmail('');
+    setNewUserRole('operator');
+    setNewUserPassword('');
+    setShowAddModal(true);
+  };
+
   const openEditModal = (user: User) => {
     setEditUserId(user.id);
     setNewUserName(user.name);
@@ -153,29 +163,42 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newUserPassword && newUserPassword.length < 6) {
+    if (!editUserId && (!newUserPassword || newUserPassword.length < 6)) {
       alert("Password harus minimal 6 karakter!");
       return;
     }
     if (editUserId) {
       try {
         const token = localStorage.getItem('token') || '';
+        const payload: any = { name: newUserName, email: newUserEmail, role: newUserRole };
+        if (newUserPassword) payload.password = newUserPassword;
+        
         const response = await fetch(`${API_URL}/api/users/${editUserId}`, {
           method: 'PUT',
           headers: { 
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({ name: newUserName, email: newUserEmail, role: newUserRole, password: newUserPassword })
+          body: JSON.stringify(payload)
         });
         if (response.ok) {
           const updatedUser = await response.json();
           const updated = users.map(u => u.id === editUserId ? { ...u, ...updatedUser } : u);
           onUpdateUsers(updated);
           addActivity('Mengedit pengguna ' + updatedUser.name, 'user');
+          setShowAddModal(false);
+          setEditUserId(null);
+          setNewUserName('');
+          setNewUserEmail('');
+          setNewUserRole('operator');
+          setNewUserPassword('');
+        } else {
+          const errData = await response.json();
+          alert(errData.message || (errData.errors ? Object.values(errData.errors).flat().join(', ') : 'Gagal mengedit pengguna'));
         }
       } catch (err) {
         console.error("Failed to update user", err);
+        alert("Terjadi kesalahan jaringan saat mengedit pengguna");
       }
     } else {
       try {
@@ -192,17 +215,21 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
           const newUser = await response.json();
           onUpdateUsers([...users, { ...newUser, avatar: newUserName.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase(), assignedSectors: [], isActive: true, lastLogin: 'Belum pernah' }]);
           addActivity('Menambahkan pengguna ' + newUser.name, 'user');
+          setShowAddModal(false);
+          setEditUserId(null);
+          setNewUserName('');
+          setNewUserEmail('');
+          setNewUserRole('operator');
+          setNewUserPassword('');
+        } else {
+          const errData = await response.json();
+          alert(errData.message || (errData.errors ? Object.values(errData.errors).flat().join(', ') : 'Gagal menambahkan pengguna'));
         }
       } catch (err) {
         console.error("Failed to add user", err);
+        alert("Terjadi kesalahan jaringan saat menambahkan pengguna");
       }
     }
-    setShowAddModal(false);
-    setEditUserId(null);
-    setNewUserName('');
-    setNewUserEmail('');
-    setNewUserRole('operator');
-    setNewUserPassword('');
   };
 
   const confirmDeleteUser = async () => {
@@ -280,13 +307,15 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
             <div style={{ background: 'var(--bg-surface)', borderRadius: '14px', border: '1px solid var(--border-color)', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {sectors.map(s => {
                 const isWarning = s.status === 'peringatan';
-                const color = isWarning ? '#f59e0b' : '#059669';
-                const percent = isWarning ? 65 : Math.floor(Math.random() * 20) + 80;
+                const isCritical = s.status === 'kritis';
+                const color = isCritical ? '#ef4444' : isWarning ? '#f59e0b' : '#059669';
+                const labelText = isCritical ? 'Kritis' : isWarning ? 'Peringatan' : 'Normal';
+                const percent = isCritical ? 45 : isWarning ? 75 : 100;
                 return (
                   <div key={s.id}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '8px', color: 'var(--text-secondary)' }}>
                       <span>{s.name}</span>
-                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{percent}% Normal</span>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{percent}% {labelText}</span>
                     </div>
                     <div style={{ height: '8px', background: 'var(--border-color)', borderRadius: '4px', overflow: 'hidden' }}>
                       <div style={{ width: `${percent}%`, height: '100%', background: color, borderRadius: '4px' }} />
@@ -323,7 +352,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
           <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text-primary)' }}>{t('admin_users')}</h2>
           <p style={{ margin: '4px 0 0', fontSize: 14, color: 'var(--text-secondary)' }}>Kelola hak akses dan peran tim Anda</p>
         </div>
-        <button className="btn btn-primary" onClick={() => openEditModal({} as User)}>
+        <button className="btn btn-primary" onClick={openAddUserModal}>
           <IcUserPlus size={18} /> {t('admin_add_user')}
         </button>
       </div>
@@ -432,11 +461,14 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Role Akses</label>
-                <input type="text" value={newUserRole === 'admin' ? 'Administrator (Super Admin)' : 'Operator Sektor'} disabled style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.05)', color: 'var(--text-secondary)', outline: 'none', cursor: 'not-allowed' }} />
+                <select value={newUserRole} onChange={e => setNewUserRole(e.target.value as 'admin' | 'operator')} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-primary)', outline: 'none' }}>
+                  <option value="operator">Operator Sektor</option>
+                  <option value="admin">Administrator (Super Admin)</option>
+                </select>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
                 <button type="button" onClick={() => setShowAddModal(false)} className="btn btn-ghost" style={{ padding: '10px 16px', background: 'var(--bg-base)', color: 'var(--text-primary)', border: 'none', borderRadius: '8px', fontWeight: 500, cursor: 'pointer' }}>Batal</button>
-                <button type="submit" className="btn btn-primary" style={{ padding: '10px 16px', background: '#059669', color: 'var(--text-primary)', borderRadius: '8px', border: 'none', fontWeight: 500, cursor: 'pointer' }}>Simpan Pengguna</button>
+                <button type="submit" className="btn btn-primary" style={{ padding: '10px 16px', background: '#059669', color: '#ffffff', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer' }}>Simpan Pengguna</button>
               </div>
             </form>
           </div>
@@ -573,9 +605,9 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
       alert('Semua field wajib diisi!');
       return;
     }
-    // Validasi sector_id: hanya huruf kecil, angka, dan tanda hubung
-    if (!/^[a-z0-9-]+$/.test(newSectorId)) {
-      alert('ID Sektor hanya boleh berisi huruf kecil, angka, dan tanda hubung (-)');
+    // Validasi sector_id: huruf, angka, tanda hubung, dan garis bawah
+    if (!/^[a-zA-Z0-9_-]+$/.test(newSectorId)) {
+      alert('ID Sektor hanya boleh berisi huruf, angka, tanda hubung (-), dan garis bawah (_)');
       return;
     }
     setAddSectorLoading(true);
@@ -600,36 +632,41 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
 
   const openEditSector = (sector: Sector) => {
     setSectorToEdit(sector);
+    setEditSectorId((sector as any).sector_id || String(sector.id));
     setEditSectorName(sector.name);
     setEditSectorUnit(sector.unit);
     setEditSectorIcon(sector.icon || '📋');
     setEditSectorColor(sector.color || '#059669');
     setEditSectorShowMqtt(false);
-    const mq = (sector as any).mqtt_broker_config;
+    let mq = (sector as any).mqtt_broker_config;
+    if (typeof mq === 'string') {
+      try { mq = JSON.parse(mq) } catch { mq = null }
+    }
+
+    const defaultHost = 'e8d98b46c66448469bd969da39a11bd8.s1.eu.hivemq.cloud';
+    const defaultUser = 'amel';
+    const defaultPass = 'amelpw123';
+
     setEditSectorMqttTopic((sector as any).mqtt_topic_pattern || '');
     setEditSectorMqttControlTopic((sector as any).mqtt_control_topic || '');
-    if (mq) {
-      setEditSectorUseCustomBroker(true);
-      setEditSectorBrokerHost(mq.host || '');
-      setEditSectorBrokerPort(mq.port ? String(mq.port) : '8883');
-      setEditSectorBrokerUser(mq.username || '');
-      setEditSectorBrokerPass(mq.password || '');
-      setEditSectorBrokerTls(mq.tls !== false);
-    } else {
-      setEditSectorUseCustomBroker(false);
-      setEditSectorBrokerHost('');
-      setEditSectorBrokerPort('8883');
-      setEditSectorBrokerUser('');
-      setEditSectorBrokerPass('');
-      setEditSectorBrokerTls(true);
-    }
+
+    setEditSectorUseCustomBroker(true);
+    setEditSectorBrokerHost(mq?.host || defaultHost);
+    setEditSectorBrokerPort(mq?.port ? String(mq.port) : '8883');
+    setEditSectorBrokerUser(mq?.username || defaultUser);
+    setEditSectorBrokerPass(mq?.password || defaultPass);
+    setEditSectorBrokerTls(mq?.tls !== false);
   };
 
   const handleEditSectorSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sectorToEdit) return;
-    if (!editSectorName.trim() || !editSectorUnit.trim()) {
-      alert('Nama dan Unit tidak boleh kosong!');
+    if (!editSectorId.trim() || !editSectorName.trim() || !editSectorUnit.trim()) {
+      alert('ID, Nama, dan Unit tidak boleh kosong!');
+      return;
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(editSectorId.trim())) {
+      alert('ID Sektor hanya boleh berisi huruf, angka, tanda hubung (-), dan garis bawah (_)');
       return;
     }
     const mqttConfig = editSectorShowMqtt ? {
@@ -645,7 +682,7 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
     } : {};
     
     setEditSectorLoading(true);
-    await onEditSector(String(sectorToEdit.id), editSectorName.trim(), editSectorUnit.trim(), editSectorIcon, editSectorColor, mqttConfig);
+    await onEditSector(String(sectorToEdit.id), editSectorName.trim(), editSectorUnit.trim(), editSectorIcon, editSectorColor, mqttConfig, editSectorId.trim());
     setEditSectorLoading(false);
     addActivity('Mengedit sektor', editSectorName.trim());
     setSectorToEdit(null);
@@ -729,8 +766,8 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
                 <input required type="text" value={newSectorUnit} onChange={e => setNewSectorUnit(e.target.value)} placeholder="cth: Peternakan" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', outline: 'none', fontSize: '14px' }} />
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ID Unik Sektor <span style={{ fontWeight: 400, textTransform: 'none' }}>(huruf kecil, angka, tanda hubung)</span></label>
-                <input required type="text" value={newSectorId} onChange={e => setNewSectorId(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} placeholder="cth: kandang-bebek" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', outline: 'none', fontSize: '14px', fontFamily: 'monospace' }} />
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ID Unik Sektor <span style={{ fontWeight: 400, textTransform: 'none' }}>(huruf, angka, tanda hubung, underscore)</span></label>
+                <input required type="text" value={newSectorId} onChange={e => setNewSectorId(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ''))} placeholder="cth: SEC-010" style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', outline: 'none', fontSize: '14px', fontFamily: 'monospace' }} />
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Icon</label>
@@ -798,8 +835,8 @@ export function AdminPage({ sectors, users, onLogout, onUpdateUsers, darkMode, s
             </div>
             <form onSubmit={handleEditSectorSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ID Sektor</label>
-                <input disabled value={String(sectorToEdit.id)} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.05)', color: 'var(--text-secondary)', fontSize: '14px', fontFamily: 'monospace', cursor: 'not-allowed' }} />
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ID Unik Sektor <span style={{ fontWeight: 400, textTransform: 'none' }}>(huruf, angka, tanda hubung, underscore)</span></label>
+                <input required type="text" value={editSectorId} onChange={e => setEditSectorId(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ''))} style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-base)', color: 'var(--text-primary)', outline: 'none', fontSize: '14px', fontFamily: 'monospace' }} placeholder="cth: SEC-010" />
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nama Sektor</label>
