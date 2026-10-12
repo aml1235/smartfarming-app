@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  IcLeaf, IcShield, IcActivity, IcZap, IcBarChart, IcUsers, IcGrid, IcBell, IcWaves, IcDroplets, IcSettings, IcLink, IcHome, IcSun, IcMoon, IcMail
+  IcLeaf, IcShield, IcActivity, IcZap, IcBarChart, IcGrid, IcBell, IcSettings, IcLink, IcHome, IcSun, IcMoon, IcMail
 } from './Icons';
 import { useLanguage } from '../i18n';
 import { API_URL } from '../constants';
@@ -126,8 +126,6 @@ export function LandingPage({ onLogin, onDownloadApk, darkMode, setDarkMode }: L
   const sectors = [
     { icon: <IcHome size={28} />, title: 'Kandang Ayam', subtitle: 'Poultry Management', desc: 'Sistem monitoring lingkungan kandang ayam secara otomatis.', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
     { icon: <IcLeaf size={28} />, title: 'Hidroponik', subtitle: 'Hydroponic System', desc: 'Pengelolaan sistem pertanian tanpa tanah dengan pemantauan nutrisi.', color: '#10b981', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)' },
-    { icon: <IcWaves size={28} />, title: 'Kolam Ikan', subtitle: 'Aquaculture System', desc: 'Pemantauan kualitas air kolam secara kontinu.', color: '#3b82f6', bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.2)' },
-    { icon: <IcDroplets size={28} />, title: 'Irigasi Tanah', subtitle: 'Soil Irrigation', desc: 'Pengelolaan irigasi berbasis data sensor kelembapan.', color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.2)' },
   ];
 
   const features = [
@@ -135,7 +133,6 @@ export function LandingPage({ onLogin, onDownloadApk, darkMode, setDarkMode }: L
     { icon: <IcZap />, title: 'Otomasi Cerdas', desc: 'Sistem bereaksi otomatis terhadap kondisi abnormal.' },
     { icon: <IcBell />, title: 'Notifikasi Peringatan', desc: 'Alert berbasis threshold yang dapat dikonfigurasi.' },
     { icon: <IcBarChart />, title: 'Analitik & Histori', desc: 'Grafik tren historis untuk mengambil keputusan berdasarkan data.' },
-    { icon: <IcUsers />, title: 'Manajemen Tim', desc: 'Pendelegasian tugas yang efisien.' },
     { icon: <IcGrid />, title: 'Multi-Perangkat', desc: 'Antarmuka responsif yang bekerja sempurna di desktop dan ponsel.' },
   ];
 
@@ -240,7 +237,7 @@ export function LandingPage({ onLogin, onDownloadApk, darkMode, setDarkMode }: L
         {/* SEKTOR PERTANIAN */}
         <section id="sektor" ref={sectorsAnim.ref} style={{ padding: '80px 0', opacity: sectorsAnim.visible ? 1 : 0, transform: sectorsAnim.visible ? 'translateY(0)' : 'translateY(40px)', transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)' }}>
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <div style={{ display: 'inline-block', padding: '8px 20px', borderRadius: '999px', backgroundColor: 'rgba(16,185,129,0.1)', color: '#059669', fontWeight: 700, fontSize: '13px', marginBottom: '20px', border: '1px solid rgba(16,185,129,0.2)' }}>Empat Pilar Sistem</div>
+            <div style={{ display: 'inline-block', padding: '8px 20px', borderRadius: '999px', backgroundColor: 'rgba(16,185,129,0.1)', color: '#059669', fontWeight: 700, fontSize: '13px', marginBottom: '20px', border: '1px solid rgba(16,185,129,0.2)' }}>Pilar Sistem Terpadu</div>
             <h2 style={{ fontSize: isMobile ? '2rem' : '2.5rem', fontWeight: 900, color: 'var(--text-primary)', margin: '0 0 16px', letterSpacing: '-0.02em' }}>Satu Platform, Semua Sektor</h2>
             <p style={{ fontSize: '1.125rem', color: 'var(--text-secondary)', maxWidth: 600, margin: '0 auto', lineHeight: 1.7 }}>Setiap sektor pertanian dimonitor dengan parameter yang disesuaikan untuk kebutuhan biologis dan target produksinya.</p>
           </div>
